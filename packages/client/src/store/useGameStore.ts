@@ -18,6 +18,7 @@ export interface GameStore {
   // Identity
   roomId: string | null
   playerId: string | null
+  clientId: string | null
   playerName: string | null
   role: "host" | "player" | null
 
@@ -48,6 +49,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   joinState: "NAME_ENTRY",
   roomId: null,
   playerId: null,
+  clientId: null,
   playerName: null,
   role: null,
   connectionStatus: "disconnected",
@@ -62,9 +64,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // Non-regression guard: once IN_ROOM, never transition backwards
     if (current === "IN_ROOM") return
 
+    // Generate a stable client ID for this session
+    const clientId = get().clientId ?? crypto.randomUUID()
+
     set({
       roomId,
       playerName: name,
+      clientId,
       role,
       joinState: "CONNECTING",
       connectionStatus: "connecting",
@@ -83,13 +89,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
   // ── Internal Actions ───────────────────────────────────────────────────
 
   _onStateSync: (state: RoomState) => {
-    const { currentRoundNumber, playerId, playerName } = get()
+    const { currentRoundNumber, playerId, clientId } = get()
 
-    // Sync role from server — server is authoritative on role assignment
-    const me = state.players.find(
-      (p) => p.id === playerId || (p.name === playerName && p.connected)
-    )
+    // Match self in roster: by playerId if set, otherwise by clientId (stable client-generated ID)
+    const me = playerId
+      ? state.players.find((p) => p.id === playerId)
+      : state.players.find((p) => p.id === clientId)
+
     const serverRole = me?.role ?? get().role
+
+    // Set playerId from roster if not yet set
+    if (!playerId && me) {
+      set({ playerId: me.id })
+    }
 
     // Detect new round and reset pick tracking
     if (

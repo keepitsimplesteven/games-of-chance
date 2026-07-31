@@ -124,7 +124,7 @@ export interface RoomState {
 
 /** Client → Server messages */
 export type ClientMessage =
-  | { type: "JOIN"; payload: { name: string; role: "host" | "player" } }
+  | { type: "JOIN"; payload: { name: string; role: "host" | "player"; clientId: string } }
   | { type: "SUBMIT_PICK"; payload: { pick: unknown } }
   | { type: "START_ROUND"; payload?: never }
   | { type: "END_GAME"; payload?: never }

@@ -135,7 +135,7 @@ export default class GameRoom implements Party.Server {
 
   private handleJoin(
     connection: Party.Connection,
-    payload: { name: string; role: "host" | "player" }
+    payload: { name: string; role: "host" | "player"; clientId: string }
   ) {
     const playerCount = Object.keys(this.state.players).length
 
@@ -144,6 +144,9 @@ export default class GameRoom implements Party.Server {
       this.sendError(connection, "ROOM_FULL", "Room is at maximum capacity")
       return
     }
+
+    // Use the client-generated stable ID as the player identity
+    const stableId = payload.clientId
 
     // Determine role
     let role: "host" | "player" = "player"
@@ -161,24 +164,24 @@ export default class GameRoom implements Party.Server {
 
     // Create the player
     const player: Player = {
-      id: connection.id,
+      id: stableId,
       name: payload.name,
       role,
       connected: true,
       connectionId: connection.id,
     }
 
-    this.state.players[player.id] = player
+    this.state.players[stableId] = player
 
     // Initialize scores for new player
-    if (!(player.id in this.state.gameScores)) {
-      this.state.gameScores[player.id] = 0
+    if (!(stableId in this.state.gameScores)) {
+      this.state.gameScores[stableId] = 0
     }
-    if (!(player.id in this.state.sessionScores)) {
-      this.state.sessionScores[player.id] = 0
+    if (!(stableId in this.state.sessionScores)) {
+      this.state.sessionScores[stableId] = 0
     }
-    if (!(player.id in this.state.sessionGamesPlayed)) {
-      this.state.sessionGamesPlayed[player.id] = 0
+    if (!(stableId in this.state.sessionGamesPlayed)) {
+      this.state.sessionGamesPlayed[stableId] = 0
     }
 
     this.broadcastState()

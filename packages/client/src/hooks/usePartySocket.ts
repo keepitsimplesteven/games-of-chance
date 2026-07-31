@@ -45,10 +45,11 @@ export function usePartySocket(
       setConnectionStatus("connected")
       useGameStore.setState({ connectionStatus: "connected" })
 
-      // Send JOIN message upon connection
+      // Send JOIN message upon connection with clientId for stable identity
+      const { clientId } = useGameStore.getState()
       const joinMsg: ClientMessage = {
         type: "JOIN",
-        payload: { name: playerName, role },
+        payload: { name: playerName, role, clientId: clientId! },
       }
       socket.send(JSON.stringify(joinMsg))
     })
@@ -67,29 +68,15 @@ export function usePartySocket(
           const store = useGameStore.getState()
           store._onStateSync(msg.payload)
 
-          // Check if the player is in the roster → transition to IN_ROOM
-          const playerId = store.playerId
-          const isInRoster = msg.payload.players.some(
-            (p) => p.name === playerName && p.connected
-          )
+          // Check if the player is in the roster by clientId → transition to IN_ROOM
+          const { clientId, playerId } = store
+          const matchId = playerId || clientId
+          const isInRoster = matchId
+            ? msg.payload.players.some((p) => p.id === matchId && p.connected)
+            : false
 
           if (isInRoster) {
-            // Set the playerId from the roster if not yet set
-            if (!playerId) {
-              const player = msg.payload.players.find(
-                (p) => p.name === playerName && p.connected
-              )
-              if (player) {
-                useGameStore.setState({ playerId: player.id })
-              }
-            }
-            // Transition to IN_ROOM permanently
             setJoinState("IN_ROOM")
-          }
-
-          // Reset pick tracking on new round
-          if (msg.payload.round.roundNumber !== store.currentRoundNumber) {
-            store._resetPickOnNewRound(msg.payload.round.roundNumber)
           }
           break
         }
