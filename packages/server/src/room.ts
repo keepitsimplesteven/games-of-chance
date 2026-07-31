@@ -9,6 +9,9 @@ import type {
   GameLeaderboardEntry,
   SessionLeaderboardEntry,
 } from "@games-of-chance/shared"
+import { registry } from "./games/GameRegistry"
+// Side-effect import: registers the coin-toss plugin in the global registry
+import "./games/coin-toss/CoinTossPlugin"
 
 // ── Server-side live state (not sent to clients directly) ──────────────────
 
@@ -95,8 +98,16 @@ export default class GameRoom implements Party.Server {
       case "JOIN":
         this.handleJoin(sender, msg.payload)
         break
+      case "START_ROUND":
+        this.handleStartRound(sender)
+        break
+      case "SUBMIT_PICK":
+        this.handleSubmitPick(sender, msg.payload)
+        break
+      case "END_GAME":
+        this.handleEndGame(sender)
+        break
       default:
-        // Only JOIN is wired for M1 — all other message types return ERROR
         this.sendError(
           sender,
           "UNSUPPORTED",
@@ -125,7 +136,23 @@ export default class GameRoom implements Party.Server {
       if (nextHost) {
         player.role = "player"
         nextHost.role = "host"
+      } else if (this.state.round.phase === "PICKING") {
+        // Host disconnected during PICKING and no new host available — suspend timer
+        this.cancelDeadlineTimer()
       }
+    }
+
+    // Disconnection during PICKING: if all remaining connected players have submitted picks,
+    // cancel deadline timer and proceed to immediate resolution.
+    // Note: disconnected player's pick is retained for scoring if already recorded.
+    if (
+      this.state.round.phase === "PICKING" &&
+      this.allConnectedPlayersHavePicked()
+    ) {
+      this.cancelDeadlineTimer()
+      this.broadcastState()
+      this.scheduleResolve(0)
+      return
     }
 
     this.broadcastState()
@@ -187,6 +214,223 @@ export default class GameRoom implements Party.Server {
     this.broadcastState()
   }
 
+  private handleStartRound(sender: Party.Connection) {
+    // Authorization: only host can start a round
+    const hostId = this.getHostId()
+    const senderId = this.getPlayerIdByConnectionId(sender.id)
+
+    if (senderId !== hostId) {
+      this.sendError(sender, "NOT_HOST", "Only the host can start a round")
+      return
+    }
+
+    // Phase guard: can only start from LOBBY or RESULT
+    if (
+      this.state.round.phase !== "LOBBY" &&
+      this.state.round.phase !== "RESULT"
+    ) {
+      this.sendError(
+        sender,
+        "WRONG_PHASE",
+        "Cannot start round in current phase"
+      )
+      return
+    }
+
+    this.beginRound()
+  }
+
+  private handleSubmitPick(
+    sender: Party.Connection,
+    payload: { pick: unknown }
+  ) {
+    // Guard: reject if not in PICKING phase
+    if (this.state.round.phase !== "PICKING") {
+      this.sendError(
+        sender,
+        "WRONG_PHASE",
+        "Picks are only accepted during the PICKING phase"
+      )
+      return
+    }
+
+    // Guard: reject if deadline has passed
+    if (
+      this.state.round.pickDeadlineMs !== null &&
+      Date.now() > this.state.round.pickDeadlineMs
+    ) {
+      this.sendError(
+        sender,
+        "DEADLINE_PASSED",
+        "The pick deadline has passed"
+      )
+      return
+    }
+
+    // Get the player ID for this connection
+    const playerId = this.getPlayerIdByConnectionId(sender.id)
+    if (!playerId) {
+      this.sendError(sender, "NOT_IN_ROOM", "Player not found in room")
+      return
+    }
+
+    // Guard: silently ignore if player already has a pick recorded (pick immutability)
+    if (playerId in this.state.round.picks) {
+      return
+    }
+
+    // Validate pick via plugin
+    const plugin = registry.lookup(this.state.config.gameType)
+    if (!plugin.validatePick(payload.pick)) {
+      this.sendError(sender, "INVALID_PICK", "The submitted pick is invalid")
+      return
+    }
+
+    // Record pick
+    this.state.round.picks[playerId] = payload.pick
+
+    // Send PICK_ACK to sender
+    const ackMsg: ServerMessage = {
+      type: "PICK_ACK",
+      payload: { playerId },
+    }
+    sender.send(JSON.stringify(ackMsg))
+
+    // Check if all connected players have picked — if yes, resolve immediately
+    if (this.allConnectedPlayersHavePicked()) {
+      this.cancelDeadlineTimer()
+      this.scheduleResolve(0)
+    }
+  }
+
+  private handleEndGame(sender: Party.Connection) {
+    // Authorization: only host can end the game
+    const hostId = this.getHostId()
+    const senderId = this.getPlayerIdByConnectionId(sender.id)
+
+    if (senderId !== hostId) {
+      this.sendError(sender, "NOT_HOST", "Only the host can end the game")
+      return
+    }
+
+    // Phase guard: can only end game from RESULT or LOBBY
+    if (
+      this.state.round.phase !== "RESULT" &&
+      this.state.round.phase !== "LOBBY"
+    ) {
+      this.sendError(
+        sender,
+        "WRONG_PHASE",
+        "Cannot end game in current phase"
+      )
+      return
+    }
+
+    // Cancel any lingering timer
+    this.cancelDeadlineTimer()
+
+    // Reset game scores and game leaderboard
+    this.state.gameScores = {}
+    for (const playerId of Object.keys(this.state.players)) {
+      this.state.gameScores[playerId] = 0
+    }
+    this.state.gameLeaderboard = []
+
+    // Transition to LOBBY, reset round state
+    this.state.round = createDefaultRoundState()
+
+    this.broadcastState()
+  }
+
+  // ── Round lifecycle ────────────────────────────────────────────────────
+
+  /**
+   * Begin a new round: reset picks, set deadline, broadcast, schedule resolve.
+   */
+  private beginRound() {
+    // Cancel any lingering timer from a previous round
+    this.cancelDeadlineTimer()
+
+    const plugin = registry.lookup(this.state.config.gameType)
+
+    // Transition to PICKING phase
+    this.state.round = {
+      phase: "PICKING",
+      roundNumber: this.state.round.roundNumber + 1,
+      picks: {},
+      result: null,
+      pickDeadlineMs: Date.now() + plugin.pickWindowMs,
+      resolvedAt: null,
+    }
+
+    this.broadcastState()
+
+    // Schedule the deadline timer
+    this.scheduleResolve(plugin.pickWindowMs)
+  }
+
+  /**
+   * Resolve the current round. Has an idempotency guard to prevent double-fire:
+   * if phase ≠ PICKING, this is a no-op.
+   */
+  private resolveRound() {
+    // IDEMPOTENCY GUARD: Only resolves if currently PICKING.
+    // Both timer expiry and "all picks in" may call this — only the first takes effect.
+    if (this.state.round.phase !== "PICKING") {
+      return
+    }
+
+    // Cancel deadline timer BEFORE any resolution logic
+    this.cancelDeadlineTimer()
+
+    // Transition to RESOLVING, broadcast
+    this.state.round.phase = "RESOLVING"
+    this.broadcastState()
+
+    const plugin = registry.lookup(this.state.config.gameType)
+
+    // Resolve the round via plugin
+    const result = plugin.resolveRound(this.state.round.picks)
+
+    // Score the round via plugin
+    const scoreResult = plugin.scoreRound(
+      this.state.round.picks,
+      result,
+      Object.values(this.state.players)
+    )
+
+    // Apply deltas to gameScores
+    for (const [playerId, delta] of Object.entries(scoreResult.deltas)) {
+      if (playerId in this.state.gameScores) {
+        this.state.gameScores[playerId] += delta
+      } else {
+        this.state.gameScores[playerId] = delta
+      }
+    }
+
+    // Compute game leaderboard
+    this.state.gameLeaderboard = plugin.computeGameLeaderboard(
+      Object.values(this.state.players),
+      this.state.gameScores
+    )
+
+    // Transition to RESULT, store result and resolvedAt
+    this.state.round.phase = "RESULT"
+    this.state.round.result = result
+    this.state.round.resolvedAt = Date.now()
+
+    this.broadcastState()
+  }
+
+  /**
+   * Schedule resolveRound to fire after a delay.
+   * Always cancels any existing timer first.
+   */
+  private scheduleResolve(delayMs: number) {
+    this.cancelDeadlineTimer()
+    this.deadlineTimerId = setTimeout(() => this.resolveRound(), delayMs)
+  }
+
   // ── Utilities ──────────────────────────────────────────────────────────
 
   /** Check if there's a connected host in the room */
@@ -194,6 +438,30 @@ export default class GameRoom implements Party.Server {
     return Object.values(this.state.players).some(
       (p) => p.role === "host" && p.connected
     )
+  }
+
+  /** Get the player ID of the current host, or null if no host */
+  private getHostId(): string | null {
+    const host = Object.values(this.state.players).find(
+      (p) => p.role === "host" && p.connected
+    )
+    return host?.id ?? null
+  }
+
+  /** Get the player ID for a given connection ID */
+  private getPlayerIdByConnectionId(connectionId: string): string | null {
+    const player = Object.values(this.state.players).find(
+      (p) => p.connectionId === connectionId
+    )
+    return player?.id ?? null
+  }
+
+  /** Check if all connected players have submitted their picks */
+  private allConnectedPlayersHavePicked(): boolean {
+    const connectedPlayers = Object.values(this.state.players).filter(
+      (p) => p.connected
+    )
+    return connectedPlayers.every((p) => p.id in this.state.round.picks)
   }
 
   /** Cancel the deadline timer — idempotent (no-op if no timer) */
