@@ -55,10 +55,10 @@ export function usePartySocket(
       })
 
       // Send JOIN message upon connection with clientId for stable identity
-      const { clientId } = useGameStore.getState()
+      const { clientId, scoringMode } = useGameStore.getState()
       const joinMsg: ClientMessage = {
         type: "JOIN",
-        payload: { name: playerName, role, clientId: clientId! },
+        payload: { name: playerName, role, clientId: clientId!, ...(scoringMode ? { scoringMode } : {}) },
       }
       socket.send(JSON.stringify(joinMsg))
     })
@@ -91,6 +91,10 @@ export function usePartySocket(
         }
         case "PICK_ACK":
           // No-op: pickSubmitted already set optimistically on send
+          break
+        case "SKIP_ANIMATION":
+          // Host skipped — all clients jump to results
+          useGameStore.setState({ roundAnimationDone: true })
           break
         case "ERROR":
           // Dispatch to error handler — update connection status for critical errors

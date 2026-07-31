@@ -6,6 +6,9 @@ export const COIN_TOSS = {
   /** Duration of the pick window in milliseconds */
   PICK_WINDOW_MS: 10_000,
 
+  /** Default number of rounds per game */
+  MAX_ROUNDS: 10,
+
   /** Multiplier applied for consecutive correct guesses (future) */
   STREAK_MULTIPLIER: 2,
 

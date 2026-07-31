@@ -27,7 +27,8 @@ function PickLockIndicator() {
 export function CoinTossContainer() {
   const roomState = useGameStore((s) => s.roomState)
   const pickSubmitted = useGameStore((s) => s.pickSubmitted)
-  const [animationDone, setAnimationDone] = useState(false)
+  const role = useGameStore((s) => s.role)
+  const roundAnimationDone = useGameStore((s) => s.roundAnimationDone)
   const [animationStarted, setAnimationStarted] = useState(false)
 
   const phase = roomState?.round.phase
@@ -35,7 +36,6 @@ export function CoinTossContainer() {
 
   // Reset animation state when a new round begins (roundNumber changes)
   useEffect(() => {
-    setAnimationDone(false)
     setAnimationStarted(false)
   }, [roundNumber])
 
@@ -47,8 +47,15 @@ export function CoinTossContainer() {
   }, [phase, animationStarted])
 
   const handleAnimationComplete = () => {
-    setAnimationDone(true)
     useGameStore.setState({ roundAnimationDone: true })
+  }
+
+  const handleSkipAnimation = () => {
+    // Host sends SKIP_ANIMATION to server, which broadcasts to all clients
+    const send = useGameStore.getState()._socketSend
+    if (send) {
+      send({ type: "SKIP_ANIMATION" })
+    }
   }
 
   if (!roomState) return null
@@ -68,13 +75,25 @@ export function CoinTossContainer() {
   if (phase === "RESOLVING" || phase === "RESULT") {
     return (
       <div className="flex flex-col items-center gap-4">
-        {!animationDone && (
-          <CoinFlipAnimation
-            result={roomState.round.result}
-            onAnimationComplete={handleAnimationComplete}
-          />
+        {!roundAnimationDone && (
+          <>
+            <CoinFlipAnimation
+              result={roomState.round.result}
+              onAnimationComplete={handleAnimationComplete}
+            />
+            {/* Skip button — host can skip the animation for all players */}
+            {role === "host" && (
+              <button
+                type="button"
+                onClick={handleSkipAnimation}
+                className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 active:scale-95"
+              >
+                Skip
+              </button>
+            )}
+          </>
         )}
-        {animationDone && (
+        {roundAnimationDone && (
           <ResultDisplay
             result={roomState.round.result}
             players={roomState.players}

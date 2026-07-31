@@ -13,6 +13,7 @@ import { useGameStore } from "../../store/useGameStore"
 export default function RoundControls() {
   const role = useGameStore((s) => s.role)
   const phase = useGameStore((s) => s.roomState?.round.phase)
+  const roundAnimationDone = useGameStore((s) => s.roundAnimationDone)
   const startRound = useGameStore((s) => s.startRound)
   const endGame = useGameStore((s) => s.endGame)
 
@@ -37,21 +38,23 @@ export default function RoundControls() {
     )
   }
 
-  // RESULT phase: show "Next Round" and "End Game"
+  // RESULT phase: show "Next Round" and "End Game" (disabled until animation done)
   if (phase === "RESULT") {
     return (
       <div className="flex flex-col gap-2">
         <button
           type="button"
           onClick={startRound}
-          className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-indigo-700 active:scale-[0.98]"
+          disabled={!roundAnimationDone}
+          className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-indigo-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Next Round
         </button>
         <button
           type="button"
           onClick={endGame}
-          className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-base font-semibold text-gray-700 shadow-sm transition hover:bg-gray-100 active:scale-[0.98]"
+          disabled={!roundAnimationDone}
+          className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-base font-semibold text-gray-700 shadow-sm transition hover:bg-gray-100 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           End Game
         </button>

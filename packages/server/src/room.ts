@@ -10,6 +10,8 @@ import type {
   SessionLeaderboardEntry,
 } from "@games-of-chance/shared"
 import { registry } from "./games/GameRegistry"
+import { getStrategy } from "./scoring"
+import { COIN_TOSS } from "./games/coin-toss/constants"
 // Side-effect import: registers the coin-toss plugin in the global registry
 import "./games/coin-toss/CoinTossPlugin"
 
@@ -107,6 +109,9 @@ export default class GameRoom implements Party.Server {
       case "END_GAME":
         this.handleEndGame(sender)
         break
+      case "SKIP_ANIMATION":
+        this.handleSkipAnimation(sender)
+        break
       default:
         this.sendError(
           sender,
@@ -162,7 +167,7 @@ export default class GameRoom implements Party.Server {
 
   private handleJoin(
     connection: Party.Connection,
-    payload: { name: string; role: "host" | "player"; clientId: string }
+    payload: { name: string; role: "host" | "player"; clientId: string; scoringMode?: "grand-prix" | "chips" }
   ) {
     const playerCount = Object.keys(this.state.players).length
 
@@ -187,6 +192,11 @@ export default class GameRoom implements Party.Server {
     } else {
       // Demote duplicate host attempts to player
       role = "player"
+    }
+
+    // If this is the first player (host) and they provided a scoring mode, apply it
+    if (role === "host" && payload.scoringMode) {
+      this.state.config.scoringMode = payload.scoringMode
     }
 
     // Create the player
@@ -329,7 +339,33 @@ export default class GameRoom implements Party.Server {
     // Cancel any lingering timer
     this.cancelDeadlineTimer()
 
-    // Reset game scores and game leaderboard
+    // Apply session scoring based on scoringMode
+    const strategy = getStrategy(
+      this.state.config.scoringMode,
+      this.state.config.placementPoints
+    )
+    const sessionUpdate = strategy.applyGameResult(
+      Object.values(this.state.players),
+      this.state.gameLeaderboard,
+      this.state.gameScores
+    )
+
+    // Accumulate session scores (additive only — monotonically increasing)
+    for (const [playerId, points] of Object.entries(sessionUpdate.sessionScores)) {
+      this.state.sessionScores[playerId] =
+        (this.state.sessionScores[playerId] ?? 0) + points
+    }
+
+    // Increment games played for all current players
+    for (const playerId of Object.keys(this.state.players)) {
+      this.state.sessionGamesPlayed[playerId] =
+        (this.state.sessionGamesPlayed[playerId] ?? 0) + 1
+    }
+
+    // Rebuild session leaderboard with accumulated totals
+    this.state.sessionLeaderboard = this.computeSessionLeaderboard()
+
+    // Reset game scores and game leaderboard for next game
     this.state.gameScores = {}
     for (const playerId of Object.keys(this.state.players)) {
       this.state.gameScores[playerId] = 0
@@ -340,6 +376,20 @@ export default class GameRoom implements Party.Server {
     this.state.round = createDefaultRoundState()
 
     this.broadcastState()
+  }
+
+  private handleSkipAnimation(sender: Party.Connection) {
+    // Only host can skip
+    const hostId = this.getHostId()
+    const senderId = this.getPlayerIdByConnectionId(sender.id)
+    if (senderId !== hostId) return
+
+    // Only skip during RESOLVING or RESULT phases (while animation would be playing)
+    if (this.state.round.phase !== "RESOLVING" && this.state.round.phase !== "RESULT") return
+
+    // Broadcast SKIP_ANIMATION to all clients
+    const msg: ServerMessage = { type: "SKIP_ANIMATION" }
+    this.room.broadcast(JSON.stringify(msg))
   }
 
   // ── Round lifecycle ────────────────────────────────────────────────────
@@ -383,6 +433,16 @@ export default class GameRoom implements Party.Server {
     // Cancel deadline timer BEFORE any resolution logic
     this.cancelDeadlineTimer()
 
+    // Assign random picks to connected players who didn't submit in time
+    // (future: bot personas could provide different strategies here)
+    const connectedPlayers = Object.values(this.state.players).filter(p => p.connected)
+    for (const player of connectedPlayers) {
+      if (!(player.id in this.state.round.picks)) {
+        const randomSide = Math.random() < 0.5 ? "HEADS" : "TAILS"
+        this.state.round.picks[player.id] = { side: randomSide }
+      }
+    }
+
     // Transition to RESOLVING, broadcast
     this.state.round.phase = "RESOLVING"
     this.broadcastState()
@@ -420,6 +480,65 @@ export default class GameRoom implements Party.Server {
     this.state.round.resolvedAt = Date.now()
 
     this.broadcastState()
+
+    // Check if we've hit the round limit — auto-end game if so
+    // Import MAX_ROUNDS from coin-toss constants (game-specific)
+    const maxRounds = this.getMaxRounds()
+    if (maxRounds > 0 && this.state.round.roundNumber >= maxRounds) {
+      // Auto-end game after a short delay so clients can see final result
+      setTimeout(() => this.autoEndGame(), 0)
+    }
+  }
+
+  /**
+   * Auto-end the game when round limit is reached.
+   * Same as handleEndGame but without auth check (system-triggered).
+   */
+  private autoEndGame() {
+    if (this.state.round.phase !== "RESULT") return
+
+    this.cancelDeadlineTimer()
+
+    const strategy = getStrategy(
+      this.state.config.scoringMode,
+      this.state.config.placementPoints
+    )
+    const sessionUpdate = strategy.applyGameResult(
+      Object.values(this.state.players),
+      this.state.gameLeaderboard,
+      this.state.gameScores
+    )
+
+    for (const [playerId, points] of Object.entries(sessionUpdate.sessionScores)) {
+      this.state.sessionScores[playerId] =
+        (this.state.sessionScores[playerId] ?? 0) + points
+    }
+
+    for (const playerId of Object.keys(this.state.players)) {
+      this.state.sessionGamesPlayed[playerId] =
+        (this.state.sessionGamesPlayed[playerId] ?? 0) + 1
+    }
+
+    this.state.sessionLeaderboard = this.computeSessionLeaderboard()
+
+    this.state.gameScores = {}
+    for (const playerId of Object.keys(this.state.players)) {
+      this.state.gameScores[playerId] = 0
+    }
+    this.state.gameLeaderboard = []
+    this.state.round = createDefaultRoundState()
+
+    this.broadcastState()
+  }
+
+  /**
+   * Get the max rounds for the current game type.
+   * Returns from the plugin's constants. Default: 10.
+   */
+  private getMaxRounds(): number {
+    // Currently only coin-toss is supported — use its MAX_ROUNDS constant
+    // Future: this could be part of the GamePlugin interface or room config
+    return COIN_TOSS.MAX_ROUNDS
   }
 
   /**
@@ -470,6 +589,34 @@ export default class GameRoom implements Party.Server {
       clearTimeout(this.deadlineTimerId)
       this.deadlineTimerId = null
     }
+  }
+
+  /**
+   * Compute session leaderboard from accumulated session scores.
+   * Tied players receive equal rank values.
+   */
+  private computeSessionLeaderboard(): SessionLeaderboardEntry[] {
+    const entries = Object.values(this.state.players).map((player) => ({
+      playerId: player.id,
+      playerName: player.name,
+      sessionPoints: this.state.sessionScores[player.id] ?? 0,
+      gamesPlayed: this.state.sessionGamesPlayed[player.id] ?? 0,
+    }))
+
+    // Sort by sessionPoints descending
+    entries.sort((a, b) => b.sessionPoints - a.sessionPoints)
+
+    // Assign ranks with ties getting equal rank
+    const ranked: SessionLeaderboardEntry[] = []
+    for (let i = 0; i < entries.length; i++) {
+      const rank =
+        i > 0 && entries[i].sessionPoints === entries[i - 1].sessionPoints
+          ? ranked[i - 1].rank
+          : i + 1
+      ranked.push({ ...entries[i], rank })
+    }
+
+    return ranked
   }
 
   /** Broadcast full STATE_SYNC to all connected clients */

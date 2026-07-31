@@ -1,5 +1,5 @@
 import { create } from "zustand"
-import type { RoomState, ClientMessage } from "@games-of-chance/shared"
+import type { RoomState, ClientMessage, ScoringMode } from "@games-of-chance/shared"
 
 // ── Join Flow State Machine ────────────────────────────────────────────────
 
@@ -21,6 +21,7 @@ export interface GameStore {
   clientId: string | null
   playerName: string | null
   role: "host" | "player" | null
+  scoringMode: ScoringMode | undefined
 
   // Connection
   connectionStatus: ConnectionStatus
@@ -39,7 +40,7 @@ export interface GameStore {
   _socketSend: ((msg: ClientMessage) => void) | null
 
   // Actions
-  connect: (roomId: string, name: string, role: "host" | "player") => void
+  connect: (roomId: string, name: string, role: "host" | "player", scoringMode?: ScoringMode) => void
   submitPick: (pick: unknown) => void
   startRound: () => void
   endGame: () => void
@@ -59,6 +60,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   clientId: null,
   playerName: null,
   role: null,
+  scoringMode: undefined,
   connectionStatus: "disconnected",
   roomState: null,
   pickSubmitted: false,
@@ -68,7 +70,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   // ── Actions ────────────────────────────────────────────────────────────
 
-  connect: (roomId, name, role) => {
+  connect: (roomId, name, role, scoringMode) => {
     const current = get().joinState
     // Non-regression guard: once IN_ROOM, never transition backwards
     if (current === "IN_ROOM") return
@@ -81,6 +83,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       playerName: name,
       clientId,
       role,
+      scoringMode,
       joinState: "CONNECTING",
       connectionStatus: "connecting",
     })

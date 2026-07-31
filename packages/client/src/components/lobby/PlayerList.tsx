@@ -8,10 +8,12 @@ export default function PlayerList() {
 
   const { players, sessionLeaderboard } = roomState
 
-  // Build a lookup for session scores
-  const sessionScoreMap = new Map(
-    sessionLeaderboard.map((entry) => [entry.playerId, entry.sessionPoints])
+  // Build a lookup for session data (points, rank, gamesPlayed)
+  const sessionDataMap = new Map(
+    sessionLeaderboard.map((entry) => [entry.playerId, entry])
   )
+
+  const hasSessionData = sessionLeaderboard.length > 0
 
   return (
     <div className="rounded-lg bg-white p-4 shadow-sm">
@@ -21,7 +23,10 @@ export default function PlayerList() {
       <ul className="space-y-2">
         {players.map((player) => {
           const isCurrentPlayer = player.id === playerId
-          const sessionScore = sessionScoreMap.get(player.id) ?? 0
+          const sessionEntry = sessionDataMap.get(player.id)
+          const sessionScore = sessionEntry?.sessionPoints ?? 0
+          const rank = sessionEntry?.rank
+          const gamesPlayed = sessionEntry?.gamesPlayed ?? 0
 
           return (
             <li
@@ -33,6 +38,13 @@ export default function PlayerList() {
               }`}
             >
               <div className="flex items-center gap-2">
+                {/* Rank badge — only show when session data exists */}
+                {hasSessionData && rank != null && (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 text-xs font-bold text-gray-600">
+                    {rank}
+                  </span>
+                )}
+
                 {/* Connection status indicator */}
                 <span
                   className={`inline-block h-2.5 w-2.5 rounded-full ${
@@ -57,10 +69,19 @@ export default function PlayerList() {
                 )}
               </div>
 
-              {/* Session score */}
-              <span className="text-xs font-medium text-gray-500">
-                {sessionScore} pts
-              </span>
+              <div className="flex items-center gap-2">
+                {/* Games played — only show when session data exists */}
+                {hasSessionData && gamesPlayed > 0 && (
+                  <span className="text-xs text-gray-400">
+                    {gamesPlayed}g
+                  </span>
+                )}
+
+                {/* Session score */}
+                <span className="text-xs font-medium text-gray-500">
+                  {sessionScore} pts
+                </span>
+              </div>
             </li>
           )
         })}
