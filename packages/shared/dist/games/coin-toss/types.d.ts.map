@@ -1,0 +1,1 @@
+{"version":3,"file":"types.d.ts","sourceRoot":"","sources":["../../../src/games/coin-toss/types.ts"],"names":[],"mappings":"AAGA,uCAAuC;AACvC,MAAM,MAAM,QAAQ,GAAG,OAAO,GAAG,OAAO,CAAA;AAExC,4CAA4C;AAC5C,MAAM,WAAW,YAAY;IAC3B,IAAI,EAAE,QAAQ,CAAA;CACf;AAED,6DAA6D;AAC7D,MAAM,WAAW,cAAc;IAC7B,OAAO,EAAE,QAAQ,CAAA;IACjB,+EAA+E;IAC/E,SAAS,EAAE,MAAM,CAAA;CAClB"}

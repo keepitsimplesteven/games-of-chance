@@ -12,8 +12,8 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
 
 ---
 
-- [ ] 1. Scaffold monorepo and project infrastructure
-  - [ ] 1.1 Initialize pnpm workspace with `shared`, `client`, and `server` packages
+- [x] 1. Scaffold monorepo and project infrastructure
+  - [x] 1.1 Initialize pnpm workspace with `shared`, `client`, and `server` packages
     - Create root `package.json` with `"workspaces"` field pointing to `packages/*`
     - Create root `pnpm-workspace.yaml` listing `packages/*`
     - Create root `tsconfig.json` with project references
@@ -24,7 +24,7 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - Create `partykit.json` at repo root specifying server entry point
     - _Requirements: 1.1, 1.5, 1.6, 1.7_
 
-  - [ ] 1.2 Configure Vite + React + Tailwind for the client package
+  - [x] 1.2 Configure Vite + React + Tailwind for the client package
     - Initialize Vite with React-TS template in `packages/client`
     - Configure Tailwind CSS with `tailwind.config.ts`
     - Set up `postcss.config.js`
@@ -32,8 +32,8 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - Configure `PARTYKIT_HOST` env variable in Vite config
     - _Requirements: 1.3, 22.1_
 
-- [ ] 2. Define shared types package
-  - [ ] 2.1 Create all shared TypeScript types in `packages/shared/src/types.ts`
+- [x] 2. Define shared types package
+  - [x] 2.1 Create all shared TypeScript types in `packages/shared/src/types.ts`
     - Export: `Player`, `RoomConfig`, `RoomState`, `RoundState`, `RoundPhase` (exactly `"LOBBY" | "PICKING" | "RESOLVING" | "RESULT"` — NO `BETWEEN_ROUNDS`)
     - Export: `GameLeaderboardEntry`, `SessionLeaderboardEntry`, `RoundScoreResult`, `ScoreModifier`
     - Export: `ScoringMode` (`"grand-prix" | "chips"`), `SessionScoringStrategy` interface, `SessionUpdate`
@@ -42,17 +42,17 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - `Player.connectionId` is `string | null` for future host-assisted reconnection
     - _Requirements: 1.2, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6_
 
-  - [ ] 2.2 Create coin-toss-specific shared types in `packages/shared/src/games/coin-toss/types.ts`
+  - [x] 2.2 Create coin-toss-specific shared types in `packages/shared/src/games/coin-toss/types.ts`
     - Export: `CoinSide` (`"HEADS" | "TAILS"`), `CoinTossPick` (`{ side: CoinSide }`), `CoinTossResult` (`{ outcome: CoinSide, flippedAt: number }`)
     - _Requirements: 7.5_
 
-- [ ] 3. Implement PartyServer with lobby-only logic
-  - [ ] 3.1 Create GamePlugin interface and GameRegistry in `packages/server/src/games/`
+- [x] 3. Implement PartyServer with lobby-only logic
+  - [x] 3.1 Create GamePlugin interface and GameRegistry in `packages/server/src/games/`
     - Define `GamePlugin<TPick, TResult>` interface with `validatePick`, `resolveRound`, `scoreRound`, `computeGameLeaderboard`, `pickWindowMs`
     - Implement `GameRegistry` class with `register`, `lookup`, `list` methods
     - _Requirements: 8.3_
 
-  - [ ] 3.2 Implement PartyServer room class (`packages/server/src/room.ts`)
+  - [x] 3.2 Implement PartyServer room class (`packages/server/src/room.ts`)
     - Implement `PartyServer` interface from `@cloudflare/partykit/server` using class-based pattern with `onStart`, `onConnect`, `onMessage`, `onClose`
     - On first connection: initialize room state with phase `LOBBY`, roundNumber 0, empty picks, empty leaderboards
     - On new connection: send full STATE_SYNC to that client immediately
@@ -68,15 +68,15 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - **Property 6: Phase Ordering** — Phase transitions follow only the permitted DAG. Room initializes in LOBBY.
     - **Validates: Requirements 4.1, 4.2, 4.3, 9.1, 9.4, 12.1**
 
-- [ ] 4. Implement client landing page and room creation
-  - [ ] 4.1 Create LandingPage component at `packages/client/src/pages/LandingPage.tsx`
+- [x] 4. Implement client landing page and room creation
+  - [x] 4.1 Create LandingPage component at `packages/client/src/pages/LandingPage.tsx`
     - Display "Create Room" button and "Join Room" input field
     - On "Create Room": generate UUID v4 Room_ID, navigate to `/:roomId`
     - On "Join Room" submit: navigate to `/:roomId` using entered code
     - Mobile-first responsive layout with Tailwind
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 22.1_
 
-  - [ ] 4.2 Create Zustand store (`packages/client/src/store/useGameStore.ts`)
+  - [x] 4.2 Create Zustand store (`packages/client/src/store/useGameStore.ts`)
     - Define `JoinState` type: `"NAME_ENTRY" | "CONNECTING" | "IN_ROOM"`
     - Store fields: `joinState`, `roomId`, `playerId`, `playerName`, `role`, `connectionStatus`, `roomState`, `pickSubmitted`, `currentRoundNumber`
     - Actions: `connect`, `submitPick`, `startRound`, `_onStateSync`, `_resetPickOnNewRound`
@@ -84,7 +84,7 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - `joinState` MUST NOT transition backwards from `IN_ROOM` within same session (non-regression guard)
     - _Requirements: 3.4, 3.6, 11.4, 16.3_
 
-  - [ ] 4.3 Create RoomPage with single-route join state machine (`packages/client/src/pages/RoomPage.tsx`)
+  - [x] 4.3 Create RoomPage with single-route join state machine (`packages/client/src/pages/RoomPage.tsx`)
     - **CRITICAL — Single-route state machine pattern to prevent infinite loop bug:**
     - This is ONE component at `/:roomId` that manages internal states: `NAME_ENTRY → CONNECTING → IN_ROOM`
     - **NO route changes occur after entering `/:roomId`** — all transitions are component-internal state changes only
@@ -96,7 +96,7 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - Direct URL navigation to `/:roomId` (shared link) renders the join flow without requiring landing page
     - _Requirements: 2.5, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 5.1_
 
-  - [ ] 4.4 Create PartySocket hook (`packages/client/src/hooks/usePartySocket.ts`)
+  - [x] 4.4 Create PartySocket hook (`packages/client/src/hooks/usePartySocket.ts`)
     - Use `PartySocket` from `partysocket` package (NOT `partykit`) with automatic reconnection
     - Configure exponential backoff: initial 500ms, doubling each attempt, capped at 30,000ms
     - On `STATE_SYNC` received: call `store._onStateSync`, check if player is in roster → transition to `IN_ROOM`
@@ -105,21 +105,21 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - Track `connectionStatus`: `"connecting" | "connected" | "disconnected" | "error"`
     - _Requirements: 21.1, 21.2, 21.3_
 
-- [ ] 5. Implement lobby UI components
-  - [ ] 5.1 Create LobbyShell, PlayerList, and ConnectionStatus components
+- [x] 5. Implement lobby UI components
+  - [x] 5.1 Create LobbyShell, PlayerList, and ConnectionStatus components
     - `LobbyShell`: always-visible wrapper around lobby content and game view
     - `PlayerList`: show each player's name, host badge (crown icon for host), connection status indicator (green=connected, grey=disconnected), current session score (initialized to 0)
     - `ConnectionStatus`: show `"connecting"`, `"connected"`, `"disconnected"`, or `"error"` states
     - _Requirements: 6.2, 6.7, 5.4, 21.6_
 
-  - [ ] 5.2 Create ShareLink, GameTileGrid, and HostControls components
+  - [x] 5.2 Create ShareLink, GameTileGrid, and HostControls components
     - `ShareLink`: prominent share card with room URL + copy button for host; compact copy-icon button for non-host players
     - `GameTileGrid`: board-game-cover style card grid. "Coin Toss" tile is active/selectable; other tiles show "Coming Soon" with dimmed overlay
     - `HostControls`: "Start Game" button visible ONLY to host, ONLY when `phase ∈ {"LOBBY", "RESULT"}` (phase guard)
     - All components use Tailwind for mobile-first responsive layout, no horizontal scroll on ≥375px viewports
     - _Requirements: 6.3, 6.4, 6.5, 6.6, 16.1, 22.3_
 
-- [ ] 6. Milestone 1 Checkpoint
+- [x] 6. Milestone 1 Checkpoint
   - Ensure all packages compile without type errors (`pnpm build`)
   - Test join flow: confirm NAME_ENTRY → CONNECTING → IN_ROOM transitions work without navigation loops
   - Test multiple players can join the same room and see each other in the player list
