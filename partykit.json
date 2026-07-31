@@ -1,5 +1,5 @@
 {
-  "name": "games-of-chance",
+  "name": "games-of-chance-keepitsimplesteven",
   "main": "packages/server/src/room.ts",
   "compatibilityDate": "2024-12-01"
 }
