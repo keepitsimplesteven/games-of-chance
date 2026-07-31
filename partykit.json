@@ -1,0 +1,5 @@
+{
+  "name": "games-of-chance",
+  "main": "packages/server/src/room.ts",
+  "compatibilityDate": "2024-01-01"
+}

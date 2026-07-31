@@ -1,0 +1,16 @@
+{
+  "name": "games-of-chance",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Live multiplayer browser-based games of chance",
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm --filter @games-of-chance/server --filter @games-of-chance/client -r --parallel dev",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
