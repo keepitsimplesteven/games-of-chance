@@ -128,6 +128,7 @@ export type ClientMessage =
   | { type: "SUBMIT_PICK"; payload: { pick: unknown } }
   | { type: "START_ROUND"; payload?: never }
   | { type: "END_GAME"; payload?: never }
+  | { type: "SKIP_ANIMATION"; payload?: never }
   | { type: "SET_AUTO_MODE"; payload: { enabled: boolean; intervalMs: number } }
   | { type: "KICK_PLAYER"; payload: { playerId: string } }
   | { type: "LINK_PLAYER"; payload: { oldPlayerId: string; newConnectionId: string } }
@@ -136,4 +137,5 @@ export type ClientMessage =
 export type ServerMessage =
   | { type: "STATE_SYNC"; payload: RoomState }
   | { type: "PICK_ACK"; payload: { playerId: string } }
+  | { type: "SKIP_ANIMATION"; payload?: never }
   | { type: "ERROR"; payload: { code: string; message: string } }

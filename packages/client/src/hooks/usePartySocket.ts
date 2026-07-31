@@ -92,6 +92,10 @@ export function usePartySocket(
         case "PICK_ACK":
           // No-op: pickSubmitted already set optimistically on send
           break
+        case "SKIP_ANIMATION":
+          // Host skipped — all clients jump to results
+          useGameStore.setState({ roundAnimationDone: true })
+          break
         case "ERROR":
           // Dispatch to error handler — update connection status for critical errors
           console.error("[PartySocket] Server error:", msg.payload.code, msg.payload.message)
