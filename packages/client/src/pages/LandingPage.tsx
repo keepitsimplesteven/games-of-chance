@@ -1,13 +1,15 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
+import type { ScoringMode } from "@games-of-chance/shared"
 
 export default function LandingPage() {
   const navigate = useNavigate()
   const [roomCode, setRoomCode] = useState("")
+  const [scoringMode, setScoringMode] = useState<ScoringMode>("grand-prix")
 
   function handleCreateRoom() {
     const roomId = crypto.randomUUID()
-    navigate(`/${roomId}`)
+    navigate(`/${roomId}`, { state: { scoringMode } })
   }
 
   function handleJoinRoom(e: React.FormEvent) {
@@ -24,6 +26,42 @@ export default function LandingPage() {
         <div className="text-center">
           <h1 className="text-3xl font-bold text-white">Games of Chance</h1>
           <p className="mt-2 text-gray-400">Create or join a room to play</p>
+        </div>
+
+        {/* Scoring mode selector */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-300">
+            Scoring Mode
+          </label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setScoringMode("grand-prix")}
+              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                scoringMode === "grand-prix"
+                  ? "bg-indigo-600 text-white ring-2 ring-indigo-400"
+                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+              }`}
+            >
+              🏆 Grand Prix
+            </button>
+            <button
+              type="button"
+              onClick={() => setScoringMode("chips")}
+              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                scoringMode === "chips"
+                  ? "bg-indigo-600 text-white ring-2 ring-indigo-400"
+                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+              }`}
+            >
+              🪙 Chips
+            </button>
+          </div>
+          <p className="text-xs text-gray-500">
+            {scoringMode === "grand-prix"
+              ? "Points awarded by placement each game"
+              : "Raw scores accumulate across games"}
+          </p>
         </div>
 
         <button

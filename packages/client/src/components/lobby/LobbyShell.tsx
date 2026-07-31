@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 import { useGameStore } from "../../store/useGameStore"
 import PlayerList from "./PlayerList"
+import SessionLeaderboard from "./SessionLeaderboard"
 import ShareLink from "./ShareLink"
 import GameTileGrid from "./GameTileGrid"
 import HostControls from "./HostControls"
@@ -30,6 +31,9 @@ export default function LobbyShell({ children }: LobbyShellProps) {
 
       {/* Player list — always visible */}
       <PlayerList />
+
+      {/* Session leaderboard — shown in lobby when games have been played */}
+      {isLobby && <SessionLeaderboard />}
 
       {/* Lobby content: game tiles + start button — only in LOBBY phase */}
       {isLobby && (

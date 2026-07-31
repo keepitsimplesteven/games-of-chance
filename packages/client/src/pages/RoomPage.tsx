@@ -1,15 +1,20 @@
 import { useState, useEffect, FormEvent } from "react"
-import { useParams } from "react-router-dom"
+import { useParams, useLocation } from "react-router-dom"
+import type { ScoringMode } from "@games-of-chance/shared"
 import { useGameStore, setJoinState } from "../store/useGameStore"
 import { usePartySocket } from "../hooks/usePartySocket"
 import LobbyShell from "../components/lobby/LobbyShell"
 
 export default function RoomPage() {
   const { roomId } = useParams<{ roomId: string }>()
+  const location = useLocation()
   const joinState = useGameStore((s) => s.joinState)
   const connectionStatus = useGameStore((s) => s.connectionStatus)
   const playerName = useGameStore((s) => s.playerName)
   const role = useGameStore((s) => s.role)
+
+  // Read scoring mode from navigation state (set by LandingPage "Create Room")
+  const scoringMode = (location.state as { scoringMode?: ScoringMode } | null)?.scoringMode ?? undefined
 
   const [name, setName] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -36,8 +41,10 @@ export default function RoomPage() {
     if (!trimmed || !roomId) return
 
     setError(null)
+    // If scoringMode is set, this is the room creator (host)
+    const joinRole = scoringMode ? "host" : "player"
     // Transition to CONNECTING and trigger WebSocket connection
-    useGameStore.getState().connect(roomId, trimmed, "player")
+    useGameStore.getState().connect(roomId, trimmed, joinRole, scoringMode)
   }
 
   // ── NAME_ENTRY state ─────────────────────────────────────────────────────

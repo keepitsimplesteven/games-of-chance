@@ -6,15 +6,17 @@
   "main": "./src/room.ts",
   "scripts": {
     "build": "tsc --build",
-    "dev": "npx partykit dev",
-    "deploy": "npx partykit deploy",
-    "typecheck": "tsc --noEmit"
+    "dev": "npx partykit dev --config ../../partykit.json --port 1999",
+    "deploy": "npx partykit deploy --config ../../partykit.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@games-of-chance/shared": "workspace:*",
     "partykit": "^0.0.115"
   },
   "devDependencies": {
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "vitest": "^3.2.7"
   }
 }
