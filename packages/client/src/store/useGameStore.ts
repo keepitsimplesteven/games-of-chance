@@ -1,5 +1,5 @@
 import { create } from "zustand"
-import type { RoomState } from "@games-of-chance/shared"
+import type { RoomState, ClientMessage } from "@games-of-chance/shared"
 
 // ── Join Flow State Machine ────────────────────────────────────────────────
 
@@ -32,10 +32,17 @@ export interface GameStore {
   pickSubmitted: boolean
   currentRoundNumber: number | null
 
+  // Animation state — shared so GameView can gate the leaderboard
+  roundAnimationDone: boolean
+
+  // Socket send reference — set by usePartySocket when connected
+  _socketSend: ((msg: ClientMessage) => void) | null
+
   // Actions
   connect: (roomId: string, name: string, role: "host" | "player") => void
   submitPick: (pick: unknown) => void
   startRound: () => void
+  endGame: () => void
 
   // Internal actions
   _onStateSync: (state: RoomState) => void
@@ -56,6 +63,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   roomState: null,
   pickSubmitted: false,
   currentRoundNumber: null,
+  roundAnimationDone: false,
+  _socketSend: null,
 
   // ── Actions ────────────────────────────────────────────────────────────
 
@@ -77,13 +86,30 @@ export const useGameStore = create<GameStore>((set, get) => ({
     })
   },
 
-  submitPick: (_pick: unknown) => {
+  submitPick: (pick: unknown) => {
+    const { _socketSend } = get()
     // Optimistically mark pick as submitted
     set({ pickSubmitted: true })
+    // Send to server
+    if (_socketSend) {
+      _socketSend({ type: "SUBMIT_PICK", payload: { pick } })
+    }
   },
 
   startRound: () => {
-    // No client-side state changes needed — server broadcasts STATE_SYNC
+    const { _socketSend } = get()
+    // Send START_ROUND to server
+    if (_socketSend) {
+      _socketSend({ type: "START_ROUND" })
+    }
+  },
+
+  endGame: () => {
+    const { _socketSend } = get()
+    // Send END_GAME to server
+    if (_socketSend) {
+      _socketSend({ type: "END_GAME" })
+    }
   },
 
   // ── Internal Actions ───────────────────────────────────────────────────
@@ -112,6 +138,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         roomState: state,
         role: serverRole,
         pickSubmitted: false,
+        roundAnimationDone: false,
         currentRoundNumber: state.round.roundNumber,
       })
     } else {

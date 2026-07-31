@@ -45,6 +45,15 @@ export function usePartySocket(
       setConnectionStatus("connected")
       useGameStore.setState({ connectionStatus: "connected" })
 
+      // Store the send function reference in Zustand for use by submitPick/startRound
+      useGameStore.setState({
+        _socketSend: (msg: ClientMessage) => {
+          if (socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify(msg))
+          }
+        },
+      })
+
       // Send JOIN message upon connection with clientId for stable identity
       const { clientId } = useGameStore.getState()
       const joinMsg: ClientMessage = {
@@ -93,7 +102,7 @@ export function usePartySocket(
     // ── Connection closed ──────────────────────────────────────────────────
     socket.addEventListener("close", () => {
       setConnectionStatus("disconnected")
-      useGameStore.setState({ connectionStatus: "disconnected" })
+      useGameStore.setState({ connectionStatus: "disconnected", _socketSend: null })
     })
 
     // ── Connection error ───────────────────────────────────────────────────
@@ -106,6 +115,7 @@ export function usePartySocket(
     return () => {
       socket.close()
       socketRef.current = null
+      useGameStore.setState({ _socketSend: null })
     }
   }, [roomId, playerName, role])
 

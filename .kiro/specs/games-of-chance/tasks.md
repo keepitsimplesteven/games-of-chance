@@ -134,15 +134,15 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
 
 ---
 
-- [ ] 7. Implement CoinTossPlugin constants and plugin
-  - [ ] 7.1 Create tuning constants file at `packages/server/src/games/coin-toss/constants.ts`
+- [x] 7. Implement CoinTossPlugin constants and plugin
+  - [x] 7.1 Create tuning constants file at `packages/server/src/games/coin-toss/constants.ts`
     - Export single `as const` object named `COIN_TOSS` with UPPER_SNAKE_CASE keys
     - Values: `CORRECT_GUESS_CHIPS: 10`, `PICK_WINDOW_MS: 10_000`, `STREAK_MULTIPLIER: 2` (future), `STREAK_THRESHOLD: 3` (future), `MAX_MULTIPLIER: 5` (future)
     - Each value has JSDoc comment; future values annotated with `(future)`
     - **This file MUST be created BEFORE the plugin implementation**
     - _Requirements: 15.1, 15.2, 15.3, 15.4_
 
-  - [ ] 7.2 Implement CoinTossPlugin at `packages/server/src/games/coin-toss/CoinTossPlugin.ts`
+  - [x] 7.2 Implement CoinTossPlugin at `packages/server/src/games/coin-toss/CoinTossPlugin.ts`
     - Import all tuning values from `./constants` — NO inline magic numbers
     - `validatePick`: accepts only objects with `side === "HEADS" || side === "TAILS"`
     - `resolveRound`: determine outcome via `Math.random() < 0.5` — independent of submitted picks (fair coin)
@@ -163,15 +163,15 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - **Property CT-3: Validation Exclusivity** — `validatePick` returns true if and only if value is `{ side: "HEADS" }` or `{ side: "TAILS" }`.
     - **Validates: Requirements 11.6, 12.3**
 
-- [ ] 8. Implement START_ROUND handler and round lifecycle on server
-  - [ ] 8.1 Implement `beginRound()` and `START_ROUND` message handler
+- [x] 8. Implement START_ROUND handler and round lifecycle on server
+  - [x] 8.1 Implement `beginRound()` and `START_ROUND` message handler
     - On `START_ROUND` from host when `phase ∈ {"LOBBY", "RESULT"}`: call `beginRound()`
     - `beginRound()`: cancel any lingering timer, set phase to `PICKING`, increment roundNumber, reset picks to empty, set `pickDeadlineMs = now() + plugin.pickWindowMs`, broadcast STATE_SYNC, schedule deadline timer via `scheduleResolve(plugin.pickWindowMs)`
     - Reject non-host with `ERROR { code: "NOT_HOST" }`
     - Reject wrong phase with `ERROR { code: "WRONG_PHASE" }`
     - _Requirements: 9.1, 9.2, 9.3, 9.4_
 
-  - [ ] 8.2 Implement `SUBMIT_PICK` handler with PICK_ACK
+  - [x] 8.2 Implement `SUBMIT_PICK` handler with PICK_ACK
     - Guard: reject if `phase ≠ "PICKING"` with `ERROR { code: "WRONG_PHASE" }`
     - Guard: reject if `currentTime > pickDeadlineMs` with `ERROR { code: "DEADLINE_PASSED" }`
     - Guard: silently ignore if player already has a pick recorded (pick immutability)
@@ -180,7 +180,7 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - After recording: check if all connected players have picked — if yes, `cancelDeadlineTimer()` then `scheduleResolve(0)` for immediate resolution
     - _Requirements: 10.3, 10.4, 11.3, 11.5, 11.6, 11.7_
 
-  - [ ] 8.3 Implement `resolveRound()` with timer cancellation and idempotency guard
+  - [x] 8.3 Implement `resolveRound()` with timer cancellation and idempotency guard
     - **CRITICAL — prevents the double-fire bug from first implementation:**
     - **Idempotency guard**: If `phase ≠ "PICKING"` at time of call, perform NO state mutation — return immediately (no-op). Both timer-expiry and "all-picks-in" may call this; only the first takes effect.
     - **Timer cancellation**: Call `cancelDeadlineTimer()` BEFORE any resolution logic executes, regardless of whether called from timer expiry or early resolve.
@@ -197,7 +197,7 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - **Property 22: Timer Cancellation on Early Resolve** — When all players submit picks before deadline, the timer is cancelled before resolveRound executes.
     - **Validates: Requirements 10.4, 12.6**
 
-  - [ ] 8.5 Implement `END_GAME` handler and disconnection during PICKING phase
+  - [x] 8.5 Implement `END_GAME` handler and disconnection during PICKING phase
     - `END_GAME`: accept only from host when `phase ∈ {"RESULT", "LOBBY"}` — transition to LOBBY, reset game scores and game leaderboard, broadcast STATE_SYNC
     - Disconnection during PICKING: if all remaining connected players have submitted picks after a disconnect, call `cancelDeadlineTimer()` then proceed to immediate resolution
     - Host disconnect during PICKING: suspend pick deadline timer until new host present
@@ -210,8 +210,8 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - **Property 9: Pick Window Enforcement** — SUBMIT_PICK after deadline returns ERROR and is not recorded.
     - **Validates: Requirements 9.3, 10.3, 11.5, 17.4**
 
-- [ ] 9. Implement client game UI — pick widget and countdown
-  - [ ] 9.1 Create CoinTossContainer component (`packages/client/src/games/coin-toss/CoinTossContainer.tsx`)
+- [x] 9. Implement client game UI — pick widget and countdown
+  - [x] 9.1 Create CoinTossContainer component (`packages/client/src/games/coin-toss/CoinTossContainer.tsx`)
     - Reads `roomState.round` from Zustand store
     - **Phase guards — prevents "Start Round" appearing during active rounds bug:**
     - Renders `PickWidget` ONLY when `phase === "PICKING"` AND `pickSubmitted === false`
@@ -220,7 +220,7 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - Renders `ResultDisplay` once animation completes (via `onAnimationComplete` callback)
     - _Requirements: 16.2, 16.3_
 
-  - [ ] 9.2 Create PickWidget with countdown timer (`packages/client/src/games/coin-toss/PickWidget.tsx`)
+  - [x] 9.2 Create PickWidget with countdown timer (`packages/client/src/games/coin-toss/PickWidget.tsx`)
     - Display Heads and Tails buttons — minimum tap target height 64px on mobile
     - **Phase guard**: component ONLY renders when `phase === "PICKING"` AND `pickSubmitted === false`
     - Show countdown timer derived from `pickDeadlineMs - Date.now()`
@@ -229,8 +229,8 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - Full-width buttons on mobile, Tailwind responsive
     - _Requirements: 10.1, 11.1, 11.2, 11.4, 22.2_
 
-- [ ] 10. Implement client result display and game leaderboard
-  - [ ] 10.1 Create placeholder animation assets (sprites + motion variants)
+- [x] 10. Implement client result display and game leaderboard
+  - [x] 10.1 Create placeholder animation assets (sprites + motion variants)
     - Create `packages/client/src/games/coin-toss/assets/sprites/coin-heads.svg` — simple circular SVG with distinct "H" face, subtle gradient, drop shadow
     - Create `packages/client/src/games/coin-toss/assets/sprites/coin-tails.svg` — simple circular SVG with distinct "T" face
     - Create `packages/client/src/games/coin-toss/assets/sprites/coin-edge.svg` — thin edge view
@@ -238,7 +238,7 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - Assets are designed to be easily swappable without logic changes
     - _Requirements: 18.5, 18.6_
 
-  - [ ] 10.2 Create CoinFlipAnimation component (`packages/client/src/games/coin-toss/CoinFlipAnimation.tsx`)
+  - [x] 10.2 Create CoinFlipAnimation component (`packages/client/src/games/coin-toss/CoinFlipAnimation.tsx`)
     - Import sprites from `assets/sprites/` and motion variants from `assets/animations/flipVariants.ts`
     - Use `result.flippedAt` timestamp to synchronize animation start across clients
     - If `flippedAt` is in the past (reconnection): skip animation, show final result face immediately
@@ -248,7 +248,7 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - Size to `40vmin` for portrait and landscape compatibility
     - _Requirements: 18.1, 18.2, 18.3, 18.4, 22.5_
 
-  - [ ] 10.3 Create ResultDisplay component (`packages/client/src/games/coin-toss/ResultDisplay.tsx`)
+  - [x] 10.3 Create ResultDisplay component (`packages/client/src/games/coin-toss/ResultDisplay.tsx`)
     - Show outcome prominently (Heads or Tails label)
     - List players who picked correctly (winners)
     - Show +10 / 0 score delta per player
@@ -256,14 +256,14 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - Vertically stacked layout on mobile viewports
     - _Requirements: 13.3, 13.4, 22.4_
 
-  - [ ] 10.4 Create GameLeaderboard component (`packages/client/src/components/game/GameLeaderboard.tsx`)
+  - [x] 10.4 Create GameLeaderboard component (`packages/client/src/components/game/GameLeaderboard.tsx`)
     - Render game leaderboard: player name, game score, rank for each entry
     - Update on each STATE_SYNC
     - Only connected players appear
     - _Requirements: 14.5_
 
-- [ ] 11. Implement host round controls with phase guards
-  - [ ] 11.1 Create RoundControls component (`packages/client/src/components/game/RoundControls.tsx`)
+- [x] 11. Implement host round controls with phase guards
+  - [x] 11.1 Create RoundControls component (`packages/client/src/components/game/RoundControls.tsx`)
     - **Phase guard — prevents "Start Round" appearing during active rounds bug:**
     - "Start Round" button: rendered ONLY when `phase ∈ {"LOBBY", "RESULT"}` AND `role === "host"`
     - "Next Round" button: rendered ONLY when `phase === "RESULT"` AND `role === "host"` (sends START_ROUND)
@@ -272,7 +272,7 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - Sends appropriate ClientMessage through PartySocket
     - _Requirements: 9.1, 16.1, 16.4, 17.1, 17.2_
 
-  - [ ] 11.2 Wire GameView shell and integrate all game components
+  - [x] 11.2 Wire GameView shell and integrate all game components
     - `GameView` renders inside `LobbyShell` when a game is active (phase ≠ LOBBY)
     - Contains: `CoinTossContainer` (dynamic per gameType), `GameLeaderboard`, `RoundControls`
     - On `END_GAME` response (phase returns to LOBBY): hide game view, show lobby game tiles again
@@ -285,7 +285,7 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - **Property 12: Leaderboard Tie Rank Equality** — Two players with identical scores get equal rank values.
     - **Validates: Requirements 14.1, 14.2, 14.3, 14.4**
 
-- [ ] 12. Milestone 2 Checkpoint
+- [x] 12. Milestone 2 Checkpoint
   - Ensure all tests pass (`pnpm test`)
   - Test full round lifecycle: host starts round → players pick → deadline or all-picks-in → resolve → result displayed
   - Test early resolution: all players pick before deadline, timer is cancelled, round resolves immediately
@@ -303,7 +303,7 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
 ---
 
 - [ ] 13. Implement session scoring strategies
-  - [ ] 13.1 Create SessionScoringStrategy interface and implementations (`packages/server/src/scoring/`)
+  - [~] 13.1 Create SessionScoringStrategy interface and implementations (`packages/server/src/scoring/`)
     - `SessionScoringStrategy` interface: `applyGameResult(players, gameLeaderboard, rawScores) → SessionUpdate`
     - `GrandPrixStrategy`: award placement points based solely on final `gameLeaderboard` rankings and `placementPoints` table (default `[10, 5, 3, 1, 1, 1, 1, 0, 0, 0]`) — never from raw scores directly
     - `ChipsStrategy`: accumulate raw game deltas directly as session points — no rank-based transformation
@@ -317,7 +317,7 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - **Property 21: Chips Mode Direct Accumulation** — Session score update equals sum of raw deltas with no rank transformation.
     - **Validates: Requirements 19.4, 19.5, 20.3**
 
-  - [ ] 13.3 Wire session scoring into END_GAME flow on server
+  - [~] 13.3 Wire session scoring into END_GAME flow on server
     - On `END_GAME`: look up `SessionScoringStrategy` based on `roomConfig.scoringMode`
     - Call `strategy.applyGameResult(players, gameLeaderboard, gameScores)` to get `SessionUpdate`
     - Update `sessionScores` and `sessionLeaderboard` in room state
@@ -326,13 +326,13 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - _Requirements: 20.1, 17.3_
 
 - [ ] 14. Implement session leaderboard and scoring mode selection
-  - [ ] 14.1 Add scoring mode selection to room creation flow
+  - [~] 14.1 Add scoring mode selection to room creation flow
     - On LandingPage "Create Room": present scoring mode selector with "GrandPrix" and "Chips" options
     - Store selected mode in `RoomConfig.scoringMode` — set at creation, immutable during session
     - Pass scoring mode to server in JOIN message payload when creating room (host role)
     - _Requirements: 19.1, 19.2_
 
-  - [ ] 14.2 Create SessionLeaderboard component and display on player list
+  - [~] 14.2 Create SessionLeaderboard component and display on player list
     - Show each player's name, cumulative session points, games played, and rank
     - Update when STATE_SYNC contains new session leaderboard data
     - Tied players show equal rank
@@ -340,7 +340,7 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - _Requirements: 20.2, 20.4, 6.7_
 
 - [ ] 15. Implement reconnection logic
-  - [ ] 15.1 Implement client reconnection handling
+  - [~] 15.1 Implement client reconnection handling
     - PartySocket already provides exponential backoff (configured in task 4.4)
     - On reconnection established: server sends full STATE_SYNC automatically (already implemented in M1)
     - On reconnect during PICKING phase: restore pick interface with correct deadline countdown from received `pickDeadlineMs`
@@ -350,7 +350,7 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - _Requirements: 21.3, 21.4, 21.5, 21.6_
 
 - [ ] 16. Deployment configuration
-  - [ ] 16.1 Configure deployment pipeline
+  - [~] 16.1 Configure deployment pipeline
     - Ensure `packages/client` builds to static assets via `vite build` (suitable for Cloudflare Pages)
     - Ensure `packages/server` is deployable via `npx partykit deploy` using `partykit.json`
     - `partykit.json` specifies server entry point and Cloudflare Pages domain for CORS
@@ -358,7 +358,7 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - CORS restricted to configured Pages domain origin
     - _Requirements: 23.1, 23.2, 23.3, 23.4, 23.5_
 
-- [ ] 17. Milestone 3 Checkpoint — Final
+- [~] 17. Milestone 3 Checkpoint — Final
   - Ensure all tests pass (`pnpm test`)
   - Test session scoring: play multiple games, verify GrandPrix awards placement points by rank, Chips accumulates raw deltas
   - Test scoring mode selection at room creation persists for the session

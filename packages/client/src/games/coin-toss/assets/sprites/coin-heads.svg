@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="coinGradientH" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFD700" />
+      <stop offset="50%" stop-color="#FFC107" />
+      <stop offset="100%" stop-color="#B8860B" />
+    </linearGradient>
+    <filter id="dropShadowH" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#00000040" />
+    </filter>
+  </defs>
+  <!-- Coin body -->
+  <circle cx="100" cy="100" r="90" fill="url(#coinGradientH)" stroke="#B8860B" stroke-width="4" filter="url(#dropShadowH)" />
+  <!-- Inner ring -->
+  <circle cx="100" cy="100" r="75" fill="none" stroke="#DAA520" stroke-width="2" />
+  <!-- "H" letter -->
+  <text x="100" y="120" text-anchor="middle" font-family="Georgia, serif" font-size="80" font-weight="bold" fill="#7B5B00">H</text>
+</svg>
