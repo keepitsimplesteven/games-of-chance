@@ -1,6 +1,16 @@
 import { describe, it, expect } from "vitest"
 import { coinTossPlugin } from "../games/coin-toss/CoinTossPlugin"
-import type { Player } from "@games-of-chance/shared"
+import type { Player, GameSettings } from "@games-of-chance/shared"
+
+const defaultSettings: GameSettings = {
+  roundCount: 10,
+  pickWindowMs: 10_000,
+  tuning: {
+    CORRECT_GUESS_CHIPS: 10,
+    STREAK_MULTIPLIER: 2,
+    STREAK_THRESHOLD: 3,
+  },
+}
 
 describe("CoinTossPlugin", () => {
   describe("validatePick", () => {
@@ -39,12 +49,12 @@ describe("CoinTossPlugin", () => {
 
   describe("resolveRound", () => {
     it("returns a valid CoinSide outcome", () => {
-      const result = coinTossPlugin.resolveRound({ p1: { side: "HEADS" } })
+      const result = coinTossPlugin.resolveRound({ p1: { side: "HEADS" } }, defaultSettings)
       expect(["HEADS", "TAILS"]).toContain(result.outcome)
     })
 
     it("returns a flippedAt timestamp", () => {
-      const result = coinTossPlugin.resolveRound({ p1: { side: "TAILS" } })
+      const result = coinTossPlugin.resolveRound({ p1: { side: "TAILS" } }, defaultSettings)
       expect(result.flippedAt).toBeTypeOf("number")
       expect(result.flippedAt).toBeGreaterThan(0)
     })
@@ -64,7 +74,7 @@ describe("CoinTossPlugin", () => {
       const picks = { p1: { side: "HEADS" as const }, p2: { side: "TAILS" as const } }
       const result = { outcome: "HEADS" as const, flippedAt: Date.now() }
 
-      const scoreResult = coinTossPlugin.scoreRound(picks, result, players)
+      const scoreResult = coinTossPlugin.scoreRound(picks, result, players, defaultSettings)
 
       expect(scoreResult.deltas.p1).toBe(10)
       expect(scoreResult.deltas.p2).toBe(0)
@@ -75,7 +85,7 @@ describe("CoinTossPlugin", () => {
       const picks = { p1: { side: "TAILS" as const } }
       const result = { outcome: "HEADS" as const, flippedAt: Date.now() }
 
-      const scoreResult = coinTossPlugin.scoreRound(picks, result, players)
+      const scoreResult = coinTossPlugin.scoreRound(picks, result, players, defaultSettings)
 
       expect(scoreResult.deltas.p1).toBe(0)
     })
@@ -85,7 +95,7 @@ describe("CoinTossPlugin", () => {
       const picks = { p1: { side: "HEADS" as const }, p2: { side: "HEADS" as const } }
       const result = { outcome: "HEADS" as const, flippedAt: Date.now() }
 
-      const scoreResult = coinTossPlugin.scoreRound(picks, result, players)
+      const scoreResult = coinTossPlugin.scoreRound(picks, result, players, defaultSettings)
 
       expect(scoreResult.deltas.p1).toBe(10)
       expect(scoreResult.deltas.p2).toBeUndefined()

@@ -87,6 +87,12 @@ const roomStateArb: fc.Arbitrary<RoomState> = fc.record({
   gameLeaderboard: fc.constant([]),
   sessionLeaderboard: fc.constant([]),
   adjustmentLog: fc.constant([]),
+  gameSettings: fc.record({
+    roundCount: fc.integer({ min: 1, max: 50 }),
+    pickWindowMs: fc.integer({ min: 3000, max: 60000 }),
+    tuning: fc.constant({}),
+  }),
+  settingsLocked: fc.boolean(),
 })
 
 /**

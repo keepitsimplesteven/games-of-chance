@@ -9,6 +9,41 @@ export type GameType = string
 /** Session scoring mode — selected by host at room creation */
 export type ScoringMode = "grand-prix" | "chips"
 
+// ── Settings Schema ────────────────────────────────────────────────────────
+
+/** A single configurable field in a game plugin's settings schema */
+export interface SettingsFieldSchema {
+  /** Unique key — must match the constant name in the plugin's constants file */
+  key: string
+  /** Human-readable label for the UI */
+  label: string
+  /** Field type determines which input control is rendered */
+  type: "number" | "boolean" | "select"
+  /** Default value (matches the plugin constant's value) */
+  defaultValue: number | boolean | string
+  /** Validation constraints (type-specific) */
+  constraints?: {
+    min?: number
+    max?: number
+    step?: number
+    /** For "select" type only */
+    options?: { label: string; value: string }[]
+  }
+}
+
+/** The full settings schema a plugin may declare */
+export type SettingsSchema = SettingsFieldSchema[]
+
+/** Resolved game settings — defaults merged with host overrides */
+export interface GameSettings {
+  /** Number of rounds per game */
+  roundCount: number
+  /** Duration of the pick window in milliseconds */
+  pickWindowMs: number
+  /** Game-specific tuning constants (keyed by constant name) */
+  tuning: Record<string, number | boolean | string>
+}
+
 // ── Room & Player ──────────────────────────────────────────────────────────
 
 export interface RoomConfig {
@@ -131,6 +166,10 @@ export interface RoomState {
   gameLeaderboard: GameLeaderboardEntry[]
   sessionLeaderboard: SessionLeaderboardEntry[]
   adjustmentLog: AdjustmentLogEntry[]
+  /** Resolved game settings — shared + game-specific tuning */
+  gameSettings: GameSettings
+  /** Whether settings are currently locked (active game in progress) */
+  settingsLocked: boolean
 }
 
 // ── Messages ───────────────────────────────────────────────────────────────
@@ -147,6 +186,8 @@ export type ClientMessage =
   | { type: "REASSIGN_HOST"; payload: { targetPlayerId: string } }
   | { type: "ADJUST_SCORE"; payload: { targetPlayerId: string; delta: number; scoreType: "game" | "session"; reason?: string } }
   | { type: "LINK_PLAYER"; payload: { oldPlayerId: string; newConnectionId: string } }
+  | { type: "UPDATE_SETTINGS"; payload: { changes: Partial<GameSettings> } }
+  | { type: "SET_GAME_TYPE"; payload: { gameType: GameType } }
   | { type: "START_SIMULATION"; payload: { playerCount?: number; roundCount?: number; seed?: number } }
   | { type: "STOP_SIMULATION"; payload?: never }
 

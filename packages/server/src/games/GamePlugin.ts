@@ -1,4 +1,4 @@
-import type { Player, GameLeaderboardEntry, RoundScoreResult, GameType } from "@games-of-chance/shared"
+import type { Player, GameLeaderboardEntry, RoundScoreResult, GameType, SettingsSchema, GameSettings } from "@games-of-chance/shared"
 
 /**
  * Interface that each game plugin must implement.
@@ -9,20 +9,25 @@ export interface GamePlugin<TPick = unknown, TResult = unknown> {
   /** Identifier for this game type (e.g. "coin-toss") */
   gameType: GameType
 
+  /** Optional schema describing configurable fields for this game */
+  settingsSchema?: SettingsSchema
+
   /** Validate a player's pick before accepting it */
   validatePick(pick: unknown): pick is TPick
 
-  /** Compute the round result server-side */
-  resolveRound(picks: Record<string, TPick>): TResult
+  /** Compute the round result server-side using active game settings */
+  resolveRound(picks: Record<string, TPick>, settings: GameSettings): TResult
 
   /**
    * Determine which players scored this round and by how much.
    * Returns RoundScoreResult with raw deltas and optional modifiers.
+   * Uses active game settings for configured tuning values.
    */
   scoreRound(
     picks: Record<string, TPick>,
     result: TResult,
-    players: Player[]
+    players: Player[],
+    settings: GameSettings
   ): RoundScoreResult
 
   /**

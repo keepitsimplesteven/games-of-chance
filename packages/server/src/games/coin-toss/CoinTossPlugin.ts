@@ -5,10 +5,11 @@ import type {
   CoinTossPick,
   CoinTossResult,
   CoinSide,
+  GameSettings,
 } from "@games-of-chance/shared"
 import type { GamePlugin } from "../GamePlugin"
 import { registry } from "../GameRegistry"
-import { COIN_TOSS } from "./constants"
+import { COIN_TOSS, COIN_TOSS_SETTINGS_SCHEMA } from "./constants"
 
 /**
  * Coin Toss game plugin — fair 50/50 coin flip.
@@ -16,6 +17,8 @@ import { COIN_TOSS } from "./constants"
  */
 export const coinTossPlugin: GamePlugin<CoinTossPick, CoinTossResult> = {
   gameType: "coin-toss",
+
+  settingsSchema: COIN_TOSS_SETTINGS_SCHEMA,
 
   pickWindowMs: COIN_TOSS.PICK_WINDOW_MS,
 
@@ -25,7 +28,7 @@ export const coinTossPlugin: GamePlugin<CoinTossPick, CoinTossResult> = {
     return candidate.side === "HEADS" || candidate.side === "TAILS"
   },
 
-  resolveRound(_picks: Record<string, CoinTossPick>): CoinTossResult {
+  resolveRound(_picks: Record<string, CoinTossPick>, _settings: GameSettings): CoinTossResult {
     const outcome: CoinSide = Math.random() < 0.5 ? "HEADS" : "TAILS"
     return {
       outcome,
@@ -36,15 +39,17 @@ export const coinTossPlugin: GamePlugin<CoinTossPick, CoinTossResult> = {
   scoreRound(
     picks: Record<string, CoinTossPick>,
     result: CoinTossResult,
-    players: Player[]
+    players: Player[],
+    settings: GameSettings
   ): RoundScoreResult {
     const deltas: Record<string, number> = {}
+    const correctGuessChips = Number(settings.tuning.CORRECT_GUESS_CHIPS) || COIN_TOSS.CORRECT_GUESS_CHIPS
 
     for (const player of players) {
       if (!player.connected) continue
       const pick = picks[player.id]
       deltas[player.id] =
-        pick && pick.side === result.outcome ? COIN_TOSS.CORRECT_GUESS_CHIPS : 0
+        pick && pick.side === result.outcome ? correctGuessChips : 0
     }
 
     return { deltas }
