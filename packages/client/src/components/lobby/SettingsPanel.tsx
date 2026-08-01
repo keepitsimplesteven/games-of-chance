@@ -74,15 +74,6 @@ export default function SettingsPanel(): JSX.Element | null {
     updateSettings({ pickWindowMs: Math.round(clampedSeconds * 1000) })
   }
 
-  function handleScoringModeChange(mode: "grand-prix" | "chips") {
-    // Scoring mode is on RoomConfig, use UPDATE_SETTINGS with a special approach
-    // Per design: scoring mode updates go through updateSettings or SET_GAME_TYPE
-    // The server processes this via the existing mechanism
-    if (_socketSend) {
-      _socketSend({ type: "UPDATE_SETTINGS", payload: { changes: { scoringMode: mode } as any } })
-    }
-  }
-
   function handleAutoModeToggle(enabled: boolean) {
     // Auto-mode lives on RoomConfig, use SET_AUTO_MODE message
     if (_socketSend) {
@@ -187,28 +178,6 @@ export default function SettingsPanel(): JSX.Element | null {
             disabled={settingsLocked}
             className="min-h-[44px] w-full rounded-lg border border-gray-300 px-3 py-2 text-base text-gray-900 shadow-sm transition focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-300 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
           />
-        </div>
-
-        {/* Scoring mode selector */}
-        <div className="flex flex-col gap-1">
-          <label
-            htmlFor="settings-scoring-mode"
-            className="text-sm font-medium text-gray-700"
-          >
-            Scoring mode
-          </label>
-          <select
-            id="settings-scoring-mode"
-            value={room.scoringMode}
-            onChange={(e) =>
-              handleScoringModeChange(e.target.value as "grand-prix" | "chips")
-            }
-            disabled={settingsLocked}
-            className="min-h-[44px] w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 shadow-sm transition focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-300 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
-          >
-            <option value="grand-prix">Grand Prix</option>
-            <option value="chips">Chips</option>
-          </select>
         </div>
 
         {/* Auto-mode toggle */}

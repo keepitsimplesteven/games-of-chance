@@ -47,7 +47,8 @@ export function ResultDisplay({ result, players }: ResultDisplayProps) {
         {connectedPlayers.map((player) => {
           const pick = picks[player.id]
           const pickedCorrectly = pick?.side === outcome
-          const delta = pickedCorrectly ? 10 : 0
+          const correctGuessChips = Number(roomState?.gameSettings?.tuning?.CORRECT_GUESS_CHIPS) || 10
+          const delta = pickedCorrectly ? correctGuessChips : 0
 
           return (
             <li

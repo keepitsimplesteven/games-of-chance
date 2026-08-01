@@ -118,12 +118,10 @@ describe("SettingsPanel", () => {
 
       const roundCountInput = screen.getByLabelText("Rounds per game") as HTMLInputElement
       const pickWindowInput = screen.getByLabelText("Pick window (seconds)") as HTMLInputElement
-      const scoringModeSelect = screen.getByLabelText("Scoring mode") as HTMLSelectElement
       const autoModeToggle = screen.getByRole("switch")
 
       expect(roundCountInput).toBeDisabled()
       expect(pickWindowInput).toBeDisabled()
-      expect(scoringModeSelect).toBeDisabled()
       expect(autoModeToggle).toBeDisabled()
     })
 
@@ -134,55 +132,6 @@ describe("SettingsPanel", () => {
       render(<SettingsPanel />)
 
       expect(screen.queryByLabelText("Settings locked")).not.toBeInTheDocument()
-    })
-  })
-
-  // ── Scoring mode dropdown (Requirement 5.1) ────────────────────────────
-
-  describe("scoring mode dropdown", () => {
-    it("shows current value 'grand-prix' as selected", () => {
-      const roomState = buildMockRoomState()
-      setStoreState("host", roomState)
-
-      render(<SettingsPanel />)
-
-      const select = screen.getByLabelText("Scoring mode") as HTMLSelectElement
-      expect(select.value).toBe("grand-prix")
-    })
-
-    it("shows current value 'chips' as selected when room uses chips", () => {
-      const roomState = buildMockRoomState({
-        room: {
-          roomId: "test-room",
-          gameType: "coin-toss",
-          maxPlayers: 10,
-          scoringMode: "chips",
-          autoMode: false,
-          autoRoundIntervalMs: 5000,
-          placementPoints: [10, 5, 3, 1, 1, 1, 1, 0, 0, 0],
-        },
-      })
-      setStoreState("host", roomState)
-
-      render(<SettingsPanel />)
-
-      const select = screen.getByLabelText("Scoring mode") as HTMLSelectElement
-      expect(select.value).toBe("chips")
-    })
-
-    it("has Grand Prix and Chips options available", () => {
-      const roomState = buildMockRoomState()
-      setStoreState("host", roomState)
-
-      render(<SettingsPanel />)
-
-      const select = screen.getByLabelText("Scoring mode") as HTMLSelectElement
-      const options = select.querySelectorAll("option")
-      expect(options).toHaveLength(2)
-      expect(options[0].textContent).toBe("Grand Prix")
-      expect(options[0].value).toBe("grand-prix")
-      expect(options[1].textContent).toBe("Chips")
-      expect(options[1].value).toBe("chips")
     })
   })
 
