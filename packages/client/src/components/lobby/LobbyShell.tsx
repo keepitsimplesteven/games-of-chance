@@ -7,6 +7,8 @@ import GameTileGrid from "./GameTileGrid"
 import HostControls from "./HostControls"
 import ConnectionStatus from "../shared/ConnectionStatus"
 import GameView from "../game/GameView"
+import HostControlPanel from "../../host-panel/HostControlPanel"
+import ScoreAdjustmentNotification from "../../host-panel/ScoreAdjustmentNotification"
 
 interface LobbyShellProps {
   children?: ReactNode
@@ -58,6 +60,12 @@ export default function LobbyShell({ children }: LobbyShellProps) {
       {children && (
         <div className="mt-4 flex flex-1 flex-col gap-4">{children}</div>
       )}
+
+      {/* Host Control Panel — renders as overlay across all phases */}
+      <HostControlPanel />
+
+      {/* Score adjustment notification toasts — visible to all players */}
+      <ScoreAdjustmentNotification />
     </div>
   )
 }

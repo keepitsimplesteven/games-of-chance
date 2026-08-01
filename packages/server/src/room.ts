@@ -8,6 +8,7 @@ import type {
   RoundState,
   GameLeaderboardEntry,
   SessionLeaderboardEntry,
+  AdjustmentLogEntry,
 } from "@games-of-chance/shared"
 import { registry } from "./games/GameRegistry"
 import { getStrategy } from "./scoring"
@@ -29,6 +30,7 @@ interface LiveRoomState {
   sessionScores: Record<string, number>
   sessionGamesPlayed: Record<string, number>
   sessionLeaderboard: SessionLeaderboardEntry[]
+  adjustmentLog: AdjustmentLogEntry[]
 }
 
 // ── Default configuration ──────────────────────────────────────────────────
@@ -79,6 +81,7 @@ export default class GameRoom implements Party.Server {
       sessionScores: {},
       sessionGamesPlayed: {},
       sessionLeaderboard: [],
+      adjustmentLog: [],
     }
   }
 
@@ -121,6 +124,15 @@ export default class GameRoom implements Party.Server {
         break
       case "STOP_SIMULATION":
         this.handleStopSimulation(sender)
+        break
+      case "KICK_PLAYER":
+        this.handleKickPlayer(sender, msg.payload)
+        break
+      case "REASSIGN_HOST":
+        this.handleReassignHost(sender, msg.payload)
+        break
+      case "ADJUST_SCORE":
+        this.handleAdjustScore(sender, msg.payload)
         break
       default:
         this.sendError(
@@ -461,6 +473,141 @@ export default class GameRoom implements Party.Server {
     this.simulationAdapter = null
   }
 
+  private handleKickPlayer(
+    sender: Party.Connection,
+    payload: { playerId: string }
+  ) {
+    // Authorization: only host can kick players
+    const hostId = this.getHostId()
+    const senderId = this.getPlayerIdByConnectionId(sender.id)
+    if (senderId !== hostId) {
+      this.sendError(sender, "NOT_HOST", "Only the host can kick players")
+      return
+    }
+
+    // Validate target exists and is not the host
+    const target = this.state.players[payload.playerId]
+    if (!target) {
+      this.sendError(sender, "INVALID_TARGET", "Player not found")
+      return
+    }
+    if (target.role === "host") {
+      this.sendError(sender, "INVALID_TARGET", "Cannot kick the host")
+      return
+    }
+
+    // Remove player from state
+    delete this.state.players[payload.playerId]
+
+    // Close their WebSocket connection if connected
+    if (target.connectionId) {
+      const conn = [...this.room.getConnections()].find(
+        (c) => c.id === target.connectionId
+      )
+      conn?.close(4001, "Kicked by host")
+    }
+
+    // During PICKING: re-evaluate if all remaining connected players have picked
+    if (
+      this.state.round.phase === "PICKING" &&
+      this.allConnectedPlayersHavePicked()
+    ) {
+      this.cancelDeadlineTimer()
+      this.broadcastState()
+      this.scheduleResolve(0)
+      return
+    }
+
+    this.broadcastState()
+  }
+
+  private handleReassignHost(
+    sender: Party.Connection,
+    payload: { targetPlayerId: string }
+  ) {
+    // Authorization: only host can reassign the host role
+    const hostId = this.getHostId()
+    const senderId = this.getPlayerIdByConnectionId(sender.id)
+    if (senderId !== hostId) {
+      this.sendError(sender, "NOT_HOST", "Only the host can reassign the host role")
+      return
+    }
+
+    // Validate target exists and is connected
+    const target = this.state.players[payload.targetPlayerId]
+    if (!target || !target.connected) {
+      this.sendError(sender, "INVALID_TARGET", "Target player is not connected")
+      return
+    }
+
+    // Swap roles: demote current host to player, promote target to host
+    const currentHost = Object.values(this.state.players).find(p => p.role === "host")
+    if (currentHost) currentHost.role = "player"
+    target.role = "host"
+
+    this.broadcastState()
+  }
+
+  private handleAdjustScore(
+    sender: Party.Connection,
+    payload: { targetPlayerId: string; delta: number; scoreType: "game" | "session"; reason?: string }
+  ) {
+    // Authorization: only host can adjust scores
+    const hostId = this.getHostId()
+    const senderId = this.getPlayerIdByConnectionId(sender.id)
+    if (senderId !== hostId) {
+      this.sendError(sender, "NOT_HOST", "Only the host can adjust scores")
+      return
+    }
+
+    // Validate delta is integer
+    if (!Number.isInteger(payload.delta)) {
+      this.sendError(sender, "INVALID_PAYLOAD", "Delta must be an integer")
+      return
+    }
+
+    // Validate target exists
+    const target = this.state.players[payload.targetPlayerId]
+    if (!target) {
+      this.sendError(sender, "INVALID_TARGET", "Target player not found")
+      return
+    }
+
+    // Apply delta to the appropriate score
+    if (payload.scoreType === "game") {
+      this.state.gameScores[payload.targetPlayerId] =
+        (this.state.gameScores[payload.targetPlayerId] ?? 0) + payload.delta
+    } else {
+      this.state.sessionScores[payload.targetPlayerId] =
+        (this.state.sessionScores[payload.targetPlayerId] ?? 0) + payload.delta
+    }
+
+    // Append to adjustment log
+    const entry: AdjustmentLogEntry = {
+      id: crypto.randomUUID(),
+      targetPlayerId: payload.targetPlayerId,
+      delta: payload.delta,
+      scoreType: payload.scoreType,
+      reason: payload.reason ?? "",
+      timestamp: Date.now(),
+      performedBy: senderId!,
+    }
+    this.state.adjustmentLog.push(entry)
+
+    // Rebuild leaderboards after score change
+    if (payload.scoreType === "game") {
+      const plugin = registry.lookup(this.state.config.gameType)
+      this.state.gameLeaderboard = plugin.computeGameLeaderboard(
+        Object.values(this.state.players),
+        this.state.gameScores
+      )
+    }
+    // Always rebuild session leaderboard for consistency
+    this.state.sessionLeaderboard = this.computeSessionLeaderboard()
+
+    this.broadcastState()
+  }
+
   // ── Round lifecycle ────────────────────────────────────────────────────
 
   /**
@@ -721,6 +868,7 @@ export default class GameRoom implements Party.Server {
       round: this.state.round,
       gameLeaderboard: this.state.gameLeaderboard,
       sessionLeaderboard: this.state.sessionLeaderboard,
+      adjustmentLog: this.state.adjustmentLog ?? [],
     }
   }
 }
