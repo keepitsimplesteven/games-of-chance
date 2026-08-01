@@ -46,6 +46,9 @@ export interface GameStore {
   endGame: () => void
   startSimulation: (options?: { playerCount?: number; roundCount?: number; seed?: number }) => void
   stopSimulation: () => void
+  kickPlayer: (playerId: string) => void
+  reassignHost: (targetPlayerId: string) => void
+  adjustScore: (targetPlayerId: string, delta: number, scoreType: "game" | "session", reason?: string) => void
 
   // Internal actions
   _onStateSync: (state: RoomState) => void
@@ -135,6 +138,30 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const { _socketSend } = get()
     if (_socketSend) {
       _socketSend({ type: "STOP_SIMULATION" })
+    }
+  },
+
+  kickPlayer: (playerId: string) => {
+    const { _socketSend } = get()
+    if (_socketSend) {
+      _socketSend({ type: "KICK_PLAYER", payload: { playerId } })
+    }
+  },
+
+  reassignHost: (targetPlayerId: string) => {
+    const { _socketSend } = get()
+    if (_socketSend) {
+      _socketSend({ type: "REASSIGN_HOST", payload: { targetPlayerId } })
+    }
+  },
+
+  adjustScore: (targetPlayerId: string, delta: number, scoreType: "game" | "session", reason?: string) => {
+    const { _socketSend } = get()
+    if (_socketSend) {
+      _socketSend({
+        type: "ADJUST_SCORE",
+        payload: { targetPlayerId, delta, scoreType, ...(reason ? { reason } : {}) },
+      })
     }
   },
 

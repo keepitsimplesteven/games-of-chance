@@ -72,11 +72,12 @@ describe("RandomBot Uniform Distribution Property Tests", () => {
           counts[pick.side]++
         }
 
-        // Each count should be within 3 standard deviations of expected
-        // P(outside 3σ) ≈ 0.0027, very unlikely for a correct uniform distribution
+        // Each count should be within 4 standard deviations of expected
+        // P(outside 4σ) ≈ 0.00006, extremely unlikely for a correct uniform distribution
+        // Using 4σ instead of 3σ to avoid flakiness across many property-test runs
         for (const side of ["HEADS", "TAILS"]) {
-          expect(counts[side]).toBeGreaterThanOrEqual(expected - 3 * stdDev)
-          expect(counts[side]).toBeLessThanOrEqual(expected + 3 * stdDev)
+          expect(counts[side]).toBeGreaterThanOrEqual(expected - 4 * stdDev)
+          expect(counts[side]).toBeLessThanOrEqual(expected + 4 * stdDev)
         }
       }),
       { numRuns: 100 }

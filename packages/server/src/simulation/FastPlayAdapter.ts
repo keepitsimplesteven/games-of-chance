@@ -165,6 +165,7 @@ export class FastPlayAdapter {
       round,
       gameLeaderboard,
       sessionLeaderboard: [],
+      adjustmentLog: [],
       simulation: true,
     }
 

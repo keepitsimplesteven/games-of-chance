@@ -110,6 +110,18 @@ export interface SessionLeaderboardEntry {
   rank: number
 }
 
+// ── Score Adjustment Log ───────────────────────────────────────────────────
+
+export interface AdjustmentLogEntry {
+  id: string                    // unique ID (uuid or timestamp-based)
+  targetPlayerId: string
+  delta: number                 // positive or negative integer
+  scoreType: "game" | "session"
+  reason: string                // empty string if no reason provided
+  timestamp: number             // Date.now() on server
+  performedBy: string           // host player ID at time of adjustment
+}
+
 // ── Room State (full sync payload) ─────────────────────────────────────────
 
 export interface RoomState {
@@ -118,6 +130,7 @@ export interface RoomState {
   round: RoundState
   gameLeaderboard: GameLeaderboardEntry[]
   sessionLeaderboard: SessionLeaderboardEntry[]
+  adjustmentLog: AdjustmentLogEntry[]
 }
 
 // ── Messages ───────────────────────────────────────────────────────────────
@@ -131,6 +144,8 @@ export type ClientMessage =
   | { type: "SKIP_ANIMATION"; payload?: never }
   | { type: "SET_AUTO_MODE"; payload: { enabled: boolean; intervalMs: number } }
   | { type: "KICK_PLAYER"; payload: { playerId: string } }
+  | { type: "REASSIGN_HOST"; payload: { targetPlayerId: string } }
+  | { type: "ADJUST_SCORE"; payload: { targetPlayerId: string; delta: number; scoreType: "game" | "session"; reason?: string } }
   | { type: "LINK_PLAYER"; payload: { oldPlayerId: string; newConnectionId: string } }
   | { type: "START_SIMULATION"; payload: { playerCount?: number; roundCount?: number; seed?: number } }
   | { type: "STOP_SIMULATION"; payload?: never }
