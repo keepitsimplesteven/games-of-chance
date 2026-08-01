@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Steel Viper: Blue/sleek robot -->
+  <!-- Head -->
+  <ellipse cx="64" cy="28" rx="18" ry="14" fill="#2266cc" stroke="#1a3d7a" stroke-width="2"/>
+  <!-- Visor -->
+  <ellipse cx="64" cy="28" rx="12" ry="5" fill="#00ccff"/>
+  <!-- Neck -->
+  <rect x="58" y="40" width="12" height="6" fill="#1a3d7a"/>
+  <!-- Body (sleek/tapered) -->
+  <ellipse cx="64" cy="70" rx="22" ry="28" fill="#3388dd" stroke="#1a3d7a" stroke-width="2"/>
+  <!-- Core -->
+  <circle cx="64" cy="65" r="8" fill="#00ccff" opacity="0.8"/>
+  <!-- Arms (thin/sleek) -->
+  <rect x="26" y="50" width="10" height="36" fill="#2266cc" stroke="#1a3d7a" stroke-width="2" rx="5"/>
+  <rect x="92" y="50" width="10" height="36" fill="#2266cc" stroke="#1a3d7a" stroke-width="2" rx="5"/>
+  <!-- Claws -->
+  <polygon points="26,86 32,96 38,86" fill="#1a3d7a"/>
+  <polygon points="92,86 98,96 104,86" fill="#1a3d7a"/>
+  <!-- Legs (thin) -->
+  <rect x="50" y="96" width="10" height="24" fill="#2266cc" stroke="#1a3d7a" stroke-width="2" rx="4"/>
+  <rect x="68" y="96" width="10" height="24" fill="#2266cc" stroke="#1a3d7a" stroke-width="2" rx="4"/>
+  <!-- Feet (pointed) -->
+  <polygon points="46,120 56,120 51,128" fill="#1a3d7a"/>
+  <polygon points="72,120 82,120 77,128" fill="#1a3d7a"/>
+  <!-- Antenna fins -->
+  <polygon points="46,16 52,14 50,24" fill="#00ccff"/>
+  <polygon points="82,16 76,14 78,24" fill="#00ccff"/>
+</svg>

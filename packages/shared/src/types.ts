@@ -172,6 +172,23 @@ export interface RoomState {
   settingsLocked: boolean
 }
 
+// ── Battle Bots ────────────────────────────────────────────────────────────
+
+/** HP snapshot for a single battle, sent as part of a tick update */
+export interface BattleHPSnapshot {
+  battleId: string
+  robots: { ownerId: string; currentHp: number; eliminated: boolean }[]
+}
+
+/** Tick update sent to clients during battle-bots battles */
+export interface BattleTickUpdate {
+  type: "BATTLE_TICK"
+  payload: {
+    tick: number
+    battles: BattleHPSnapshot[]
+  }
+}
+
 // ── Messages ───────────────────────────────────────────────────────────────
 
 /** Client → Server messages */
@@ -197,3 +214,4 @@ export type ServerMessage =
   | { type: "PICK_ACK"; payload: { playerId: string } }
   | { type: "SKIP_ANIMATION"; payload?: never }
   | { type: "ERROR"; payload: { code: string; message: string } }
+  | BattleTickUpdate

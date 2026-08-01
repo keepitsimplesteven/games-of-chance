@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Chrome Fang: Green/bulky robot -->
+  <!-- Head -->
+  <rect x="42" y="14" width="44" height="30" fill="#228b22" stroke="#145214" stroke-width="2" rx="4"/>
+  <!-- Eyes -->
+  <circle cx="54" cy="26" r="5" fill="#00ff66"/>
+  <circle cx="74" cy="26" r="5" fill="#00ff66"/>
+  <!-- Mouth (fangs) -->
+  <polygon points="52,36 56,42 60,36" fill="#145214"/>
+  <polygon points="64,36 68,42 72,36" fill="#145214"/>
+  <!-- Body (wide/bulky) -->
+  <rect x="30" y="46" width="68" height="48" fill="#2ea82e" stroke="#145214" stroke-width="2" rx="6"/>
+  <!-- Chest bolts -->
+  <circle cx="48" cy="62" r="4" fill="#145214"/>
+  <circle cx="80" cy="62" r="4" fill="#145214"/>
+  <!-- Belly panel -->
+  <rect x="50" y="70" width="28" height="16" fill="#145214" rx="3"/>
+  <rect x="54" y="74" width="20" height="8" fill="#00ff66" opacity="0.6" rx="2"/>
+  <!-- Arms (thick) -->
+  <rect x="14" y="48" width="18" height="44" fill="#228b22" stroke="#145214" stroke-width="2" rx="4"/>
+  <rect x="96" y="48" width="18" height="44" fill="#228b22" stroke="#145214" stroke-width="2" rx="4"/>
+  <!-- Fists (large) -->
+  <rect x="14" y="90" width="18" height="16" fill="#145214" rx="4"/>
+  <rect x="96" y="90" width="18" height="16" fill="#145214" rx="4"/>
+  <!-- Legs (stocky) -->
+  <rect x="38" y="96" width="20" height="24" fill="#228b22" stroke="#145214" stroke-width="2" rx="3"/>
+  <rect x="70" y="96" width="20" height="24" fill="#228b22" stroke="#145214" stroke-width="2" rx="3"/>
+  <!-- Feet (wide) -->
+  <rect x="34" y="118" width="28" height="8" fill="#145214" rx="3"/>
+  <rect x="66" y="118" width="28" height="8" fill="#145214" rx="3"/>
+  <!-- Horns -->
+  <polygon points="46,14 50,4 54,14" fill="#00ff66"/>
+  <polygon points="74,14 78,4 82,14" fill="#00ff66"/>
+</svg>
