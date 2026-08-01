@@ -9,15 +9,13 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true
+    "composite": true,
+    "outDir": "./dist",
+    "rootDir": "./src"
   },
+  "include": ["src/**/*"],
   "references": [
-    { "path": "./packages/shared" },
-    { "path": "./packages/client" },
-    { "path": "./packages/server" },
-    { "path": "./packages/simulation" }
-  ],
-  "files": []
+    { "path": "../shared" },
+    { "path": "../server" }
+  ]
 }

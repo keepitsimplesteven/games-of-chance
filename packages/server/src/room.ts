@@ -14,6 +14,9 @@ import { getStrategy } from "./scoring"
 import { COIN_TOSS } from "./games/coin-toss/constants"
 // Side-effect import: registers the coin-toss plugin in the global registry
 import "./games/coin-toss/CoinTossPlugin"
+import { FastPlayAdapter } from "./simulation/FastPlayAdapter"
+// Side-effect import: registers coin-toss pick generator in the simulation registry
+import "@games-of-chance/simulation/src/pick-generators/coin-toss"
 
 // ── Server-side live state (not sent to clients directly) ──────────────────
 
@@ -59,6 +62,7 @@ export default class GameRoom implements Party.Server {
   readonly room: Party.Room
   private state!: LiveRoomState
   private deadlineTimerId: ReturnType<typeof setTimeout> | null = null
+  private simulationAdapter: FastPlayAdapter | null = null
 
   constructor(room: Party.Room) {
     this.room = room
@@ -111,6 +115,12 @@ export default class GameRoom implements Party.Server {
         break
       case "SKIP_ANIMATION":
         this.handleSkipAnimation(sender)
+        break
+      case "START_SIMULATION":
+        this.handleStartSimulation(sender, msg.payload)
+        break
+      case "STOP_SIMULATION":
+        this.handleStopSimulation(sender)
         break
       default:
         this.sendError(
@@ -390,6 +400,65 @@ export default class GameRoom implements Party.Server {
     // Broadcast SKIP_ANIMATION to all clients
     const msg: ServerMessage = { type: "SKIP_ANIMATION" }
     this.room.broadcast(JSON.stringify(msg))
+  }
+
+  private handleStartSimulation(
+    sender: Party.Connection,
+    payload: { playerCount?: number; roundCount?: number; seed?: number }
+  ) {
+    // Authorization: only host can start a simulation
+    const hostId = this.getHostId()
+    const senderId = this.getPlayerIdByConnectionId(sender.id)
+
+    if (senderId !== hostId) {
+      this.sendError(sender, "NOT_HOST", "Only the host can start a simulation")
+      return
+    }
+
+    // Phase guard: can only start from LOBBY or RESULT (same as START_ROUND)
+    if (
+      this.state.round.phase !== "LOBBY" &&
+      this.state.round.phase !== "RESULT"
+    ) {
+      this.sendError(
+        sender,
+        "WRONG_PHASE",
+        "Cannot start simulation in current phase"
+      )
+      return
+    }
+
+    // Create and run the FastPlayAdapter
+    const adapter = new FastPlayAdapter(this.room)
+    this.simulationAdapter = adapter
+
+    const gameType = this.state.config.gameType
+    const playerCount = payload.playerCount ?? 4
+    const roundCount = payload.roundCount ?? COIN_TOSS.MAX_ROUNDS
+    const seed = payload.seed
+
+    // Fire-and-forget: run the simulation asynchronously
+    adapter.run(gameType, playerCount, roundCount, seed).then(() => {
+      // Clear the reference when simulation completes naturally
+      if (this.simulationAdapter === adapter) {
+        this.simulationAdapter = null
+      }
+    })
+  }
+
+  private handleStopSimulation(sender: Party.Connection) {
+    // Authorization: only host can stop a simulation
+    const hostId = this.getHostId()
+    const senderId = this.getPlayerIdByConnectionId(sender.id)
+
+    if (senderId !== hostId) {
+      this.sendError(sender, "NOT_HOST", "Only the host can stop a simulation")
+      return
+    }
+
+    // Abort the running simulation
+    this.simulationAdapter?.abort()
+    this.simulationAdapter = null
   }
 
   // ── Round lifecycle ────────────────────────────────────────────────────

@@ -44,6 +44,8 @@ export interface GameStore {
   submitPick: (pick: unknown) => void
   startRound: () => void
   endGame: () => void
+  startSimulation: (options?: { playerCount?: number; roundCount?: number; seed?: number }) => void
+  stopSimulation: () => void
 
   // Internal actions
   _onStateSync: (state: RoomState) => void
@@ -112,6 +114,27 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // Send END_GAME to server
     if (_socketSend) {
       _socketSend({ type: "END_GAME" })
+    }
+  },
+
+  startSimulation: (options) => {
+    const { _socketSend } = get()
+    if (_socketSend) {
+      _socketSend({
+        type: "START_SIMULATION",
+        payload: {
+          playerCount: options?.playerCount,
+          roundCount: options?.roundCount,
+          seed: options?.seed,
+        },
+      })
+    }
+  },
+
+  stopSimulation: () => {
+    const { _socketSend } = get()
+    if (_socketSend) {
+      _socketSend({ type: "STOP_SIMULATION" })
     }
   },
 

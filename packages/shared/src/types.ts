@@ -132,6 +132,8 @@ export type ClientMessage =
   | { type: "SET_AUTO_MODE"; payload: { enabled: boolean; intervalMs: number } }
   | { type: "KICK_PLAYER"; payload: { playerId: string } }
   | { type: "LINK_PLAYER"; payload: { oldPlayerId: string; newConnectionId: string } }
+  | { type: "START_SIMULATION"; payload: { playerCount?: number; roundCount?: number; seed?: number } }
+  | { type: "STOP_SIMULATION"; payload?: never }
 
 /** Server → Client messages */
 export type ServerMessage =
