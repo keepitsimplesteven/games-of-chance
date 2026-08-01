@@ -1,0 +1,21 @@
+{
+  "enabled": true,
+  "name": "Code Quality Review",
+  "description": "Analyzes modified source code files for potential improvements including code smells, design patterns, and best practices. Generates suggestions for improving readability, maintainability, and performance while maintaining existing functionality.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "*.ts",
+      "*.tsx",
+      "*.js",
+      "*.jsx"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Analyze the modified code for potential improvements. Look for: 1) Code smells (long functions, deep nesting, duplicated logic, magic numbers), 2) Design pattern opportunities (where patterns could simplify or improve the code), 3) Best practices (proper error handling, type safety, naming conventions), 4) Readability improvements (clearer variable names, better function decomposition, improved comments), 5) Maintainability concerns (tight coupling, missing abstractions, hard-coded values), 6) Performance optimizations (unnecessary re-renders, inefficient algorithms, memory leaks). Provide concise, actionable suggestions that maintain existing functionality. Focus on the most impactful improvements rather than nitpicking minor style issues."
+  },
+  "workspaceFolderName": "games-of-chance",
+  "shortName": "code-quality-review"
+}

@@ -1,0 +1,15 @@
+{
+  "enabled": true,
+  "name": "Update Docs on Source Change",
+  "description": "When TypeScript source files or relevant config files are edited, asks the agent to review the change and update documentation (README.md files) to stay in sync.",
+  "version": "1",
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A source file was just edited. Review the change and determine if any documentation needs to be updated. If so, update the relevant README.md file(s) — either the root README.md or a package-level README.md (e.g., packages/simulation/README.md) — to reflect the change. Only update docs if the change is meaningful (new features, API changes, configuration changes, architectural changes). Do not update docs for minor refactors or formatting changes."
+  },
+  "workspaceFolderName": "games-of-chance",
+  "shortName": "update-docs-on-change"
+}
