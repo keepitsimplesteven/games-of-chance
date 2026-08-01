@@ -5,7 +5,7 @@ import type { ScoringMode } from "@games-of-chance/shared"
 export default function LandingPage() {
   const navigate = useNavigate()
   const [roomCode, setRoomCode] = useState("")
-  const [scoringMode, setScoringMode] = useState<ScoringMode>("grand-prix")
+  const [scoringMode, setScoringMode] = useState<ScoringMode>("chips")
   const [roomSize, setRoomSize] = useState(4)
 
   function handleCreateRoom() {
@@ -37,17 +37,6 @@ export default function LandingPage() {
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => setScoringMode("grand-prix")}
-              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                scoringMode === "grand-prix"
-                  ? "bg-indigo-600 text-white ring-2 ring-indigo-400"
-                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-              }`}
-            >
-              🏆 Grand Prix
-            </button>
-            <button
-              type="button"
               onClick={() => setScoringMode("chips")}
               className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
                 scoringMode === "chips"
@@ -56,6 +45,17 @@ export default function LandingPage() {
               }`}
             >
               🪙 Chips
+            </button>
+            <button
+              type="button"
+              onClick={() => setScoringMode("grand-prix")}
+              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                scoringMode === "grand-prix"
+                  ? "bg-indigo-600 text-white ring-2 ring-indigo-400"
+                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+              }`}
+            >
+              🏆 Grand Prix
             </button>
           </div>
           <p className="text-xs text-gray-500">
