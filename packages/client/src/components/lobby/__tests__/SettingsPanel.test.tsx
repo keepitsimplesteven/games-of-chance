@@ -16,6 +16,7 @@ function buildMockRoomState(overrides?: Partial<RoomState>): RoomState {
       autoMode: false,
       autoRoundIntervalMs: 5000,
       placementPoints: [10, 5, 3, 1, 1, 1, 1, 0, 0, 0],
+      roomSize: 4,
     },
     players: [
       { id: "host-1", name: "Host", role: "host", connected: true, connectionId: "conn-1" },
@@ -157,6 +158,7 @@ describe("SettingsPanel", () => {
           autoMode: true,
           autoRoundIntervalMs: 5000,
           placementPoints: [10, 5, 3, 1, 1, 1, 1, 0, 0, 0],
+          roomSize: 4,
         },
       })
       setStoreState("host", roomState)
@@ -188,6 +190,7 @@ describe("SettingsPanel", () => {
           autoMode: true,
           autoRoundIntervalMs: 5000,
           placementPoints: [10, 5, 3, 1, 1, 1, 1, 0, 0, 0],
+          roomSize: 4,
         },
       })
       setStoreState("host", roomState)

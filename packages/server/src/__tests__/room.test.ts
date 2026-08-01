@@ -56,8 +56,9 @@ describe("GameRoom", () => {
       const state = getStateFromBroadcast(mockRoom)
       const bob = state.players.find((p: any) => p.id === "bob-1")
       expect(bob.role).toBe("host")
+      // Alice is removed from the roster (replaced by a bot)
       const alice = state.players.find((p: any) => p.id === "alice-1")
-      expect(alice.role).toBe("player")
+      expect(alice).toBeUndefined()
     })
   })
 
@@ -175,14 +176,14 @@ describe("GameRoom", () => {
       const startMsg = JSON.stringify({ type: "START_ROUND" })
       await gameRoom.onMessage(startMsg, aliceConn as any)
 
-      // Both players pick (triggers scheduleResolve(0))
+      // Both players pick
       const pickHeads = JSON.stringify({ type: "SUBMIT_PICK", payload: { pick: { side: "HEADS" } } })
       const pickTails = JSON.stringify({ type: "SUBMIT_PICK", payload: { pick: { side: "TAILS" } } })
       await gameRoom.onMessage(pickHeads, aliceConn as any)
       await gameRoom.onMessage(pickTails, bobConn as any)
 
-      // Flush the scheduled resolve (setTimeout 0)
-      vi.advanceTimersByTime(0)
+      // Run all pending timers (bot picks + resolve)
+      vi.runAllTimers()
 
       // Now the round should be resolved (RESULT phase)
       const state = getStateFromBroadcast(mockRoom)
@@ -210,13 +211,13 @@ describe("GameRoom", () => {
       const startMsg = JSON.stringify({ type: "START_ROUND" })
       await gameRoom.onMessage(startMsg, aliceConn as any)
 
-      // Both pick
+      // Both humans pick
       const pickHeads = JSON.stringify({ type: "SUBMIT_PICK", payload: { pick: { side: "HEADS" } } })
       await gameRoom.onMessage(pickHeads, aliceConn as any)
       await gameRoom.onMessage(pickHeads, bobConn as any)
 
-      // scheduleResolve(0) is called — advance timers by 0 to flush
-      vi.advanceTimersByTime(0)
+      // Run all pending timers (bot picks + resolve)
+      vi.runAllTimers()
 
       // Should now be in RESULT phase
       const state = getStateFromBroadcast(mockRoom)
@@ -256,8 +257,8 @@ describe("GameRoom", () => {
       await gameRoom.onMessage(pickHeads, aliceConn as any)
       await gameRoom.onMessage(pickHeads, bobConn as any)
 
-      // Resolve the round
-      vi.advanceTimersByTime(0)
+      // Run all pending timers (bot picks + resolve)
+      vi.runAllTimers()
 
       // Verify we're in RESULT
       let state = getStateFromBroadcast(mockRoom)

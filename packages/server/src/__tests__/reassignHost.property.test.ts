@@ -32,8 +32,8 @@ describe("Feature: host-control-panel, Property 6: Reassign host swaps roles", (
   it("target becomes host, sender becomes player, exactly one host exists", async () => {
     await fc.assert(
       fc.asyncProperty(
-        // Generate player count between 2 and 10
-        fc.integer({ min: 2, max: 10 }),
+        // Generate player count between 2 and 4 (max roomSize is 4 by default, humans can't exceed it)
+        fc.integer({ min: 2, max: 4 }),
         // Generate a target index (which non-host player to target for reassignment)
         fc.integer({ min: 0, max: 100 }),
         async (playerCount, targetIndexSeed) => {
@@ -54,9 +54,9 @@ describe("Feature: host-control-panel, Property 6: Reassign host swaps roles", (
           const hostPlayer = state.players.find((p: any) => p.role === "host")
           expect(hostPlayer.id).toBe("player-0")
 
-          // Get non-host connected players
+          // Get non-host connected human players (exclude bots)
           const nonHostPlayers = state.players.filter(
-            (p: any) => p.role !== "host" && p.connected
+            (p: any) => p.role !== "host" && p.connected && !p.id.startsWith("bot:")
           )
           expect(nonHostPlayers.length).toBeGreaterThan(0)
 
@@ -93,8 +93,8 @@ describe("Feature: host-control-panel, Property 6: Reassign host swaps roles", (
           // Verify: the single host is the target player
           expect(hosts[0].id).toBe(targetPlayer.id)
 
-          // Verify: total player count unchanged
-          expect(state.players.length).toBe(playerCount)
+          // Verify: total player count unchanged (equals roomSize, including bots)
+          expect(state.players.length).toBe(4) // default roomSize
         }
       ),
       { numRuns: 100 }

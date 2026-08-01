@@ -6,10 +6,11 @@ export default function LandingPage() {
   const navigate = useNavigate()
   const [roomCode, setRoomCode] = useState("")
   const [scoringMode, setScoringMode] = useState<ScoringMode>("grand-prix")
+  const [roomSize, setRoomSize] = useState(4)
 
   function handleCreateRoom() {
     const roomId = crypto.randomUUID()
-    navigate(`/${roomId}`, { state: { scoringMode } })
+    navigate(`/${roomId}`, { state: { scoringMode, roomSize } })
   }
 
   function handleJoinRoom(e: React.FormEvent) {
@@ -61,6 +62,37 @@ export default function LandingPage() {
             {scoringMode === "grand-prix"
               ? "Points awarded by placement each game"
               : "Raw scores accumulate across games"}
+          </p>
+        </div>
+
+        {/* Room size selector */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-300">
+            Room Size
+          </label>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setRoomSize((s) => Math.max(2, s - 1))}
+              disabled={roomSize <= 2}
+              className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-800 text-lg font-bold text-gray-300 transition hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              −
+            </button>
+            <span className="w-8 text-center text-lg font-semibold text-white">
+              {roomSize}
+            </span>
+            <button
+              type="button"
+              onClick={() => setRoomSize((s) => Math.min(10, s + 1))}
+              disabled={roomSize >= 10}
+              className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-800 text-lg font-bold text-gray-300 transition hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              +
+            </button>
+          </div>
+          <p className="text-xs text-gray-500">
+            Total player slots (empty slots filled by bots)
           </p>
         </div>
 

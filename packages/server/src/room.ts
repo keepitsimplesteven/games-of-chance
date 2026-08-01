@@ -24,6 +24,7 @@ import "./games/coin-toss/CoinTossPlugin"
 import "./games/battle-bots/index"
 import { validateSettingsUpdate } from "./settings/validateSettings"
 import { FastPlayAdapter } from "./simulation/FastPlayAdapter"
+import { BotManager } from "./bots/BotManager"
 // Side-effect import: registers coin-toss pick generator in the simulation registry
 import "@games-of-chance/simulation/src/pick-generators/coin-toss"
 
@@ -58,6 +59,7 @@ function createDefaultConfig(roomId: string): RoomConfig {
     autoMode: false,
     autoRoundIntervalMs: 5000,
     placementPoints: [10, 5, 3, 1, 1, 1, 1, 0, 0, 0],
+    roomSize: 4,
   }
 }
 
@@ -109,6 +111,8 @@ export default class GameRoom implements Party.Server {
   private tickReplayTimerId: ReturnType<typeof setTimeout> | null = null
   /** Holds the round result during async tick replay so SKIP_ANIMATION can finalize it */
   private pendingResolveResult: unknown = null
+  private botManager: BotManager = new BotManager()
+  private botPickTimerIds: ReturnType<typeof setTimeout>[] = []
 
   constructor(room: Party.Room) {
     this.room = room
@@ -187,6 +191,9 @@ export default class GameRoom implements Party.Server {
       case "SET_GAME_TYPE":
         this.handleGameTypeChange(sender, msg.payload)
         break
+      case "UPDATE_ROOM_SIZE":
+        this.handleUpdateRoomSize(sender, msg.payload)
+        break
       default:
         this.sendError(
           sender,
@@ -208,19 +215,24 @@ export default class GameRoom implements Party.Server {
     player.connected = false
     player.connectionId = null
 
-    // If the disconnected player was the host, promote another connected player
+    // If the disconnected player was the host, promote another connected human player.
+    // Bots must NEVER become host — if no humans remain, there is no host.
     if (player.role === "host") {
+      player.role = "player"
       const nextHost = Object.values(this.state.players).find(
-        (p) => p.connected && p.id !== player.id
+        (p) => p.connected && p.id !== player.id && !this.botManager.isBot(p.id)
       )
       if (nextHost) {
-        player.role = "player"
         nextHost.role = "host"
       } else if (this.state.round.phase === "PICKING") {
         // Host disconnected during PICKING and no new host available — suspend timer
         this.cancelDeadlineTimer()
       }
+      // If no humans remain, no one is host. First human to rejoin becomes host.
     }
+
+    // Remove the disconnected player from the roster so a bot can replace them
+    delete this.state.players[player.id]
 
     // Disconnection during PICKING: if all remaining connected players have submitted picks,
     // cancel deadline timer and proceed to immediate resolution.
@@ -231,23 +243,30 @@ export default class GameRoom implements Party.Server {
     ) {
       this.cancelDeadlineTimer()
       this.broadcastState()
+      // Reconcile bots after a human disconnects (add a bot to replace the human)
+      this.reconcileBots()
       this.scheduleResolve(0)
       return
     }
 
     this.broadcastState()
+
+    // Reconcile bots after a human disconnects (add a bot to replace the human)
+    this.reconcileBots()
   }
 
   // ── Message handlers ───────────────────────────────────────────────────
 
   private handleJoin(
     connection: Party.Connection,
-    payload: { name: string; role: "host" | "player"; clientId: string; scoringMode?: "grand-prix" | "chips" }
+    payload: { name: string; role: "host" | "player"; clientId: string; scoringMode?: "grand-prix" | "chips"; roomSize?: number }
   ) {
     const playerCount = Object.keys(this.state.players).length
 
-    // Reject if at capacity
-    if (playerCount >= this.state.config.maxPlayers) {
+    // Reject if at capacity: when all slots are filled by humans (no bots to remove)
+    const botCount = Object.keys(this.state.players).filter(id => this.botManager.isBot(id)).length
+    const humanCount = playerCount - botCount
+    if (humanCount >= this.state.config.roomSize) {
       this.sendError(connection, "ROOM_FULL", "Room is at maximum capacity")
       return
     }
@@ -261,8 +280,8 @@ export default class GameRoom implements Party.Server {
     if (playerCount === 0) {
       // First player always gets host
       role = "host"
-    } else if (payload.role === "host" && !this.hasConnectedHost()) {
-      // Explicit host request when no host exists
+    } else if (!this.hasConnectedHost()) {
+      // No current host (all humans left, only bots remain) — this human becomes host
       role = "host"
     } else {
       // Demote duplicate host attempts to player
@@ -272,6 +291,11 @@ export default class GameRoom implements Party.Server {
     // If this is the first player (host) and they provided a scoring mode, apply it
     if (role === "host" && payload.scoringMode) {
       this.state.config.scoringMode = payload.scoringMode
+    }
+
+    // If this is the host creating the room and they provided a room size, apply it
+    if (role === "host" && payload.roomSize && Number.isInteger(payload.roomSize) && payload.roomSize >= 2 && payload.roomSize <= 10) {
+      this.state.config.roomSize = payload.roomSize
     }
 
     // Create the player
@@ -297,6 +321,9 @@ export default class GameRoom implements Party.Server {
     }
 
     this.broadcastState()
+
+    // Reconcile bots after a human joins (remove a bot to make room)
+    this.reconcileBots()
   }
 
   private handleStartRound(sender: Party.Connection) {
@@ -381,8 +408,8 @@ export default class GameRoom implements Party.Server {
     }
     sender.send(JSON.stringify(ackMsg))
 
-    // Check if all connected players have picked — if yes, resolve immediately
-    if (this.allConnectedPlayersHavePicked()) {
+    // Check if all players (humans + bots) have picked — if yes, resolve immediately
+    if (this.allPlayersHavePicked()) {
       this.cancelDeadlineTimer()
       this.scheduleResolve(0)
     }
@@ -586,11 +613,16 @@ export default class GameRoom implements Party.Server {
     ) {
       this.cancelDeadlineTimer()
       this.broadcastState()
+      // Reconcile bots after a player is kicked (add a bot to replace the kicked human)
+      this.reconcileBots()
       this.scheduleResolve(0)
       return
     }
 
     this.broadcastState()
+
+    // Reconcile bots after a player is kicked (add a bot to replace the kicked human)
+    this.reconcileBots()
   }
 
   private handleReassignHost(
@@ -609,6 +641,12 @@ export default class GameRoom implements Party.Server {
     const target = this.state.players[payload.targetPlayerId]
     if (!target || !target.connected) {
       this.sendError(sender, "INVALID_TARGET", "Target player is not connected")
+      return
+    }
+
+    // Bots cannot be promoted to host
+    if (this.botManager.isBot(payload.targetPlayerId)) {
+      this.sendError(sender, "INVALID_TARGET", "Cannot assign host role to a bot")
       return
     }
 
@@ -677,6 +715,54 @@ export default class GameRoom implements Party.Server {
     // Always rebuild session leaderboard for consistency
     this.state.sessionLeaderboard = this.computeSessionLeaderboard()
 
+    this.broadcastState()
+  }
+
+  private handleUpdateRoomSize(
+    sender: Party.Connection,
+    payload: { roomSize: number }
+  ) {
+    // Authorization: only host can change room size
+    const hostId = this.getHostId()
+    const senderId = this.getPlayerIdByConnectionId(sender.id)
+    if (senderId !== hostId) {
+      this.sendError(sender, "NOT_HOST", "Only the host can change room size")
+      return
+    }
+
+    // Lock guard: reject during active game
+    if (this.state.settingsLocked) {
+      this.sendError(sender, "SETTINGS_LOCKED", "Cannot change room size during an active game")
+      return
+    }
+
+    // Validate roomSize is an integer between 2 and 10
+    if (!Number.isInteger(payload.roomSize) || payload.roomSize < 2 || payload.roomSize > 10) {
+      this.sendError(sender, "INVALID_ROOM_SIZE", "Room size must be an integer between 2 and 10")
+      return
+    }
+
+    // Reject if new room size < current human player count
+    const humanCount = Object.keys(this.state.players).filter(
+      (id) => !this.botManager.isBot(id)
+    ).length
+    if (payload.roomSize < humanCount) {
+      this.sendError(
+        sender,
+        "ROOM_SIZE_TOO_SMALL",
+        `Cannot reduce room size below the number of human players (${humanCount})`
+      )
+      return
+    }
+
+    // Apply the new room size
+    this.state.config.roomSize = payload.roomSize
+
+    // Reconcile bots to match the new room size
+    this.reconcileBots()
+
+    // Broadcast state (reconcileBots already broadcasts if changes occurred,
+    // but we need to broadcast even if bot count didn't change, since roomSize config changed)
     this.broadcastState()
   }
 
@@ -831,8 +917,49 @@ export default class GameRoom implements Party.Server {
       }
 
       this.broadcastState()
+
+      // Schedule bot picks with random delays (500–2000ms per bot)
+      this.scheduleBotPicks()
+
       // Schedule the deadline timer
       this.scheduleResolve(this.state.gameSettings.pickWindowMs)
+    }
+  }
+
+  /**
+   * Schedule bot picks with random delays (500–2000ms per bot).
+   * Bots submit picks instantly so that the round resolves as soon as all
+   * HUMAN players have made their choices.
+   */
+  private scheduleBotPicks() {
+    this.cancelBotPickTimers()
+
+    const botIds = this.botManager.getBotIds()
+    if (botIds.length === 0) return
+
+    const plugin = registry.lookup(this.state.config.gameType)
+    const picks = this.botManager.generatePicks(
+      this.state.config.gameType,
+      this.state.gameSettings
+    )
+
+    // Submit all bot picks immediately (no delay)
+    for (const botId of botIds) {
+      const pick = picks[botId]
+      if (pick === undefined) continue
+      if (botId in this.state.round.picks) continue
+
+      // Validate pick via plugin (same validation as human picks)
+      if (!plugin.validatePick(pick)) continue
+
+      // Record the bot's pick instantly
+      this.state.round.picks[botId] = pick
+    }
+
+    // After all bot picks are in, check if all players have picked → early resolution
+    if (this.allPlayersHavePicked()) {
+      this.cancelDeadlineTimer()
+      this.scheduleResolve(0)
     }
   }
 
@@ -850,13 +977,25 @@ export default class GameRoom implements Party.Server {
     // Cancel deadline timer BEFORE any resolution logic
     this.cancelDeadlineTimer()
 
-    // Assign random picks to connected players who didn't submit in time
-    // (future: bot personas could provide different strategies here)
-    const connectedPlayers = Object.values(this.state.players).filter(p => p.connected)
-    for (const player of connectedPlayers) {
+    // Assign random picks to connected human players who didn't submit in time
+    const connectedHumans = Object.values(this.state.players).filter(
+      p => p.connected && !this.botManager.isBot(p.id)
+    )
+    for (const player of connectedHumans) {
       if (!(player.id in this.state.round.picks)) {
         const randomSide = Math.random() < 0.5 ? "HEADS" : "TAILS"
         this.state.round.picks[player.id] = { side: randomSide }
+      }
+    }
+
+    // Assign picks for bots that haven't submitted yet (their timers may not have fired)
+    const botPicks = this.botManager.generatePicks(
+      this.state.config.gameType,
+      this.state.gameSettings
+    )
+    for (const [botId, pick] of Object.entries(botPicks)) {
+      if (!(botId in this.state.round.picks)) {
+        this.state.round.picks[botId] = pick
       }
     }
 
@@ -1259,9 +1398,15 @@ export default class GameRoom implements Party.Server {
   /** Check if all connected players have submitted their picks */
   private allConnectedPlayersHavePicked(): boolean {
     const connectedPlayers = Object.values(this.state.players).filter(
-      (p) => p.connected
+      (p) => p.connected && !this.botManager.isBot(p.id)
     )
     return connectedPlayers.every((p) => p.id in this.state.round.picks)
+  }
+
+  /** Check if ALL players (humans + bots) have submitted their picks */
+  private allPlayersHavePicked(): boolean {
+    const allPlayerIds = Object.keys(this.state.players)
+    return allPlayerIds.every((id) => id in this.state.round.picks)
   }
 
   /** Cancel the deadline timer — idempotent (no-op if no timer) */
@@ -1270,6 +1415,15 @@ export default class GameRoom implements Party.Server {
       clearTimeout(this.deadlineTimerId)
       this.deadlineTimerId = null
     }
+    this.cancelBotPickTimers()
+  }
+
+  /** Cancel all pending bot pick timers — idempotent */
+  private cancelBotPickTimers() {
+    for (const timerId of this.botPickTimerIds) {
+      clearTimeout(timerId)
+    }
+    this.botPickTimerIds = []
   }
 
   /**
@@ -1320,6 +1474,59 @@ export default class GameRoom implements Party.Server {
       payload: { code, message },
     }
     connection.send(JSON.stringify(msg))
+  }
+
+  /**
+   * Reconcile bots to maintain the room size invariant.
+   * Adds or removes bots and updates player entries and scores accordingly.
+   */
+  private reconcileBots() {
+    const { added, removed } = this.botManager.reconcile(
+      this.state.players,
+      this.state.config.roomSize
+    )
+
+    // Add new bot player entries and initialize their scores
+    for (const persona of added) {
+      const botPlayer: Player = {
+        id: persona.id,
+        name: persona.name,
+        role: "player",
+        connected: true,
+        connectionId: null,
+      }
+      this.state.players[persona.id] = botPlayer
+
+      // Initialize scores to 0
+      this.state.gameScores[persona.id] = 0
+      this.state.sessionScores[persona.id] = 0
+      if (!(persona.id in this.state.sessionGamesPlayed)) {
+        this.state.sessionGamesPlayed[persona.id] = 0
+      }
+    }
+
+    // Remove departed bot entries and clean up their scores
+    for (const botId of removed) {
+      delete this.state.players[botId]
+      delete this.state.gameScores[botId]
+      delete this.state.sessionScores[botId]
+      delete this.state.sessionGamesPlayed[botId]
+
+      // Remove from game leaderboard
+      this.state.gameLeaderboard = this.state.gameLeaderboard.filter(
+        (entry) => entry.playerId !== botId
+      )
+
+      // Remove from session leaderboard
+      this.state.sessionLeaderboard = this.state.sessionLeaderboard.filter(
+        (entry) => entry.playerId !== botId
+      )
+    }
+
+    // Broadcast state if any changes occurred
+    if (added.length > 0 || removed.length > 0) {
+      this.broadcastState()
+    }
   }
 
   /**
