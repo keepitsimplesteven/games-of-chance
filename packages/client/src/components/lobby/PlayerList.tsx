@@ -78,6 +78,16 @@ export default function PlayerList() {
             const sessionScore = sessionEntry?.sessionPoints ?? 0
             const rank = sessionEntry?.rank ?? index + 1
 
+            // Color the rank badge for positions 1-3 in the list
+            const rankBadgeClass =
+              index === 0
+                ? "bg-yellow-400 text-yellow-900"
+                : index === 1
+                  ? "bg-gray-300 text-gray-700"
+                  : index === 2
+                    ? "bg-amber-600 text-amber-50"
+                    : "bg-gray-200 text-gray-700"
+
             return (
               <li
                 key={player.id}
@@ -89,7 +99,7 @@ export default function PlayerList() {
               >
                 <div className="flex items-center gap-2">
                   {/* Rank badge */}
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 text-xs font-bold text-gray-700">
+                  <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${rankBadgeClass}`}>
                     {rank}
                   </span>
 
