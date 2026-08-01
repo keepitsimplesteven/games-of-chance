@@ -445,17 +445,52 @@ PROCEDURE simulateBattle(robot1: RobotInstance, robot2: RobotInstance, tickRateM
     WAIT tickRateMs
   END WHILE
 
-  // Determine winner (if both reach 0 in same tick, attacker order wins — robot1 attacks first)
-  IF robot2.currentHp <= 0 THEN
+  // Determine winner — handle simultaneous KO with tiebreaker
+  IF robot1.currentHp <= 0 AND robot2.currentHp <= 0 THEN
+    winner ← resolveTiebreaker(robot1, robot2, tickLog, tick)
+  ELSE IF robot2.currentHp <= 0 THEN
     winner ← robot1.ownerId
   ELSE
     winner ← robot2.ownerId
   END IF
   RETURN winner
 END PROCEDURE
+
+PROCEDURE resolveTiebreaker(robot1, robot2, tickLog, currentTick)
+  // Up to 3 additional attack rolls to break the tie
+  FOR attempt ← 1 TO 3
+    // Both robots attack each other (same accuracy/damage rules)
+    roll1 ← randomInt(1, 100)
+    hit1 ← roll1 <= robot1.accuracy
+    damage1 ← IF hit1 THEN randomInt(robot1.damageMin, robot1.damageMax) ELSE 0
+
+    roll2 ← randomInt(1, 100)
+    hit2 ← roll2 <= robot2.accuracy
+    damage2 ← IF hit2 THEN randomInt(robot2.damageMin, robot2.damageMax) ELSE 0
+
+    // If one hit and the other missed, the hitter wins
+    IF hit1 AND NOT hit2 THEN RETURN robot1.ownerId
+    IF hit2 AND NOT hit1 THEN RETURN robot2.ownerId
+
+    // If both hit, higher damage wins
+    IF hit1 AND hit2 THEN
+      IF damage1 > damage2 THEN RETURN robot1.ownerId
+      IF damage2 > damage1 THEN RETURN robot2.ownerId
+      // Equal damage — continue to next attempt
+    END IF
+    // Both missed — continue to next attempt
+  END FOR
+
+  // After 3 failed tiebreaker rolls, 50/50 coin flip
+  coinFlip ← randomInt(1, 2)
+  IF coinFlip = 1 THEN RETURN robot1.ownerId
+  ELSE RETURN robot2.ownerId
+  // Winner's HP is left untouched (at 0 from the simultaneous KO tick — 
+  // in practice this means the winner "survives" with the HP they had before the final tick)
+END PROCEDURE
 ```
 
-**Note on simultaneous KO:** If both robots reach 0 HP in the same tick, the robot that attacked first (robot1 in the pairing) is declared the winner. This is deterministic and avoids ambiguity.
+**Note on simultaneous KO:** When both robots reach 0 HP in the same tick, up to 3 tiebreaker rolls are performed. Each roll has both robots attack normally — if one lands a hit and the other doesn't, the hitter wins. If both hit, the higher damage roll wins. If still tied after 3 attempts (both miss, or both deal equal damage), a plain 50/50 coin flip decides the winner. The winner's HP is left untouched from before the tiebreaker (they "survive" at whatever state triggered the tie).
 
 ### Battle Engine Algorithm (FFA)
 
@@ -727,8 +762,17 @@ case "BATTLE_TICK":
 
 ### Attack Order in 1v1
 - Robot 1 (first in pairing) always attacks first within a tick
-- This creates a tiny first-mover advantage but is deterministic
+- This does NOT give an advantage in the simultaneous KO case — tiebreaker rolls are used instead
 - Mitigated by random pairing assignment
+
+### Simultaneous KO Tiebreaker (1v1)
+- When both robots reach 0 HP in the same tick, up to 3 tiebreaker rolls are performed
+- Each tiebreaker roll: both robots attack each other using normal accuracy and damage
+- If one hits and the other misses → hitter wins
+- If both hit → higher damage wins; equal damage → continue to next roll
+- If both miss → continue to next roll
+- After 3 failed tiebreaker attempts → 50/50 coin flip determines the winner
+- Winner's HP is left at the value it was before the simultaneous KO tick (they "survive")
 
 ### Attack Order in FFA
 - Robots attack in participant array order (which is randomized at bracket creation)

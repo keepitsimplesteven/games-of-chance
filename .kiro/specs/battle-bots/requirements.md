@@ -76,9 +76,11 @@ Battle Bots is a 3-round competitive game plugin for the Games of Chance platfor
 2. THE Battle_Bots_Plugin SHALL advance the battle simulation by one tick at a configurable interval (default 250ms)
 3. WHEN a tick is processed, THE Battle_Bots_Plugin SHALL perform an Accuracy_Roll for each living robot by generating a random integer from 1 to 100 and comparing the result against the robot's accuracy percentage
 4. WHEN an Accuracy_Roll result is less than or equal to the robot's accuracy percentage, THE Battle_Bots_Plugin SHALL deal random damage to the opponent within the configured damage range (minimum to maximum, inclusive)
-5. WHEN a robot's HP reaches 0 or below, THE Battle_Bots_Plugin SHALL declare the opposing robot the winner and end that battle
-6. THE Battle_Bots_Plugin SHALL run all 1v1 battles concurrently within the same tick loop
-7. AFTER each tick, THE Battle_Bots_Plugin SHALL emit a Tick_Update to all connected clients containing the current HP values for all active battles
+5. WHEN exactly one robot's HP reaches 0 or below, THE Battle_Bots_Plugin SHALL declare the opposing robot the winner and end that battle
+6. WHEN both robots reach 0 HP or below on the same tick (simultaneous KO), THE Battle_Bots_Plugin SHALL perform up to 3 additional tiebreaker rolls where each robot attacks the other using normal accuracy and damage rules
+7. IF after 3 tiebreaker rolls both robots are still at 0 HP or both survived equally, THE Battle_Bots_Plugin SHALL perform a 50/50 coin-flip roll to eliminate one robot while leaving the other's HP unchanged from before the tiebreaker
+8. THE Battle_Bots_Plugin SHALL run all 1v1 battles concurrently within the same tick loop
+9. AFTER each tick, THE Battle_Bots_Plugin SHALL emit a Tick_Update to all connected clients containing the current HP values for all active battles
 
 ### Requirement 6: 1v1 Battle Results and Scoring
 

@@ -1,5 +1,5 @@
 import { create } from "zustand"
-import type { RoomState, ClientMessage, ScoringMode, GameSettings } from "@games-of-chance/shared"
+import type { RoomState, ClientMessage, ScoringMode, GameSettings, GameType, BattleHPSnapshot } from "@games-of-chance/shared"
 
 // ── Join Flow State Machine ────────────────────────────────────────────────
 
@@ -36,6 +36,9 @@ export interface GameStore {
   // Animation state — shared so GameView can gate the leaderboard
   roundAnimationDone: boolean
 
+  // Battle HP state — latest snapshot from BATTLE_TICK messages per battle
+  battleHPState: Record<string, BattleHPSnapshot["robots"]> | null
+
   // Socket send reference — set by usePartySocket when connected
   _socketSend: ((msg: ClientMessage) => void) | null
 
@@ -50,9 +53,11 @@ export interface GameStore {
   reassignHost: (targetPlayerId: string) => void
   adjustScore: (targetPlayerId: string, delta: number, scoreType: "game" | "session", reason?: string) => void
   updateSettings: (changes: Partial<GameSettings>) => void
+  setGameType: (gameType: GameType) => void
 
   // Internal actions
   _onStateSync: (state: RoomState) => void
+  _onBattleTick: (payload: { tick: number; battles: BattleHPSnapshot[] }) => void
   _resetPickOnNewRound: (roundNumber: number) => void
 }
 
@@ -72,6 +77,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   pickSubmitted: false,
   currentRoundNumber: null,
   roundAnimationDone: false,
+  battleHPState: null,
   _socketSend: null,
 
   // ── Actions ────────────────────────────────────────────────────────────
@@ -173,6 +179,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
+  setGameType: (gameType: GameType) => {
+    const { _socketSend } = get()
+    if (_socketSend) {
+      _socketSend({ type: "SET_GAME_TYPE", payload: { gameType } })
+    }
+  },
+
   // ── Internal Actions ───────────────────────────────────────────────────
 
   _onStateSync: (state: RoomState) => {
@@ -190,7 +203,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
       set({ playerId: me.id })
     }
 
-    // Detect new round and reset pick tracking
+    // Clear battle HP state when returning to lobby (game ended)
+    const clearBattle = state.round.phase === "LOBBY" ? { battleHPState: null } : {}
+
+    // Detect new round and reset pick tracking + battle HP state
     if (
       state.round.roundNumber !== currentRoundNumber &&
       currentRoundNumber !== null
@@ -200,6 +216,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         role: serverRole,
         pickSubmitted: false,
         roundAnimationDone: false,
+        battleHPState: null,
         currentRoundNumber: state.round.roundNumber,
       })
     } else {
@@ -207,8 +224,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
         roomState: state,
         role: serverRole,
         currentRoundNumber: state.round.roundNumber,
+        ...clearBattle,
       })
     }
+  },
+
+  _onBattleTick: (payload) => {
+    const battleHPState: Record<string, BattleHPSnapshot["robots"]> = {}
+    for (const battle of payload.battles) {
+      battleHPState[battle.battleId] = battle.robots
+    }
+    set({ battleHPState })
   },
 
   _resetPickOnNewRound: (roundNumber: number) => {

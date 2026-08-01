@@ -10,12 +10,18 @@ import type {
   SessionLeaderboardEntry,
   AdjustmentLogEntry,
   GameSettings,
+  BattleTickUpdate,
+  BattleHPSnapshot,
 } from "@games-of-chance/shared"
 import { registry } from "./games/GameRegistry"
 import { getStrategy } from "./scoring"
 import { COIN_TOSS } from "./games/coin-toss/constants"
+import { BATTLE_BOTS } from "./games/battle-bots/constants"
+import { getRobotTemplates, resetGameState as resetBattleBotsState } from "./games/battle-bots/BattleBotsPlugin"
 // Side-effect import: registers the coin-toss plugin in the global registry
 import "./games/coin-toss/CoinTossPlugin"
+// Side-effect import: registers the battle-bots plugin in the global registry
+import "./games/battle-bots/index"
 import { validateSettingsUpdate } from "./settings/validateSettings"
 import { FastPlayAdapter } from "./simulation/FastPlayAdapter"
 // Side-effect import: registers coin-toss pick generator in the simulation registry
@@ -37,6 +43,8 @@ interface LiveRoomState {
   gameSettings: GameSettings
   /** Whether settings are locked (game in progress) */
   settingsLocked: boolean
+  /** Plugin-specific state for multi-round games */
+  pluginState: Record<string, unknown>
 }
 
 // ── Default configuration ──────────────────────────────────────────────────
@@ -79,8 +87,13 @@ function buildDefaultGameSettings(gameType: string): GameSettings {
     }
   }
 
+  // Use game-specific round count: battle-bots always uses 3 rounds
+  const roundCount = gameType === "battle-bots"
+    ? BATTLE_BOTS.ROUND_COUNT
+    : COIN_TOSS.MAX_ROUNDS
+
   return {
-    roundCount: COIN_TOSS.MAX_ROUNDS,
+    roundCount,
     pickWindowMs: plugin.pickWindowMs,
     tuning,
   }
@@ -93,6 +106,9 @@ export default class GameRoom implements Party.Server {
   private state!: LiveRoomState
   private deadlineTimerId: ReturnType<typeof setTimeout> | null = null
   private simulationAdapter: FastPlayAdapter | null = null
+  private tickReplayTimerId: ReturnType<typeof setTimeout> | null = null
+  /** Holds the round result during async tick replay so SKIP_ANIMATION can finalize it */
+  private pendingResolveResult: unknown = null
 
   constructor(room: Party.Room) {
     this.room = room
@@ -112,6 +128,7 @@ export default class GameRoom implements Party.Server {
       adjustmentLog: [],
       gameSettings: buildDefaultGameSettings("coin-toss"),
       settingsLocked: false,
+      pluginState: {},
     }
   }
 
@@ -394,8 +411,9 @@ export default class GameRoom implements Party.Server {
       return
     }
 
-    // Cancel any lingering timer
+    // Cancel any lingering timers
     this.cancelDeadlineTimer()
+    this.cancelTickReplay()
 
     // Apply session scoring based on scoringMode
     const strategy = getStrategy(
@@ -436,6 +454,10 @@ export default class GameRoom implements Party.Server {
     // Unlock settings now that game is over
     this.state.settingsLocked = false
 
+    // Clear plugin state for next game
+    this.state.pluginState = {}
+    resetBattleBotsState()
+
     this.broadcastState()
   }
 
@@ -447,6 +469,17 @@ export default class GameRoom implements Party.Server {
 
     // Only skip during RESOLVING or RESULT phases (while animation would be playing)
     if (this.state.round.phase !== "RESOLVING" && this.state.round.phase !== "RESULT") return
+
+    // If tick replay is in progress (battle-bots RESOLVING), cancel it and finish immediately
+    if (this.tickReplayTimerId !== null && this.state.round.phase === "RESOLVING") {
+      this.cancelTickReplay()
+      // Finalize the round using the stored pending result
+      this.finishResolving(this.pendingResolveResult)
+      // Also broadcast SKIP_ANIMATION so clients skip client-side animations
+      const skipMsg: ServerMessage = { type: "SKIP_ANIMATION" }
+      this.room.broadcast(JSON.stringify(skipMsg))
+      return
+    }
 
     // Broadcast SKIP_ANIMATION to all clients
     const msg: ServerMessage = { type: "SKIP_ANIMATION" }
@@ -683,7 +716,9 @@ export default class GameRoom implements Party.Server {
 
     // Retain shared settings, reset tuning and pickWindowMs
     this.state.gameSettings = {
-      roundCount: this.state.gameSettings.roundCount,  // retained
+      roundCount: newGameType === "battle-bots"
+        ? BATTLE_BOTS.ROUND_COUNT
+        : this.state.gameSettings.roundCount,  // retained for non-battle-bots
       pickWindowMs: plugin.pickWindowMs,               // reset to new plugin default
       tuning: newTuning,                               // reset to new plugin defaults
     }
@@ -723,6 +758,11 @@ export default class GameRoom implements Party.Server {
       return
     }
 
+    // Battle-bots has a fixed round count of 3 — prevent overriding
+    if (this.state.config.gameType === "battle-bots" && result.sanitized.roundCount !== undefined) {
+      result.sanitized.roundCount = BATTLE_BOTS.ROUND_COUNT
+    }
+
     // Merge sanitized changes into gameSettings
     this.state.gameSettings = {
       ...this.state.gameSettings,
@@ -740,28 +780,60 @@ export default class GameRoom implements Party.Server {
 
   /**
    * Begin a new round: reset picks, set deadline, broadcast, schedule resolve.
+   * For battle-bots rounds 2 and 3, skip PICKING and go directly to RESOLVING.
    */
   private beginRound() {
     // Cancel any lingering timer from a previous round
     this.cancelDeadlineTimer()
+    this.cancelTickReplay()
 
     // Lock settings during active game
     this.state.settingsLocked = true
 
-    // Transition to PICKING phase
-    this.state.round = {
-      phase: "PICKING",
-      roundNumber: this.state.round.roundNumber + 1,
-      picks: {},
-      result: null,
-      pickDeadlineMs: Date.now() + this.state.gameSettings.pickWindowMs,
-      resolvedAt: null,
+    const roundNumber = this.state.round.roundNumber + 1
+
+    // Battle-bots rounds 2 and 3 skip PICKING — no player input needed
+    const shouldSkipPicking =
+      this.state.config.gameType === "battle-bots" && roundNumber > 1
+
+    if (shouldSkipPicking) {
+      // Skip PICKING — go directly to RESOLVING
+      this.state.round = {
+        phase: "RESOLVING",
+        roundNumber,
+        picks: {},
+        result: null,
+        pickDeadlineMs: null,
+        resolvedAt: null,
+      }
+      this.broadcastState()
+      // Resolve immediately without waiting for picks
+      this.resolveRoundDirect()
+    } else {
+      // Standard PICKING phase
+      this.state.round = {
+        phase: "PICKING",
+        roundNumber,
+        picks: {},
+        result: null,
+        pickDeadlineMs: Date.now() + this.state.gameSettings.pickWindowMs,
+        resolvedAt: null,
+      }
+
+      // For battle-bots Round 1: pre-generate robot options so clients can display them during PICKING
+      if (this.state.config.gameType === "battle-bots" && roundNumber === 1) {
+        const templates = getRobotTemplates(this.state.gameSettings)
+        const robotOptions: Record<string, { playerId: string; options: typeof templates }> = {}
+        for (const player of Object.values(this.state.players)) {
+          robotOptions[player.id] = { playerId: player.id, options: [...templates] }
+        }
+        this.state.round.result = { robotOptions }
+      }
+
+      this.broadcastState()
+      // Schedule the deadline timer
+      this.scheduleResolve(this.state.gameSettings.pickWindowMs)
     }
-
-    this.broadcastState()
-
-    // Schedule the deadline timer
-    this.scheduleResolve(this.state.gameSettings.pickWindowMs)
   }
 
   /**
@@ -837,6 +909,263 @@ export default class GameRoom implements Party.Server {
   }
 
   /**
+   * Resolve a round directly without waiting for picks.
+   * Used for battle-bots rounds 2 and 3 which skip the PICKING phase entirely.
+   * The round is already in RESOLVING phase when this is called.
+   */
+  private resolveRoundDirect() {
+    const plugin = registry.lookup(this.state.config.gameType)
+
+    // Resolve the round via plugin (picks are empty — battle-bots rounds 2/3 don't need them)
+    const result = plugin.resolveRound(this.state.round.picks, this.state.gameSettings)
+
+    // Score the round via plugin
+    const scoreResult = plugin.scoreRound(
+      this.state.round.picks,
+      result,
+      Object.values(this.state.players),
+      this.state.gameSettings
+    )
+
+    // Apply deltas to gameScores
+    for (const [playerId, delta] of Object.entries(scoreResult.deltas)) {
+      if (playerId in this.state.gameScores) {
+        this.state.gameScores[playerId] += delta
+      } else {
+        this.state.gameScores[playerId] = delta
+      }
+    }
+
+    // Compute game leaderboard
+    this.state.gameLeaderboard = plugin.computeGameLeaderboard(
+      Object.values(this.state.players),
+      this.state.gameScores
+    )
+
+    // For battle-bots rounds 2 and 3, replay tick logs asynchronously before transitioning
+    if (this.state.config.gameType === "battle-bots" && this.state.round.roundNumber >= 2) {
+      this.replayBattleTicks(result)
+      return
+    }
+
+    // Transition to RESULT
+    this.state.round.phase = "RESULT"
+    this.state.round.result = result
+    this.state.round.resolvedAt = Date.now()
+
+    this.broadcastState()
+
+    // Check round limit for auto-end
+    const maxRounds = this.getMaxRounds()
+    if (maxRounds > 0 && this.state.round.roundNumber >= maxRounds) {
+      setTimeout(() => this.autoEndGame(), 0)
+    }
+  }
+
+  /**
+   * Replay pre-computed battle tick logs asynchronously during the RESOLVING phase.
+   * Emits BATTLE_TICK messages at TICK_RATE_MS (250ms) intervals to all clients,
+   * then transitions to RESULT phase when all ticks have been emitted.
+   *
+   * Used by battle-bots during Rounds 2 and 3 for real-time tick updates.
+   */
+  private replayBattleTicks(result: unknown) {
+    // Store the result so SKIP_ANIMATION can finalize the round immediately
+    this.pendingResolveResult = result
+
+    const tickRateMs = BATTLE_BOTS.TICK_RATE_MS
+    const battleResult = result as { round: number; pairings?: Array<{ id: string; robot1: { ownerId: string; currentHp: number }; robot2: { ownerId: string; currentHp: number }; tickLog: Array<{ tick: number; attacks: Array<{ targetId: string; targetHpAfter: number }> }> }>; winnersBracket?: { id: string; participants: Array<{ ownerId: string; currentHp: number }>; tickLog: Array<{ tick: number; attacks: Array<{ targetId: string; targetHpAfter: number }> }> }; losersBracket?: { id: string; participants: Array<{ ownerId: string; currentHp: number }>; tickLog: Array<{ tick: number; attacks: Array<{ targetId: string; targetHpAfter: number }> }> } }
+
+    // Collect all tick snapshots to replay, ordered by tick number
+    const tickSnapshots: BattleTickUpdate[] = []
+
+    if (battleResult.round === 2 && battleResult.pairings) {
+      // Round 2: replay 1v1 battle ticks from all pairings
+      // Find the maximum tick number across all pairings
+      const maxTick = Math.max(
+        ...battleResult.pairings.map((p) =>
+          p.tickLog.length > 0 ? p.tickLog[p.tickLog.length - 1].tick : 0
+        )
+      )
+
+      // Track running HP for each robot in each pairing
+      const pairingHp: Array<{ robot1Hp: number; robot2Hp: number }> = battleResult.pairings.map((pairing) => ({
+        robot1Hp: pairing.robot1.currentHp,
+        robot2Hp: pairing.robot2.currentHp,
+      }))
+
+      for (let t = 1; t <= maxTick; t++) {
+        const battles: BattleHPSnapshot[] = battleResult.pairings.map((pairing, idx) => {
+          const tickEvent = pairing.tickLog.find((te) => te.tick === t)
+          if (tickEvent) {
+            // Update running HP from this tick's attacks
+            const r1HpAfter = this.getHpAfterTick(pairing.robot1.ownerId, tickEvent.attacks, pairingHp[idx].robot1Hp)
+            const r2HpAfter = this.getHpAfterTick(pairing.robot2.ownerId, tickEvent.attacks, pairingHp[idx].robot2Hp)
+            pairingHp[idx].robot1Hp = r1HpAfter
+            pairingHp[idx].robot2Hp = r2HpAfter
+          }
+
+          return {
+            battleId: pairing.id,
+            robots: [
+              { ownerId: pairing.robot1.ownerId, currentHp: Math.max(0, pairingHp[idx].robot1Hp), eliminated: pairingHp[idx].robot1Hp <= 0 },
+              { ownerId: pairing.robot2.ownerId, currentHp: Math.max(0, pairingHp[idx].robot2Hp), eliminated: pairingHp[idx].robot2Hp <= 0 },
+            ],
+          }
+        })
+
+        tickSnapshots.push({
+          type: "BATTLE_TICK",
+          payload: { tick: t, battles },
+        })
+      }
+    } else if (battleResult.round === 3) {
+      // Round 3: replay FFA bracket ticks
+      const winnersTicks = battleResult.winnersBracket?.tickLog ?? []
+      const losersTicks = battleResult.losersBracket?.tickLog ?? []
+      const maxTick = Math.max(
+        winnersTicks.length > 0 ? winnersTicks[winnersTicks.length - 1].tick : 0,
+        losersTicks.length > 0 ? losersTicks[losersTicks.length - 1].tick : 0
+      )
+
+      // Track running HP for each robot across ticks
+      const winnersHp: Record<string, number> = {}
+      const losersHp: Record<string, number> = {}
+      if (battleResult.winnersBracket) {
+        for (const p of battleResult.winnersBracket.participants) {
+          winnersHp[p.ownerId] = p.currentHp
+        }
+      }
+      if (battleResult.losersBracket) {
+        for (const p of battleResult.losersBracket.participants) {
+          losersHp[p.ownerId] = p.currentHp
+        }
+      }
+
+      for (let t = 1; t <= maxTick; t++) {
+        const battles: BattleHPSnapshot[] = []
+
+        // Winners bracket snapshot for this tick
+        if (battleResult.winnersBracket) {
+          const tickEvent = winnersTicks.find((te) => te.tick === t)
+          if (tickEvent) {
+            for (const attack of tickEvent.attacks) {
+              winnersHp[attack.targetId] = attack.targetHpAfter
+            }
+          }
+          battles.push({
+            battleId: battleResult.winnersBracket.id,
+            robots: battleResult.winnersBracket.participants.map((p) => ({
+              ownerId: p.ownerId,
+              currentHp: Math.max(0, winnersHp[p.ownerId] ?? 0),
+              eliminated: (winnersHp[p.ownerId] ?? 0) <= 0,
+            })),
+          })
+        }
+
+        // Losers bracket snapshot for this tick
+        if (battleResult.losersBracket) {
+          const tickEvent = losersTicks.find((te) => te.tick === t)
+          if (tickEvent) {
+            for (const attack of tickEvent.attacks) {
+              losersHp[attack.targetId] = attack.targetHpAfter
+            }
+          }
+          battles.push({
+            battleId: battleResult.losersBracket.id,
+            robots: battleResult.losersBracket.participants.map((p) => ({
+              ownerId: p.ownerId,
+              currentHp: Math.max(0, losersHp[p.ownerId] ?? 0),
+              eliminated: (losersHp[p.ownerId] ?? 0) <= 0,
+            })),
+          })
+        }
+
+        tickSnapshots.push({
+          type: "BATTLE_TICK",
+          payload: { tick: t, battles },
+        })
+      }
+    }
+
+    // If no ticks to replay, transition immediately
+    if (tickSnapshots.length === 0) {
+      this.finishResolving(result)
+      return
+    }
+
+    // Emit ticks at configured interval using recursive setTimeout
+    let tickIndex = 0
+    const emitNextTick = () => {
+      if (tickIndex >= tickSnapshots.length) {
+        // All ticks emitted — transition to RESULT
+        this.tickReplayTimerId = null
+        this.finishResolving(result)
+        return
+      }
+
+      // Broadcast the tick message to all clients
+      this.room.broadcast(JSON.stringify(tickSnapshots[tickIndex]))
+      tickIndex++
+
+      // Schedule next tick emission
+      this.tickReplayTimerId = setTimeout(emitNextTick, tickRateMs)
+    }
+
+    // Start emitting — first tick immediately
+    this.room.broadcast(JSON.stringify(tickSnapshots[tickIndex]))
+    tickIndex++
+    this.tickReplayTimerId = setTimeout(emitNextTick, tickRateMs)
+  }
+
+  /**
+   * Get the HP of a target robot after a specific tick's attacks resolve.
+   * Finds the last attack targeting this robot in the tick and returns targetHpAfter.
+   */
+  private getHpAfterTick(
+    targetOwnerId: string,
+    attacks: Array<{ targetId: string; targetHpAfter: number }>,
+    fallbackHp: number
+  ): number {
+    // Find the last attack targeting this robot in this tick
+    for (let i = attacks.length - 1; i >= 0; i--) {
+      if (attacks[i].targetId === targetOwnerId) {
+        return attacks[i].targetHpAfter
+      }
+    }
+    return fallbackHp
+  }
+
+  /**
+   * Complete the RESOLVING phase by transitioning to RESULT.
+   * Called after all battle ticks have been emitted (or immediately for non-battle-bots).
+   */
+  private finishResolving(result: unknown) {
+    // Clear pending result reference
+    this.pendingResolveResult = null
+
+    this.state.round.phase = "RESULT"
+    this.state.round.result = result
+    this.state.round.resolvedAt = Date.now()
+
+    this.broadcastState()
+
+    // Check round limit for auto-end
+    const maxRounds = this.getMaxRounds()
+    if (maxRounds > 0 && this.state.round.roundNumber >= maxRounds) {
+      setTimeout(() => this.autoEndGame(), 0)
+    }
+  }
+
+  /** Cancel the tick replay timer — idempotent (no-op if no timer) */
+  private cancelTickReplay() {
+    if (this.tickReplayTimerId !== null) {
+      clearTimeout(this.tickReplayTimerId)
+      this.tickReplayTimerId = null
+    }
+  }
+
+  /**
    * Auto-end the game when round limit is reached.
    * Same as handleEndGame but without auth check (system-triggered).
    */
@@ -844,6 +1173,7 @@ export default class GameRoom implements Party.Server {
     if (this.state.round.phase !== "RESULT") return
 
     this.cancelDeadlineTimer()
+    this.cancelTickReplay()
 
     const strategy = getStrategy(
       this.state.config.scoringMode,
@@ -876,6 +1206,10 @@ export default class GameRoom implements Party.Server {
 
     // Unlock settings now that game is over
     this.state.settingsLocked = false
+
+    // Clear plugin state for next game
+    this.state.pluginState = {}
+    resetBattleBotsState()
 
     this.broadcastState()
   }

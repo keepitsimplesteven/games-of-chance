@@ -1,5 +1,6 @@
 import { useGameStore } from "../../store/useGameStore"
 import { CoinTossContainer } from "../../games/coin-toss/CoinTossContainer"
+import { BattleBotsView } from "../../games/battle-bots/BattleBotsView"
 import GameLeaderboard from "./GameLeaderboard"
 import RoundControls from "./RoundControls"
 
@@ -33,6 +34,8 @@ export default function GameView() {
     switch (gameType) {
       case "coin-toss":
         return <CoinTossContainer />
+      case "battle-bots":
+        return <BattleBotsView />
       default:
         return (
           <div className="py-8 text-center text-gray-500">

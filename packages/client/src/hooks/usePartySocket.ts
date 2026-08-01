@@ -96,6 +96,9 @@ export function usePartySocket(
           // Host skipped — all clients jump to results
           useGameStore.setState({ roundAnimationDone: true })
           break
+        case "BATTLE_TICK":
+          useGameStore.getState()._onBattleTick(msg.payload)
+          break
         case "ERROR":
           // Dispatch to error handler — update connection status for critical errors
           console.error("[PartySocket] Server error:", msg.payload.code, msg.payload.message)
