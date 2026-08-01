@@ -67,6 +67,7 @@ const roomConfigArb: fc.Arbitrary<RoomConfig> = fc.record({
   autoMode: fc.boolean(),
   autoRoundIntervalMs: fc.integer({ min: 1000, max: 30000 }),
   placementPoints: fc.constant([10, 5, 3, 1, 1, 1, 1, 0, 0, 0]),
+  roomSize: fc.integer({ min: 2, max: 10 }),
 })
 
 /** Generate a RoundState */

@@ -30,8 +30,8 @@ describe("Feature: host-control-panel, Property 3: Kick removes player from stat
   it("kicking a valid non-host target removes them from state and decreases player count by 1", () => {
     fc.assert(
       fc.asyncProperty(
-        // Generate a player count between 2 and 10
-        fc.integer({ min: 2, max: 10 }),
+        // Generate a player count between 2 and 4 (max roomSize is 4 by default)
+        fc.integer({ min: 2, max: 4 }),
         // Generate a random index for the kick target (non-host)
         fc.integer({ min: 0, max: 100 }),
         async (playerCount, targetIndexSeed) => {
@@ -53,9 +53,9 @@ describe("Feature: host-control-panel, Property 3: Kick removes player from stat
             nonHostIds.push(`player-${i}`)
           }
 
-          // Verify initial state has correct player count
+          // Verify initial state has correct player count (roomSize, including bots)
           const stateBefore = getStateFromBroadcast(mockRoom)
-          expect(stateBefore.players.length).toBe(playerCount)
+          expect(stateBefore.players.length).toBe(4) // default roomSize
 
           // Select a random non-host player as the kick target
           const targetIndex = targetIndexSeed % nonHostIds.length
@@ -75,8 +75,8 @@ describe("Feature: host-control-panel, Property 3: Kick removes player from stat
           )
           expect(targetInState).toBeUndefined()
 
-          // Verify player count decreased by exactly 1
-          expect(stateAfter.players.length).toBe(playerCount - 1)
+          // Verify player count remains at roomSize (bot fills the vacated slot)
+          expect(stateAfter.players.length).toBe(4) // default roomSize
         }
       ),
       { numRuns: 100 }

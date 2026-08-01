@@ -172,6 +172,7 @@ export class FastPlayAdapter {
       autoMode: false,
       autoRoundIntervalMs: this.roundIntervalMs,
       placementPoints: [10, 5, 3, 1, 1, 1, 1, 0, 0, 0],
+      roomSize: players.length,
     }
 
     const payload: SimulationRoomState = {

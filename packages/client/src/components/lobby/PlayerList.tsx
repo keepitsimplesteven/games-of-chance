@@ -1,5 +1,10 @@
 import { useGameStore } from "../../store/useGameStore"
 
+/** Check if a player ID belongs to a bot */
+function isBot(playerId: string): boolean {
+  return playerId.startsWith("bot:")
+}
+
 export default function PlayerList() {
   const roomState = useGameStore((s) => s.roomState)
   const playerId = useGameStore((s) => s.playerId)
@@ -7,6 +12,14 @@ export default function PlayerList() {
   if (!roomState) return null
 
   const { players, sessionLeaderboard } = roomState
+
+  // Sort players: humans first, then bots (preserve existing order within each group)
+  const sortedPlayers = [...players].sort((a, b) => {
+    const aIsBot = isBot(a.id)
+    const bIsBot = isBot(b.id)
+    if (aIsBot === bIsBot) return 0
+    return aIsBot ? 1 : -1
+  })
 
   // Build a lookup for session data (points, rank, gamesPlayed)
   const sessionDataMap = new Map(
@@ -21,8 +34,9 @@ export default function PlayerList() {
         Players ({players.length})
       </h3>
       <ul className="space-y-2">
-        {players.map((player) => {
+        {sortedPlayers.map((player) => {
           const isCurrentPlayer = player.id === playerId
+          const isBotPlayer = isBot(player.id)
           const sessionEntry = sessionDataMap.get(player.id)
           const sessionScore = sessionEntry?.sessionPoints ?? 0
           const rank = sessionEntry?.rank
@@ -52,6 +66,13 @@ export default function PlayerList() {
                   }`}
                   aria-label={player.connected ? "Connected" : "Disconnected"}
                 />
+
+                {/* Bot icon */}
+                {isBotPlayer && (
+                  <span className="text-sm" aria-label="Bot" title="Bot">
+                    🤖
+                  </span>
+                )}
 
                 {/* Player name */}
                 <span className="text-sm font-medium text-gray-800">

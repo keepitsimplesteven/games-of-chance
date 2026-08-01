@@ -55,6 +55,8 @@ export interface RoomConfig {
   autoRoundIntervalMs: number
   /** GrandPrix mode: index 0 = 1st place points, etc. Default: [10, 5, 3, 1, 1, 1, 1, 0, 0, 0] */
   placementPoints: number[]
+  /** Total number of player slots (humans + bots). Integer 2–10, default 4. */
+  roomSize: number
 }
 
 export interface Player {
@@ -193,7 +195,7 @@ export interface BattleTickUpdate {
 
 /** Client → Server messages */
 export type ClientMessage =
-  | { type: "JOIN"; payload: { name: string; role: "host" | "player"; clientId: string; scoringMode?: ScoringMode } }
+  | { type: "JOIN"; payload: { name: string; role: "host" | "player"; clientId: string; scoringMode?: ScoringMode; roomSize?: number } }
   | { type: "SUBMIT_PICK"; payload: { pick: unknown } }
   | { type: "START_ROUND"; payload?: never }
   | { type: "END_GAME"; payload?: never }
@@ -207,6 +209,7 @@ export type ClientMessage =
   | { type: "SET_GAME_TYPE"; payload: { gameType: GameType } }
   | { type: "START_SIMULATION"; payload: { playerCount?: number; roundCount?: number; seed?: number } }
   | { type: "STOP_SIMULATION"; payload?: never }
+  | { type: "UPDATE_ROOM_SIZE"; payload: { roomSize: number } }
 
 /** Server → Client messages */
 export type ServerMessage =

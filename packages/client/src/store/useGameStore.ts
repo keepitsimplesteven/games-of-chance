@@ -22,6 +22,7 @@ export interface GameStore {
   playerName: string | null
   role: "host" | "player" | null
   scoringMode: ScoringMode | undefined
+  roomSize: number | undefined
 
   // Connection
   connectionStatus: ConnectionStatus
@@ -43,7 +44,7 @@ export interface GameStore {
   _socketSend: ((msg: ClientMessage) => void) | null
 
   // Actions
-  connect: (roomId: string, name: string, role: "host" | "player", scoringMode?: ScoringMode) => void
+  connect: (roomId: string, name: string, role: "host" | "player", scoringMode?: ScoringMode, roomSize?: number) => void
   submitPick: (pick: unknown) => void
   startRound: () => void
   endGame: () => void
@@ -72,6 +73,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   playerName: null,
   role: null,
   scoringMode: undefined,
+  roomSize: undefined,
   connectionStatus: "disconnected",
   roomState: null,
   pickSubmitted: false,
@@ -82,7 +84,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   // ── Actions ────────────────────────────────────────────────────────────
 
-  connect: (roomId, name, role, scoringMode) => {
+  connect: (roomId, name, role, scoringMode, roomSize) => {
     const current = get().joinState
     // Non-regression guard: once IN_ROOM, never transition backwards
     if (current === "IN_ROOM") return
@@ -96,6 +98,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       clientId,
       role,
       scoringMode,
+      roomSize,
       joinState: "CONNECTING",
       connectionStatus: "connecting",
     })
