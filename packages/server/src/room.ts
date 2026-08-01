@@ -9,12 +9,14 @@ import type {
   GameLeaderboardEntry,
   SessionLeaderboardEntry,
   AdjustmentLogEntry,
+  GameSettings,
 } from "@games-of-chance/shared"
 import { registry } from "./games/GameRegistry"
 import { getStrategy } from "./scoring"
 import { COIN_TOSS } from "./games/coin-toss/constants"
 // Side-effect import: registers the coin-toss plugin in the global registry
 import "./games/coin-toss/CoinTossPlugin"
+import { validateSettingsUpdate } from "./settings/validateSettings"
 import { FastPlayAdapter } from "./simulation/FastPlayAdapter"
 // Side-effect import: registers coin-toss pick generator in the simulation registry
 import "@games-of-chance/simulation/src/pick-generators/coin-toss"
@@ -31,6 +33,10 @@ interface LiveRoomState {
   sessionGamesPlayed: Record<string, number>
   sessionLeaderboard: SessionLeaderboardEntry[]
   adjustmentLog: AdjustmentLogEntry[]
+  /** Resolved game settings (shared + tuning) */
+  gameSettings: GameSettings
+  /** Whether settings are locked (game in progress) */
+  settingsLocked: boolean
 }
 
 // ── Default configuration ──────────────────────────────────────────────────
@@ -58,6 +64,28 @@ function createDefaultRoundState(): RoundState {
   }
 }
 
+/**
+ * Build default GameSettings from the active plugin.
+ * Reads the plugin's constants (MAX_ROUNDS, pickWindowMs) and its settingsSchema
+ * to populate the tuning defaults.
+ */
+function buildDefaultGameSettings(gameType: string): GameSettings {
+  const plugin = registry.lookup(gameType)
+
+  const tuning: Record<string, number | boolean | string> = {}
+  if (plugin.settingsSchema) {
+    for (const field of plugin.settingsSchema) {
+      tuning[field.key] = field.defaultValue
+    }
+  }
+
+  return {
+    roundCount: COIN_TOSS.MAX_ROUNDS,
+    pickWindowMs: plugin.pickWindowMs,
+    tuning,
+  }
+}
+
 // ── Room Server ────────────────────────────────────────────────────────────
 
 export default class GameRoom implements Party.Server {
@@ -82,6 +110,8 @@ export default class GameRoom implements Party.Server {
       sessionGamesPlayed: {},
       sessionLeaderboard: [],
       adjustmentLog: [],
+      gameSettings: buildDefaultGameSettings("coin-toss"),
+      settingsLocked: false,
     }
   }
 
@@ -133,6 +163,12 @@ export default class GameRoom implements Party.Server {
         break
       case "ADJUST_SCORE":
         this.handleAdjustScore(sender, msg.payload)
+        break
+      case "UPDATE_SETTINGS":
+        this.handleUpdateSettings(sender, msg.payload)
+        break
+      case "SET_GAME_TYPE":
+        this.handleGameTypeChange(sender, msg.payload)
         break
       default:
         this.sendError(
@@ -397,6 +433,9 @@ export default class GameRoom implements Party.Server {
     // Transition to LOBBY, reset round state
     this.state.round = createDefaultRoundState()
 
+    // Unlock settings now that game is over
+    this.state.settingsLocked = false
+
     this.broadcastState()
   }
 
@@ -608,6 +647,95 @@ export default class GameRoom implements Party.Server {
     this.broadcastState()
   }
 
+  private handleGameTypeChange(
+    sender: Party.Connection,
+    payload: { gameType: string }
+  ) {
+    // Authorization: only host can change game type
+    const hostId = this.getHostId()
+    const senderId = this.getPlayerIdByConnectionId(sender.id)
+    if (senderId !== hostId) {
+      this.sendError(sender, "NOT_HOST", "Only the host can change the game type")
+      return
+    }
+
+    // Lock guard: reject during active game
+    if (this.state.settingsLocked) {
+      this.sendError(sender, "SETTINGS_LOCKED", "Cannot change game type during an active game")
+      return
+    }
+
+    // No-op if same game type
+    if (payload.gameType === this.state.config.gameType) {
+      return
+    }
+
+    const newGameType = payload.gameType
+    const plugin = registry.lookup(newGameType)
+
+    // Reset game-specific tuning to new plugin defaults
+    const newTuning: Record<string, number | boolean | string> = {}
+    if (plugin.settingsSchema) {
+      for (const field of plugin.settingsSchema) {
+        newTuning[field.key] = field.defaultValue
+      }
+    }
+
+    // Retain shared settings, reset tuning and pickWindowMs
+    this.state.gameSettings = {
+      roundCount: this.state.gameSettings.roundCount,  // retained
+      pickWindowMs: plugin.pickWindowMs,               // reset to new plugin default
+      tuning: newTuning,                               // reset to new plugin defaults
+    }
+
+    this.state.config.gameType = newGameType
+    this.broadcastState()
+  }
+
+  private handleUpdateSettings(
+    sender: Party.Connection,
+    payload: { changes: Partial<GameSettings> }
+  ) {
+    // Auth: only host
+    const hostId = this.getHostId()
+    const senderId = this.getPlayerIdByConnectionId(sender.id)
+    if (senderId !== hostId) {
+      this.sendError(sender, "NOT_HOST", "Only the host can update settings")
+      return
+    }
+
+    // Lock guard: reject during active game
+    if (this.state.settingsLocked) {
+      this.sendError(sender, "SETTINGS_LOCKED", "Settings cannot be changed during an active game")
+      return
+    }
+
+    // Validate and sanitize
+    const plugin = registry.lookup(this.state.config.gameType)
+    const result = validateSettingsUpdate(
+      payload.changes,
+      this.state.gameSettings,
+      plugin.settingsSchema
+    )
+
+    if (!result.valid) {
+      this.sendError(sender, "INVALID_SETTINGS", result.error)
+      return
+    }
+
+    // Merge sanitized changes into gameSettings
+    this.state.gameSettings = {
+      ...this.state.gameSettings,
+      ...result.sanitized,
+      tuning: {
+        ...this.state.gameSettings.tuning,
+        ...(result.sanitized.tuning ?? {}),
+      },
+    }
+
+    this.broadcastState()
+  }
+
   // ── Round lifecycle ────────────────────────────────────────────────────
 
   /**
@@ -617,7 +745,8 @@ export default class GameRoom implements Party.Server {
     // Cancel any lingering timer from a previous round
     this.cancelDeadlineTimer()
 
-    const plugin = registry.lookup(this.state.config.gameType)
+    // Lock settings during active game
+    this.state.settingsLocked = true
 
     // Transition to PICKING phase
     this.state.round = {
@@ -625,14 +754,14 @@ export default class GameRoom implements Party.Server {
       roundNumber: this.state.round.roundNumber + 1,
       picks: {},
       result: null,
-      pickDeadlineMs: Date.now() + plugin.pickWindowMs,
+      pickDeadlineMs: Date.now() + this.state.gameSettings.pickWindowMs,
       resolvedAt: null,
     }
 
     this.broadcastState()
 
     // Schedule the deadline timer
-    this.scheduleResolve(plugin.pickWindowMs)
+    this.scheduleResolve(this.state.gameSettings.pickWindowMs)
   }
 
   /**
@@ -666,13 +795,14 @@ export default class GameRoom implements Party.Server {
     const plugin = registry.lookup(this.state.config.gameType)
 
     // Resolve the round via plugin
-    const result = plugin.resolveRound(this.state.round.picks)
+    const result = plugin.resolveRound(this.state.round.picks, this.state.gameSettings)
 
     // Score the round via plugin
     const scoreResult = plugin.scoreRound(
       this.state.round.picks,
       result,
-      Object.values(this.state.players)
+      Object.values(this.state.players),
+      this.state.gameSettings
     )
 
     // Apply deltas to gameScores
@@ -744,17 +874,18 @@ export default class GameRoom implements Party.Server {
     this.state.gameLeaderboard = []
     this.state.round = createDefaultRoundState()
 
+    // Unlock settings now that game is over
+    this.state.settingsLocked = false
+
     this.broadcastState()
   }
 
   /**
    * Get the max rounds for the current game type.
-   * Returns from the plugin's constants. Default: 10.
+   * Returns the configured round count from game settings.
    */
   private getMaxRounds(): number {
-    // Currently only coin-toss is supported — use its MAX_ROUNDS constant
-    // Future: this could be part of the GamePlugin interface or room config
-    return COIN_TOSS.MAX_ROUNDS
+    return this.state.gameSettings.roundCount
   }
 
   /**
@@ -869,6 +1000,8 @@ export default class GameRoom implements Party.Server {
       gameLeaderboard: this.state.gameLeaderboard,
       sessionLeaderboard: this.state.sessionLeaderboard,
       adjustmentLog: this.state.adjustmentLog ?? [],
+      gameSettings: this.state.gameSettings,
+      settingsLocked: this.state.settingsLocked,
     }
   }
 }

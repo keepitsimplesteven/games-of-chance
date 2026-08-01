@@ -5,6 +5,7 @@ import SessionLeaderboard from "./SessionLeaderboard"
 import ShareLink from "./ShareLink"
 import GameTileGrid from "./GameTileGrid"
 import HostControls from "./HostControls"
+import SettingsPanel from "./SettingsPanel"
 import ConnectionStatus from "../shared/ConnectionStatus"
 import GameView from "../game/GameView"
 import HostControlPanel from "../../host-panel/HostControlPanel"
@@ -37,11 +38,14 @@ export default function LobbyShell({ children }: LobbyShellProps) {
       {/* Session leaderboard — shown in lobby when games have been played */}
       {isLobby && <SessionLeaderboard />}
 
-      {/* Lobby content: game tiles + start button — only in LOBBY phase */}
+      {/* Lobby content: game tiles + settings + start button — only in LOBBY phase */}
       {isLobby && (
         <>
           <div className="mt-4">
             <GameTileGrid />
+          </div>
+          <div className="mt-4">
+            <SettingsPanel />
           </div>
           <div className="mt-4">
             <HostControls />

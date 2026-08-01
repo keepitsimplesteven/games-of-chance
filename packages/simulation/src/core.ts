@@ -1,4 +1,4 @@
-import type { GameLeaderboardEntry, Player, RoundScoreResult } from "@games-of-chance/shared"
+import type { GameLeaderboardEntry, GameSettings, Player, RoundScoreResult } from "@games-of-chance/shared"
 import type { GamePlugin } from "@games-of-chance/server/src/games/GamePlugin"
 import type { Rng } from "./rng"
 import type { PickGenerator } from "./pick-generator"
@@ -33,6 +33,19 @@ export function simulateGame(
   gameIndex: number,
   onRound?: (round: RoundRecord) => void
 ): GameResult {
+  // Build default settings from the plugin's schema
+  const tuning: Record<string, number | boolean | string> = {}
+  if (plugin.settingsSchema) {
+    for (const field of plugin.settingsSchema) {
+      tuning[field.key] = field.defaultValue
+    }
+  }
+  const settings: GameSettings = {
+    roundCount,
+    pickWindowMs: plugin.pickWindowMs,
+    tuning,
+  }
+
   const gameScores: Record<string, number> = {}
   for (const p of players) gameScores[p.id] = 0
 
@@ -46,10 +59,10 @@ export function simulateGame(
     }
 
     // Resolve round via plugin
-    const result = plugin.resolveRound(picks)
+    const result = plugin.resolveRound(picks, settings)
 
     // Score round via plugin
-    const scoreResult: RoundScoreResult = plugin.scoreRound(picks, result, players)
+    const scoreResult: RoundScoreResult = plugin.scoreRound(picks, result, players, settings)
 
     // Accumulate scores
     for (const [playerId, delta] of Object.entries(scoreResult.deltas)) {

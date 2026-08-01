@@ -1,5 +1,5 @@
 import { create } from "zustand"
-import type { RoomState, ClientMessage, ScoringMode } from "@games-of-chance/shared"
+import type { RoomState, ClientMessage, ScoringMode, GameSettings } from "@games-of-chance/shared"
 
 // ── Join Flow State Machine ────────────────────────────────────────────────
 
@@ -49,6 +49,7 @@ export interface GameStore {
   kickPlayer: (playerId: string) => void
   reassignHost: (targetPlayerId: string) => void
   adjustScore: (targetPlayerId: string, delta: number, scoreType: "game" | "session", reason?: string) => void
+  updateSettings: (changes: Partial<GameSettings>) => void
 
   // Internal actions
   _onStateSync: (state: RoomState) => void
@@ -162,6 +163,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
         type: "ADJUST_SCORE",
         payload: { targetPlayerId, delta, scoreType, ...(reason ? { reason } : {}) },
       })
+    }
+  },
+
+  updateSettings: (changes: Partial<GameSettings>) => {
+    const { _socketSend } = get()
+    if (_socketSend) {
+      _socketSend({ type: "UPDATE_SETTINGS", payload: { changes } })
     }
   },
 

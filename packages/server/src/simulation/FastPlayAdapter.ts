@@ -5,6 +5,7 @@ import type {
   Player,
   RoundState,
   GameLeaderboardEntry,
+  GameSettings,
 } from "@games-of-chance/shared"
 import {
   createBotPlayers,
@@ -56,6 +57,19 @@ export class FastPlayAdapter {
     const rng = createRng(seed)
     const bot = new RandomBot()
 
+    // Build default settings from the plugin
+    const tuning: Record<string, number | boolean | string> = {}
+    if (plugin.settingsSchema) {
+      for (const field of plugin.settingsSchema) {
+        tuning[field.key] = field.defaultValue
+      }
+    }
+    const settings: GameSettings = {
+      roundCount,
+      pickWindowMs: plugin.pickWindowMs,
+      tuning,
+    }
+
     const gameScores: Record<string, number> = {}
     for (const p of players) gameScores[p.id] = 0
 
@@ -69,10 +83,10 @@ export class FastPlayAdapter {
       }
 
       // Resolve round via plugin
-      const result = plugin.resolveRound(picks)
+      const result = plugin.resolveRound(picks, settings)
 
       // Score round via plugin
-      const scoreResult = plugin.scoreRound(picks, result, players)
+      const scoreResult = plugin.scoreRound(picks, result, players, settings)
 
       // Accumulate scores
       for (const [playerId, delta] of Object.entries(scoreResult.deltas)) {
@@ -92,7 +106,7 @@ export class FastPlayAdapter {
         resolvedAt: Date.now(),
       }
 
-      this.broadcastSimState(players, roundState, leaderboard, gameType)
+      this.broadcastSimState(players, roundState, leaderboard, gameType, settings)
 
       // Wait between rounds (unless aborted)
       if (r < roundCount) {
@@ -113,7 +127,7 @@ export class FastPlayAdapter {
         resolvedAt: Date.now(),
       }
 
-      this.broadcastSimState(players, finalRoundState, leaderboard, gameType)
+      this.broadcastSimState(players, finalRoundState, leaderboard, gameType, settings)
     }
   }
 
@@ -147,7 +161,8 @@ export class FastPlayAdapter {
     players: Player[],
     round: RoundState,
     gameLeaderboard: GameLeaderboardEntry[],
-    gameType: string
+    gameType: string,
+    settings: GameSettings
   ): void {
     const roomConfig: RoomConfig = {
       roomId: this.room.id,
@@ -166,6 +181,8 @@ export class FastPlayAdapter {
       gameLeaderboard,
       sessionLeaderboard: [],
       adjustmentLog: [],
+      gameSettings: settings,
+      settingsLocked: true,
       simulation: true,
     }
 
