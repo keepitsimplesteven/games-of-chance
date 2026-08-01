@@ -10,7 +10,8 @@
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "deploy:client": "pnpm --filter @games-of-chance/client build",
-    "deploy:server": "pnpm --filter @games-of-chance/client build && npx partykit deploy --config partykit.deploy.json"
+    "deploy:server": "pnpm --filter @games-of-chance/client build && npx partykit deploy --config partykit.deploy.json",
+    "simulate": "pnpm --filter @games-of-chance/simulation exec tsx src/cli.ts"
   },
   "engines": {
     "node": ">=18"

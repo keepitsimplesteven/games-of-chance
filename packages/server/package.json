@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@games-of-chance/shared": "workspace:*",
+    "@games-of-chance/simulation": "workspace:*",
     "partykit": "^0.0.115"
   },
   "devDependencies": {
