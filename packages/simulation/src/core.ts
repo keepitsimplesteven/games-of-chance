@@ -3,6 +3,7 @@ import type { GamePlugin } from "@games-of-chance/server/src/games/GamePlugin"
 import type { Rng } from "./rng"
 import type { PickGenerator } from "./pick-generator"
 import type { BotDecisionMaker } from "./bot"
+import { resetCoinTossStreakState } from "@games-of-chance/server/src/games/coin-toss/CoinTossPlugin"
 
 export interface RoundRecord {
   roundNumber: number
@@ -33,6 +34,10 @@ export function simulateGame(
   gameIndex: number,
   onRound?: (round: RoundRecord) => void
 ): GameResult {
+  // Reset coin-toss streak state at the start of each game (mirrors room.ts behavior)
+  if (plugin.gameType === "coin-toss") {
+    resetCoinTossStreakState()
+  }
   // Build default settings from the plugin's schema
   const tuning: Record<string, number | boolean | string> = {}
   if (plugin.settingsSchema) {

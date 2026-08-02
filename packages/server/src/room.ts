@@ -18,6 +18,7 @@ import { getStrategy } from "./scoring"
 import { COIN_TOSS } from "./games/coin-toss/constants"
 import { BATTLE_BOTS } from "./games/battle-bots/constants"
 import { getRobotTemplates, resetGameState as resetBattleBotsState } from "./games/battle-bots/BattleBotsPlugin"
+import { resetCoinTossStreakState } from "./games/coin-toss/CoinTossPlugin"
 // Side-effect import: registers the coin-toss plugin in the global registry
 import "./games/coin-toss/CoinTossPlugin"
 // Side-effect import: registers the battle-bots plugin in the global registry
@@ -194,6 +195,9 @@ export default class GameRoom implements Party.Server {
       case "UPDATE_ROOM_SIZE":
         this.handleUpdateRoomSize(sender, msg.payload)
         break
+      case "RETURN_TO_LOBBY":
+        this.handleReturnToLobby(sender)
+        break
       default:
         this.sendError(
           sender,
@@ -349,6 +353,17 @@ export default class GameRoom implements Party.Server {
       return
     }
 
+    // If the last round just completed, transition to END_GAME instead of starting a new round
+    const maxRounds = this.getMaxRounds()
+    if (
+      this.state.round.phase === "RESULT" &&
+      maxRounds > 0 &&
+      this.state.round.roundNumber >= maxRounds
+    ) {
+      this.autoEndGame()
+      return
+    }
+
     this.beginRound()
   }
 
@@ -484,6 +499,7 @@ export default class GameRoom implements Party.Server {
     // Clear plugin state for next game
     this.state.pluginState = {}
     resetBattleBotsState()
+    resetCoinTossStreakState()
 
     this.broadcastState()
   }
@@ -766,6 +782,47 @@ export default class GameRoom implements Party.Server {
     this.broadcastState()
   }
 
+  private handleReturnToLobby(sender: Party.Connection) {
+    // Authorization: only host can return to lobby
+    const hostId = this.getHostId()
+    const senderId = this.getPlayerIdByConnectionId(sender.id)
+
+    if (senderId !== hostId) {
+      this.sendError(sender, "NOT_HOST", "Only the host can return to lobby")
+      return
+    }
+
+    // Phase guard: can only return to lobby from END_GAME
+    if (this.state.round.phase !== "END_GAME") {
+      this.sendError(
+        sender,
+        "WRONG_PHASE",
+        "Can only return to lobby from END_GAME phase"
+      )
+      return
+    }
+
+    // Reset game scores
+    this.state.gameScores = {}
+    for (const playerId of Object.keys(this.state.players)) {
+      this.state.gameScores[playerId] = 0
+    }
+    this.state.gameLeaderboard = []
+
+    // Transition to LOBBY, reset round state
+    this.state.round = createDefaultRoundState()
+
+    // Unlock settings now that game is over
+    this.state.settingsLocked = false
+
+    // Clear plugin state for next game
+    this.state.pluginState = {}
+    resetBattleBotsState()
+    resetCoinTossStreakState()
+
+    this.broadcastState()
+  }
+
   private handleGameTypeChange(
     sender: Party.Connection,
     payload: { gameType: string }
@@ -877,6 +934,11 @@ export default class GameRoom implements Party.Server {
     this.state.settingsLocked = true
 
     const roundNumber = this.state.round.roundNumber + 1
+
+    // Reset streak counters at the start of a new game (round 1)
+    if (roundNumber === 1) {
+      resetCoinTossStreakState()
+    }
 
     // Battle-bots rounds 2 and 3 skip PICKING — no player input needed
     const shouldSkipPicking =
@@ -1037,14 +1099,6 @@ export default class GameRoom implements Party.Server {
     this.state.round.resolvedAt = Date.now()
 
     this.broadcastState()
-
-    // Check if we've hit the round limit — auto-end game if so
-    // Import MAX_ROUNDS from coin-toss constants (game-specific)
-    const maxRounds = this.getMaxRounds()
-    if (maxRounds > 0 && this.state.round.roundNumber >= maxRounds) {
-      // Auto-end game after a short delay so clients can see final result
-      setTimeout(() => this.autoEndGame(), 0)
-    }
   }
 
   /**
@@ -1093,12 +1147,6 @@ export default class GameRoom implements Party.Server {
     this.state.round.resolvedAt = Date.now()
 
     this.broadcastState()
-
-    // Check round limit for auto-end
-    const maxRounds = this.getMaxRounds()
-    if (maxRounds > 0 && this.state.round.roundNumber >= maxRounds) {
-      setTimeout(() => this.autoEndGame(), 0)
-    }
   }
 
   /**
@@ -1288,12 +1336,6 @@ export default class GameRoom implements Party.Server {
     this.state.round.resolvedAt = Date.now()
 
     this.broadcastState()
-
-    // Check round limit for auto-end
-    const maxRounds = this.getMaxRounds()
-    if (maxRounds > 0 && this.state.round.roundNumber >= maxRounds) {
-      setTimeout(() => this.autoEndGame(), 0)
-    }
   }
 
   /** Cancel the tick replay timer — idempotent (no-op if no timer) */
@@ -1306,7 +1348,8 @@ export default class GameRoom implements Party.Server {
 
   /**
    * Auto-end the game when round limit is reached.
-   * Same as handleEndGame but without auth check (system-triggered).
+   * Transitions to END_GAME phase instead of directly to LOBBY.
+   * The host must send RETURN_TO_LOBBY to complete the transition back to LOBBY.
    */
   private autoEndGame() {
     if (this.state.round.phase !== "RESULT") return
@@ -1314,6 +1357,7 @@ export default class GameRoom implements Party.Server {
     this.cancelDeadlineTimer()
     this.cancelTickReplay()
 
+    // Apply session scoring before transitioning to END_GAME
     const strategy = getStrategy(
       this.state.config.scoringMode,
       this.state.config.placementPoints
@@ -1336,19 +1380,8 @@ export default class GameRoom implements Party.Server {
 
     this.state.sessionLeaderboard = this.computeSessionLeaderboard()
 
-    this.state.gameScores = {}
-    for (const playerId of Object.keys(this.state.players)) {
-      this.state.gameScores[playerId] = 0
-    }
-    this.state.gameLeaderboard = []
-    this.state.round = createDefaultRoundState()
-
-    // Unlock settings now that game is over
-    this.state.settingsLocked = false
-
-    // Clear plugin state for next game
-    this.state.pluginState = {}
-    resetBattleBotsState()
+    // Transition to END_GAME phase (keep game scores and leaderboard for display)
+    this.state.round.phase = "END_GAME"
 
     this.broadcastState()
   }

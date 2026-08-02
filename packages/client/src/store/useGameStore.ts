@@ -32,6 +32,7 @@ export interface GameStore {
 
   // Client-side pick tracking (prevents double-submission)
   pickSubmitted: boolean
+  currentPick: unknown | null
   currentRoundNumber: number | null
 
   // Animation state — shared so GameView can gate the leaderboard
@@ -77,6 +78,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   connectionStatus: "disconnected",
   roomState: null,
   pickSubmitted: false,
+  currentPick: null,
   currentRoundNumber: null,
   roundAnimationDone: false,
   battleHPState: null,
@@ -106,8 +108,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   submitPick: (pick: unknown) => {
     const { _socketSend } = get()
-    // Optimistically mark pick as submitted
-    set({ pickSubmitted: true })
+    // Optimistically mark pick as submitted and store the pick value
+    set({ pickSubmitted: true, currentPick: pick })
     // Send to server
     if (_socketSend) {
       _socketSend({ type: "SUBMIT_PICK", payload: { pick } })
@@ -218,6 +220,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         roomState: state,
         role: serverRole,
         pickSubmitted: false,
+        currentPick: null,
         roundAnimationDone: false,
         battleHPState: null,
         currentRoundNumber: state.round.roundNumber,
@@ -243,6 +246,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   _resetPickOnNewRound: (roundNumber: number) => {
     set({
       pickSubmitted: false,
+      currentPick: null,
       currentRoundNumber: roundNumber,
     })
   },

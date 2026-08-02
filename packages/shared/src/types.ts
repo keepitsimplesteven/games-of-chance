@@ -75,7 +75,7 @@ export interface Player {
  * Valid room phases. NO BETWEEN_ROUNDS phase exists.
  * RESULT transitions directly to PICKING (next round) or LOBBY (game ended).
  */
-export type RoundPhase = "LOBBY" | "PICKING" | "RESOLVING" | "RESULT"
+export type RoundPhase = "LOBBY" | "PICKING" | "RESOLVING" | "RESULT" | "END_GAME"
 
 export interface RoundState {
   phase: RoundPhase
@@ -132,6 +132,12 @@ export interface GameLeaderboardEntry {
   playerName: string
   score: number
   rank: number
+  /** Current correct streak length (0 = no streak) */
+  streak?: number
+  /** Current wrong streak length (0 = no streak) */
+  coldStreak?: number
+  /** Multiplier applied in the most recent round (for UI display) */
+  lastMultiplier?: number
 }
 
 /**
@@ -210,6 +216,7 @@ export type ClientMessage =
   | { type: "START_SIMULATION"; payload: { playerCount?: number; roundCount?: number; seed?: number } }
   | { type: "STOP_SIMULATION"; payload?: never }
   | { type: "UPDATE_ROOM_SIZE"; payload: { roomSize: number } }
+  | { type: "RETURN_TO_LOBBY"; payload?: never }
 
 /** Server → Client messages */
 export type ServerMessage =

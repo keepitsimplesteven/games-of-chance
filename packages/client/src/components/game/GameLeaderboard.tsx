@@ -1,5 +1,24 @@
 import { useGameStore } from "../../store/useGameStore"
 
+/**
+ * Returns the streak indicator emoji for a leaderboard entry.
+ * - streak=2 (2 consecutive correct) → 🔥
+ * - streak≥3 (3+ consecutive correct) → 🔥🔥
+ * - coldStreak=2 (2 consecutive wrong) → 🧊
+ * - coldStreak≥3 (3+ consecutive wrong) → 🧊🧊
+ * - Otherwise → "" (no indicator)
+ */
+function getStreakIndicator(streak?: number, coldStreak?: number): string {
+  const s = streak ?? 0
+  const c = coldStreak ?? 0
+
+  if (s >= 3) return "🔥🔥"
+  if (s === 2) return "🔥"
+  if (c >= 3) return "🧊🧊"
+  if (c === 2) return "🧊"
+  return ""
+}
+
 export default function GameLeaderboard() {
   const roomState = useGameStore((s) => s.roomState)
   const playerId = useGameStore((s) => s.playerId)
@@ -49,6 +68,12 @@ export default function GameLeaderboard() {
                     <span className="ml-1 text-xs text-gray-500">(you)</span>
                   )}
                 </span>
+                {/* Streak Indicator */}
+                {getStreakIndicator(entry.streak, entry.coldStreak) && (
+                  <span className="text-sm">
+                    {getStreakIndicator(entry.streak, entry.coldStreak)}
+                  </span>
+                )}
               </div>
 
               {/* Score */}

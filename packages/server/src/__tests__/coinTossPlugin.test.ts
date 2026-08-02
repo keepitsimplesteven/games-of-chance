@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest"
-import { coinTossPlugin } from "../games/coin-toss/CoinTossPlugin"
+import { describe, it, expect, beforeEach } from "vitest"
+import { coinTossPlugin, resetCoinTossStreakState } from "../games/coin-toss/CoinTossPlugin"
 import type { Player, GameSettings } from "@games-of-chance/shared"
 
 const defaultSettings: GameSettings = {
@@ -67,6 +67,11 @@ describe("CoinTossPlugin", () => {
       role: "player",
       connected,
       connectionId: connected ? `conn-${id}` : null,
+    })
+
+    // Reset streak state before each test to prevent accumulation
+    beforeEach(() => {
+      resetCoinTossStreakState()
     })
 
     it("awards 10 chips for correct pick", () => {

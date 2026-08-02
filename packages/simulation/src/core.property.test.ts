@@ -3,7 +3,7 @@ import * as fc from "fast-check"
 import { SeededRng } from "./rng"
 import { RandomBot, createBotPlayers } from "./bot"
 import { pickGeneratorRegistry } from "./pick-generator"
-import { coinTossPlugin } from "@games-of-chance/server/src/games/coin-toss/CoinTossPlugin"
+import { coinTossPlugin, resetCoinTossStreakState } from "@games-of-chance/server/src/games/coin-toss/CoinTossPlugin"
 import { simulateGame } from "./core"
 
 // Side-effect import: registers the coin-toss pick generator
@@ -47,6 +47,7 @@ describe("Seed Determinism (full simulation) Property Tests", () => {
           const mathRng1 = new SeededRng(seed + 999_999)
           vi.spyOn(Math, "random").mockImplementation(() => mathRng1.next())
 
+          resetCoinTossStreakState()
           const rng1 = new SeededRng(seed)
           const result1 = simulateGame(
             coinTossPlugin,
@@ -65,6 +66,7 @@ describe("Seed Determinism (full simulation) Property Tests", () => {
           const mathRng2 = new SeededRng(seed + 999_999)
           vi.spyOn(Math, "random").mockImplementation(() => mathRng2.next())
 
+          resetCoinTossStreakState()
           const rng2 = new SeededRng(seed)
           const result2 = simulateGame(
             coinTossPlugin,

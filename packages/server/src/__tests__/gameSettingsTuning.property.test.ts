@@ -5,7 +5,7 @@
  */
 import { describe, it, expect } from "vitest"
 import * as fc from "fast-check"
-import { coinTossPlugin } from "../games/coin-toss/CoinTossPlugin"
+import { coinTossPlugin, resetCoinTossStreakState } from "../games/coin-toss/CoinTossPlugin"
 import type {
   GameSettings,
   Player,
@@ -43,6 +43,9 @@ describe("Feature: game-settings, Property 4: Configured tuning constants are us
         coinSideArb,
         playerIdArb,
         (correctGuessChips, outcome, playerId) => {
+          // Reset streak state so 1x multiplier is applied (fresh streak)
+          resetCoinTossStreakState()
+
           // Build GameSettings with the generated tuning value
           const settings: GameSettings = {
             roundCount: 10,
@@ -99,6 +102,9 @@ describe("Feature: game-settings, Property 4: Configured tuning constants are us
         coinSideArb,
         playerIdArb,
         (correctGuessChips, outcome, playerId) => {
+          // Reset streak state so no prototype/accumulation issues
+          resetCoinTossStreakState()
+
           // Build GameSettings with the generated tuning value
           const settings: GameSettings = {
             roundCount: 10,
