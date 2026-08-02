@@ -2,6 +2,8 @@ import { useGameStore } from "../../store/useGameStore"
 import { CoinTossContainer } from "../../games/coin-toss/CoinTossContainer"
 import { BattleBotsView } from "../../games/battle-bots/BattleBotsView"
 import GameLeaderboard from "./GameLeaderboard"
+import PhaseIndicator from "./PhaseIndicator"
+import FinalResultsScreen from "./FinalResultsScreen"
 import RoundControls from "./RoundControls"
 
 /**
@@ -25,6 +27,11 @@ export default function GameView() {
   // Only render when a game is active (phase ≠ LOBBY)
   if (!phase || phase === "LOBBY") return null
 
+  // END_GAME phase — show the final results screen with podium layout
+  if (phase === "END_GAME") {
+    return <FinalResultsScreen />
+  }
+
   // Only show leaderboard after animation completes (prevents spoiling the result)
   // During PICKING phase, show leaderboard (previous round's scores are already revealed)
   const showLeaderboard = phase === "PICKING" || roundAnimationDone
@@ -47,6 +54,9 @@ export default function GameView() {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Phase indicator — shows current game phase */}
+      <PhaseIndicator phase={phase} />
+
       {/* Game-specific UI (pick widget, animation, result) */}
       {renderGameContainer()}
 

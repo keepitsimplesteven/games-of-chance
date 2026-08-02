@@ -608,8 +608,28 @@ describe("Feature: game-settings, Property 8: Settings persist across game sessi
           vi.advanceTimersByTime(pickWindowMs + 100)
 
           // End the game (returns to LOBBY, unlocks settings)
-          const endMsg = JSON.stringify({ type: "END_GAME" })
-          await gameRoom.onMessage(endMsg, hostConn as any)
+          // With the new behavior: last round stays in RESULT, host must send START_ROUND
+          // to trigger END_GAME, then RETURN_TO_LOBBY to get back to LOBBY.
+          // For roundCount > 1 (not at last round), just send END_GAME directly.
+          const stateAfterResolve = getStateFromBroadcast(mockRoom)
+          if (stateAfterResolve.round.phase === "END_GAME") {
+            const returnMsg = JSON.stringify({ type: "RETURN_TO_LOBBY" })
+            await gameRoom.onMessage(returnMsg, hostConn as any)
+          } else if (stateAfterResolve.round.phase === "RESULT") {
+            // Check if this is the last round — if so, START_ROUND triggers END_GAME
+            const maxRounds = stateAfterResolve.gameSettings.roundCount
+            if (maxRounds > 0 && stateAfterResolve.round.roundNumber >= maxRounds) {
+              // Trigger END_GAME via START_ROUND
+              const nextMsg = JSON.stringify({ type: "START_ROUND" })
+              await gameRoom.onMessage(nextMsg, hostConn as any)
+              // Then return to lobby
+              const returnMsg = JSON.stringify({ type: "RETURN_TO_LOBBY" })
+              await gameRoom.onMessage(returnMsg, hostConn as any)
+            } else {
+              const endMsg = JSON.stringify({ type: "END_GAME" })
+              await gameRoom.onMessage(endMsg, hostConn as any)
+            }
+          }
 
           // Verify we're back in LOBBY
           const stateAfterEnd = getStateFromBroadcast(mockRoom)

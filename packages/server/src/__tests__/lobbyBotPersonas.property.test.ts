@@ -10,7 +10,7 @@ import { describe, it, expect } from "vitest"
 import * as fc from "fast-check"
 import { BotManager, BOT_NAMES } from "../bots/BotManager"
 import { registry } from "../games/GameRegistry"
-import "../games/coin-toss/CoinTossPlugin"
+import { resetCoinTossStreakState } from "../games/coin-toss/CoinTossPlugin"
 import "../games/battle-bots/index"
 import type { Player, GameSettings, CoinTossPick, CoinTossResult, CoinSide } from "@games-of-chance/shared"
 
@@ -1488,6 +1488,10 @@ describe("Feature: lobby-bot-personas, Property 5: Bot Scoring Equality", () => 
         ({ humanCount, botCount }, outcome, pickSides) => {
           const plugin = registry.lookup("coin-toss")
           const settings = defaultSettings()
+
+          // Reset streak state so each iteration starts fresh (no accumulated multipliers)
+          resetCoinTossStreakState()
+
           const { players, humanIds, botIds } = buildPlayers(humanCount, botCount)
           const allIds = [...humanIds, ...botIds]
 
@@ -1539,6 +1543,10 @@ describe("Feature: lobby-bot-personas, Property 5: Bot Scoring Equality", () => 
         ({ humanCount, botCount }, outcome, pickSides) => {
           const plugin = registry.lookup("coin-toss")
           const settings = defaultSettings()
+
+          // Reset streak state so each iteration starts fresh
+          resetCoinTossStreakState()
+
           const { players, humanIds, botIds } = buildPlayers(humanCount, botCount)
           const allIds = [...humanIds, ...botIds]
 
@@ -1595,6 +1603,9 @@ describe("Feature: lobby-bot-personas, Property 5: Bot Scoring Equality", () => 
         (outcome, pickSide) => {
           const plugin = registry.lookup("coin-toss")
           const settings = defaultSettings()
+
+          // Reset streak state so each iteration starts fresh
+          resetCoinTossStreakState()
 
           // Create a human and a bot with the same pick
           const humanId = "human-0"

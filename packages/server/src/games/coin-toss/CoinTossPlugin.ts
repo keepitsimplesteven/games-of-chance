@@ -10,10 +10,41 @@ import type {
 import type { GamePlugin } from "../GamePlugin"
 import { registry } from "../GameRegistry"
 import { COIN_TOSS, COIN_TOSS_SETTINGS_SCHEMA } from "./constants"
+import { computeStreakScoring, type StreakState } from "./StreakEngine"
+
+// ── Module-level streak state ──────────────────────────────────────────────
+
+let streakState: StreakState = {
+  correctStreaks: {},
+  wrongStreaks: {},
+}
+
+/** Last round's applied multipliers (for leaderboard display) */
+let lastAppliedMultipliers: Record<string, number> = {}
+
+/**
+ * Resets the module-level streak state. Called when a new game starts.
+ */
+export function resetCoinTossStreakState(): void {
+  streakState = {
+    correctStreaks: {},
+    wrongStreaks: {},
+  }
+  lastAppliedMultipliers = {}
+}
+
+/**
+ * Returns the current streak state (for testing).
+ */
+export function getStreakState(): StreakState {
+  return streakState
+}
+
+// ── Plugin Implementation ──────────────────────────────────────────────────
 
 /**
  * Coin Toss game plugin — fair 50/50 coin flip.
- * Players guess HEADS or TAILS; correct guesses earn CORRECT_GUESS_CHIPS.
+ * Players guess HEADS or TAILS; correct guesses earn streak-multiplied points.
  */
 export const coinTossPlugin: GamePlugin<CoinTossPick, CoinTossResult> = {
   gameType: "coin-toss",
@@ -42,17 +73,25 @@ export const coinTossPlugin: GamePlugin<CoinTossPick, CoinTossResult> = {
     players: Player[],
     settings: GameSettings
   ): RoundScoreResult {
-    const deltas: Record<string, number> = {}
-    const correctGuessChips = Number(settings.tuning.CORRECT_GUESS_CHIPS) || COIN_TOSS.CORRECT_GUESS_CHIPS
+    const basePoints = Number(settings.tuning.CORRECT_GUESS_CHIPS) || COIN_TOSS.CORRECT_GUESS_CHIPS
 
-    for (const player of players) {
-      if (!player.connected) continue
-      const pick = picks[player.id]
-      deltas[player.id] =
-        pick && pick.side === result.outcome ? correctGuessChips : 0
+    // Filter out disconnected players — only score connected players
+    const connectedIds = new Set(players.filter((p) => p.connected).map((p) => p.id))
+    const connectedPicks: Record<string, CoinTossPick> = {}
+    for (const [id, pick] of Object.entries(picks)) {
+      if (connectedIds.has(id)) {
+        connectedPicks[id] = pick
+      }
     }
 
-    return { deltas }
+    // Use streak-based scoring
+    const scoringResult = computeStreakScoring(connectedPicks, result, streakState, basePoints)
+
+    // Update module-level streak state
+    streakState = scoringResult.nextStreakState
+    lastAppliedMultipliers = scoringResult.appliedMultipliers
+
+    return { deltas: scoringResult.deltas }
   },
 
   computeGameLeaderboard(
@@ -68,6 +107,9 @@ export const coinTossPlugin: GamePlugin<CoinTossPick, CoinTossResult> = {
         playerName: p.name,
         score: gameScores[p.id] ?? 0,
         rank: 0,
+        streak: streakState.correctStreaks[p.id] ?? 0,
+        coldStreak: streakState.wrongStreaks[p.id] ?? 0,
+        lastMultiplier: lastAppliedMultipliers[p.id] ?? 0,
       }))
       .sort((a, b) => b.score - a.score)
 
