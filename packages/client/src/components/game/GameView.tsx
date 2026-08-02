@@ -58,7 +58,7 @@ export default function GameView() {
   return (
     <div className="flex flex-col gap-4">
       {/* Phase indicator — shows current game phase */}
-      <PhaseIndicator phase={phase} />
+      <PhaseIndicator phase={phase} gameType={gameType} />
 
       {/* Game-specific UI (pick widget, animation, result) */}
       {renderGameContainer()}

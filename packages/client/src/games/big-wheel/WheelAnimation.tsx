@@ -72,11 +72,17 @@ export function WheelAnimation({
     [anglePerSegment, currentRotation]
   )
 
+  const onSpinCompleteRef = useRef(onSpinComplete)
+  onSpinCompleteRef.current = onSpinComplete
+
+  const calculateTargetRotationRef = useRef(calculateTargetRotation)
+  calculateTargetRotationRef.current = calculateTargetRotation
+
   useEffect(() => {
     if (isSpinning && landingIndex !== null && !animatingRef.current) {
       animatingRef.current = true
 
-      const targetRotation = calculateTargetRotation(landingIndex)
+      const targetRotation = calculateTargetRotationRef.current(landingIndex)
       const startRotation = currentRotation
       const totalDelta = targetRotation - startRotation
       const duration = 3500 + Math.random() * 1500 // 3.5–5 seconds
@@ -102,19 +108,13 @@ export function WheelAnimation({
           setCurrentRotation(targetRotation)
           animatingRef.current = false
           animationFrameRef.current = null
-          onSpinComplete?.()
+          onSpinCompleteRef.current?.()
         }
       }
 
       animationFrameRef.current = requestAnimationFrame(animate)
     }
-
-    return () => {
-      if (animationFrameRef.current !== null) {
-        cancelAnimationFrame(animationFrameRef.current)
-      }
-    }
-  }, [isSpinning, landingIndex, calculateTargetRotation, onSpinComplete, currentRotation])
+  }, [isSpinning, landingIndex]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Set initial rotation on the element
   useEffect(() => {

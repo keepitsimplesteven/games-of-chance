@@ -370,12 +370,21 @@ export default class GameRoom implements Party.Server {
   }
 
   private handleStartRound(sender: Party.Connection) {
-    // Authorization: only host can start a round
+    // Authorization: host can always start a round. For Big Wheel, the active spinner can too.
     const hostId = this.getHostId()
     const senderId = this.getPlayerIdByConnectionId(sender.id)
 
-    if (senderId !== hostId) {
-      this.sendError(sender, "NOT_HOST", "Only the host can start a round")
+    let authorized = senderId === hostId
+    if (!authorized && this.state.config.gameType === "big-wheel") {
+      const bwState = getBigWheelState()
+      if (bwState) {
+        const activeSpinnerId = bwState.spinOrder[bwState.currentTurnIndex]
+        authorized = senderId === activeSpinnerId
+      }
+    }
+
+    if (!authorized) {
+      this.sendError(sender, "NOT_HOST", "Only the host or active spinner can advance the round")
       return
     }
 
@@ -403,6 +412,28 @@ export default class GameRoom implements Party.Server {
     ) {
       this.autoEndGame()
       return
+    }
+
+    // Big Wheel: advance turn index after spin 2 before starting next round
+    if (this.state.config.gameType === "big-wheel" && this.state.round.phase === "RESULT") {
+      const bwState = getBigWheelState()
+      if (bwState) {
+        // Use the round result to determine what just happened
+        const lastResult = this.state.round.result as BigWheelSpinResult | null
+        if (lastResult && lastResult.spinNumber === 2) {
+          // Spin 2 just completed — advance to next player
+          bwState.currentTurnIndex++
+          bwState.currentSpinNumber = 1
+
+          // Check if all players are done
+          if (bwState.currentTurnIndex >= bwState.spinOrder.length) {
+            this.finalizeBigWheelGame()
+            return
+          }
+        }
+        // If spinNumber === 1, we're advancing from spin 1 to spin 2 (same player)
+        // currentSpinNumber is already set to 2 by resolveRound
+      }
     }
 
     this.beginRound()
@@ -1243,102 +1274,49 @@ export default class GameRoom implements Party.Server {
         bwState.spinResults[activeSpinnerId].push(spinResult.value)
 
         if (bwState.currentSpinNumber === 1) {
-          // After spin 1: advance to spin 2, stay on same player, restart PICKING phase
+          // After spin 1: advance to spin 2, stay on same player
           bwState.currentSpinNumber = 2
 
-          // Transition to RESULT to show spin 1 result + play animation
+          // Transition to RESULT — stay here until player/host clicks to continue
           this.state.round.phase = "RESULT"
           this.state.round.result = result
           this.state.round.resolvedAt = Date.now()
           this.broadcastState()
 
-          // Delay before advancing to spin 2 (allow wheel animation to complete)
-          this.deadlineTimerId = setTimeout(() => {
-            // Auto-advance to spin 2 PICKING phase
-            this.state.round = {
-              phase: "PICKING",
-              roundNumber: this.state.round.roundNumber + 1,
-              picks: {},
-              result: null,
-              pickDeadlineMs: Date.now() + this.state.gameSettings.pickWindowMs,
-              resolvedAt: null,
-            }
-            this.broadcastState()
-
-            // Schedule bot picks for big-wheel (if active spinner is a bot)
-            // If bot picks, it will cancel the deadline and resolve immediately
-            if (!this.scheduleBigWheelBotPick()) {
-              // Only schedule the deadline timer if bot didn't already resolve
-              this.scheduleResolve(this.state.gameSettings.pickWindowMs)
-            }
-          }, 5000)
+          // If active spinner is a bot, auto-advance after animation delay
+          if (this.botManager.isBot(activeSpinnerId)) {
+            this.deadlineTimerId = setTimeout(() => {
+              this.beginRound()
+            }, 4500)
+          }
           return
         } else {
           // After spin 2: player's turn is complete
           // DON'T increment currentTurnIndex yet — keep it pointing at the player
-          // whose result we're showing, so the client displays correctly during the delay
+          // whose result we're showing, so the client displays correctly
 
-          // Check if this was the last player
-          const isLastPlayer = bwState.currentTurnIndex >= bwState.spinOrder.length - 1
-
-          // Transition to RESULT to show spin 2 result + play animation
+          // Transition to RESULT to show spin 2 result
           this.state.round.phase = "RESULT"
           this.state.round.result = result
           this.state.round.resolvedAt = Date.now()
           this.broadcastState()
 
-          if (isLastPlayer) {
-            // Delay before ending game (allow final wheel animation)
+          // If active spinner is a bot, auto-advance after animation delay
+          if (this.botManager.isBot(activeSpinnerId)) {
             this.deadlineTimerId = setTimeout(() => {
               bwState.currentTurnIndex++
               bwState.currentSpinNumber = 1
-              this.finalizeBigWheelGame()
-            }, 5000)
-            return
-          }
-
-          // More players to go — delay before advancing to next player
-          this.deadlineTimerId = setTimeout(() => {
-            // NOW advance the turn index
-            bwState.currentTurnIndex++
-            bwState.currentSpinNumber = 1
-
-            // Auto-advance to next player's PICKING phase
-            this.state.round = {
-              phase: "PICKING",
-              roundNumber: this.state.round.roundNumber + 1,
-              picks: {},
-              result: null,
-              pickDeadlineMs: Date.now() + this.state.gameSettings.pickWindowMs,
-              resolvedAt: null,
-            }
-            this.broadcastState()
-
-            // Check if next player is disconnected — skip them
-            const nextSpinnerId = bwState.spinOrder[bwState.currentTurnIndex]
-            if (nextSpinnerId && isPlayerDisconnected(nextSpinnerId)) {
-              this.cancelDeadlineTimer()
-              resolveDisconnectedTurn(nextSpinnerId)
-              bwState.currentTurnIndex++
-              bwState.currentSpinNumber = 1
-
               if (bwState.currentTurnIndex >= bwState.spinOrder.length) {
                 this.finalizeBigWheelGame()
                 return
               }
-              // Continue to next player
-              this.broadcastState()
               this.beginRound()
-              return
-            }
+            }, 4500)
+            return
+          }
 
-            // Schedule bot picks for big-wheel (if active spinner is a bot)
-            // If bot picks, it will cancel the deadline and resolve immediately
-            if (!this.scheduleBigWheelBotPick()) {
-              // Only schedule the deadline timer if bot didn't already resolve
-              this.scheduleResolve(this.state.gameSettings.pickWindowMs)
-            }
-          }, 5000)
+          // Human player — stay in RESULT until host/player clicks to continue
+          // (includes the last player — host must click "Next Player" / "View Results")
           return
         }
       }

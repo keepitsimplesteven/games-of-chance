@@ -13,6 +13,7 @@ import { useGameStore } from "../../store/useGameStore"
 export default function RoundControls() {
   const role = useGameStore((s) => s.role)
   const phase = useGameStore((s) => s.roomState?.round.phase)
+  const gameType = useGameStore((s) => s.roomState?.room.gameType)
   const roundAnimationDone = useGameStore((s) => s.roundAnimationDone)
   const roundNumber = useGameStore((s) => s.roomState?.round.roundNumber ?? 0)
   const totalRounds = useGameStore((s) => s.roomState?.gameSettings?.roundCount ?? 0)
@@ -21,6 +22,9 @@ export default function RoundControls() {
 
   // Only host sees these controls
   if (role !== "host") return null
+
+  // Big Wheel has its own advance controls in BigWheelContainer
+  if (gameType === "big-wheel" && phase === "RESULT") return null
 
   // No buttons during PICKING or RESOLVING
   if (phase === "PICKING" || phase === "RESOLVING") return null

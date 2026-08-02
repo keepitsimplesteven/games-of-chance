@@ -70,15 +70,27 @@ export function BigWheelContainer() {
   const [wheelSpinning, setWheelSpinning] = useState(false)
   const [wheelLandingIndex, setWheelLandingIndex] = useState<number | null>(null)
   const lastResultRef = useRef<BigWheelSpinResult | null>(null)
+  // Track confirmed spin results — only updated after animation completes
+  const [confirmedSpins, setConfirmedSpins] = useState<number[]>([])
 
   // Trigger spin animation when a new round result arrives (phase transitions to RESULT)
+  const lastResultIdRef = useRef<string>("")
+
   useEffect(() => {
-    if (phase === "RESULT" && roundResult && roundResult !== lastResultRef.current) {
-      lastResultRef.current = roundResult
-      setWheelLandingIndex(roundResult.reelIndex)
-      setWheelSpinning(true)
+    if (phase === "RESULT" && roundResult) {
+      // Create a unique ID for this result to detect new spins
+      const resultId = `${roundResult.spinnerPlayerId}-${roundResult.spinNumber}-${roundResult.reelIndex}`
+      if (resultId !== lastResultIdRef.current) {
+        // Only animate if this result belongs to the current active spinner we're displaying
+        if (roundResult.spinnerPlayerId === activeSpinnerId) {
+          lastResultIdRef.current = resultId
+          lastResultRef.current = roundResult
+          setWheelLandingIndex(roundResult.reelIndex)
+          setWheelSpinning(true)
+        }
+      }
     }
-  }, [phase, roundResult])
+  }, [phase, roundResult, activeSpinnerId])
 
   // Also trigger a visual "fast spin" during RESOLVING before the result comes back
   useEffect(() => {
@@ -91,7 +103,31 @@ export function BigWheelContainer() {
 
   const handleSpinComplete = () => {
     setWheelSpinning(false)
+    // Add the landed value to confirmed spins only for the current active spinner
+    if (lastResultRef.current && lastResultRef.current.spinnerPlayerId === activeSpinnerId) {
+      setConfirmedSpins((prev) => {
+        // Prevent duplicates: only add if this spin number isn't already tracked
+        const spinNum = lastResultRef.current!.spinNumber
+        if (prev.length < spinNum) {
+          return [...prev, lastResultRef.current!.value]
+        }
+        return prev
+      })
+    }
   }
+
+  // Reset confirmed spins when the active spinner changes
+  const prevSpinnerRef = useRef(activeSpinnerId)
+  useEffect(() => {
+    if (activeSpinnerId !== prevSpinnerRef.current) {
+      prevSpinnerRef.current = activeSpinnerId
+      setConfirmedSpins([])
+      lastResultRef.current = null
+      lastResultIdRef.current = ""
+    }
+  }, [activeSpinnerId])
+
+  const confirmedTotal = confirmedSpins.reduce((sum, v) => sum + v, 0)
 
   return (
     <div className="flex flex-col items-center gap-4">
@@ -161,20 +197,33 @@ export function BigWheelContainer() {
         </div>
       )}
 
-      {/* Spin Results Summary — show accumulated spins for active spinner */}
-      {activeSpinnerResults.length > 0 && phase !== "RESULT" && (
+      {/* Next Spin / Next Player button — shown to active spinner OR host during RESULT */}
+      {phase === "RESULT" && !wheelSpinning && (isActiveSpinner || useGameStore.getState().role === "host") && (
+        <button
+          type="button"
+          onClick={() => useGameStore.getState().startRound()}
+          className="rounded-lg bg-indigo-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 active:scale-95"
+        >
+          {roundResult?.spinNumber === 1
+            ? "Spin Again"
+            : currentTurnIndex >= spinOrder.length - 1
+              ? "View Results"
+              : "Next Player"}
+        </button>
+      )}
+
+      {/* Spin Results Summary — show after wheel animation completes, persists through spin 2 */}
+      {confirmedSpins.length > 0 && (
         <div className="text-sm text-gray-600">
-          {activeSpinnerResults.map((val, i) => (
+          {confirmedSpins.map((val, i) => (
             <span key={i}>
               Spin {i + 1}: {val}
-              {i < activeSpinnerResults.length - 1 && " | "}
+              {i < confirmedSpins.length - 1 && " | "}
             </span>
           ))}
-          {activeSpinnerResults.length > 0 && (
-            <span className="ml-2 font-medium">
-              Total: {spinTotal}
-            </span>
-          )}
+          <span className="ml-2 font-medium">
+            Total: {confirmedTotal}
+          </span>
         </div>
       )}
 
