@@ -1,6 +1,7 @@
 import { useGameStore } from "../../store/useGameStore"
 import { CoinTossContainer } from "../../games/coin-toss/CoinTossContainer"
 import { BattleBotsView } from "../../games/battle-bots/BattleBotsView"
+import { BigWheelContainer } from "../../games/big-wheel/BigWheelContainer"
 import GameLeaderboard from "./GameLeaderboard"
 import PhaseIndicator from "./PhaseIndicator"
 import FinalResultsScreen from "./FinalResultsScreen"
@@ -43,6 +44,8 @@ export default function GameView() {
         return <CoinTossContainer />
       case "battle-bots":
         return <BattleBotsView />
+      case "big-wheel":
+        return <BigWheelContainer />
       default:
         return (
           <div className="py-8 text-center text-gray-500">

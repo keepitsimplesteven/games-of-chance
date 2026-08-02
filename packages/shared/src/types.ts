@@ -178,6 +178,8 @@ export interface RoomState {
   gameSettings: GameSettings
   /** Whether settings are currently locked (active game in progress) */
   settingsLocked: boolean
+  /** Big Wheel game state — present only during a big-wheel game */
+  bigWheelGameState?: BigWheelGameState | null
 }
 
 // ── Battle Bots ────────────────────────────────────────────────────────────
@@ -195,6 +197,32 @@ export interface BattleTickUpdate {
     tick: number
     battles: BattleHPSnapshot[]
   }
+}
+
+// ── Big Wheel ──────────────────────────────────────────────────────────────
+
+/** Big Wheel pick — the only action is to trigger a spin */
+export interface BigWheelPick {
+  type: "spin"
+}
+
+/** Big Wheel spin result — sent as round result in STATE_SYNC */
+export interface BigWheelSpinResult {
+  spinnerPlayerId: string
+  spinNumber: 1 | 2
+  reelIndex: number
+  value: number
+  spinTotal: number | null  // null until both spins complete
+}
+
+/** Big Wheel game state included in STATE_SYNC for client rendering */
+export interface BigWheelGameState {
+  spinOrder: string[]
+  currentTurnIndex: number
+  currentSpinNumber: 1 | 2
+  activeSpinnerId: string
+  spinResults: Record<string, number[]>  // playerId → [spin1, spin2?]
+  reelStrip: number[]
 }
 
 // ── Messages ───────────────────────────────────────────────────────────────
