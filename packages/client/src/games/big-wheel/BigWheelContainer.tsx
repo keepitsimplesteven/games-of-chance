@@ -103,6 +103,8 @@ export function BigWheelContainer() {
 
   const handleSpinComplete = () => {
     setWheelSpinning(false)
+    // Signal that animation is done — unlocks leaderboard display
+    useGameStore.setState({ roundAnimationDone: true })
     // Add the landed value to confirmed spins only for the current active spinner
     if (lastResultRef.current && lastResultRef.current.spinnerPlayerId === activeSpinnerId) {
       setConfirmedSpins((prev) => {
@@ -140,7 +142,7 @@ export function BigWheelContainer() {
           )}
         </div>
         <div className="text-sm text-gray-500">
-          Spin {currentSpinNumber} of 2
+          Spin {phase === "RESULT" && roundResult ? roundResult.spinNumber : currentSpinNumber} of 2
         </div>
       </div>
 

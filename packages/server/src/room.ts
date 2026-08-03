@@ -1286,8 +1286,24 @@ export default class GameRoom implements Party.Server {
           // If active spinner is a bot, auto-advance after animation delay
           if (this.botManager.isBot(activeSpinnerId)) {
             this.deadlineTimerId = setTimeout(() => {
-              this.beginRound()
-            }, 4500)
+              // Transition to PICKING for spin 2
+              this.state.round = {
+                phase: "PICKING",
+                roundNumber: this.state.round.roundNumber + 1,
+                picks: {},
+                result: null,
+                pickDeadlineMs: Date.now() + this.state.gameSettings.pickWindowMs,
+                resolvedAt: null,
+              }
+              this.broadcastState()
+
+              // Small delay before bot picks for spin 2 — lets client reset animation state
+              this.deadlineTimerId = setTimeout(() => {
+                if (!this.scheduleBigWheelBotPick()) {
+                  this.scheduleResolve(this.state.gameSettings.pickWindowMs)
+                }
+              }, 100)
+            }, BIG_WHEEL.BOT_SPIN_DELAY_MS)
           }
           return
         } else {
@@ -1311,7 +1327,7 @@ export default class GameRoom implements Party.Server {
                 return
               }
               this.beginRound()
-            }, 4500)
+            }, BIG_WHEEL.BOT_SPIN_DELAY_MS)
             return
           }
 

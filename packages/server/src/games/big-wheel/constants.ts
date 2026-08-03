@@ -22,6 +22,9 @@ export const BIG_WHEEL = {
 
   /** Number of spins per player turn */
   SPINS_PER_TURN: 2,
+
+  /** Delay in ms for bot auto-advance (must exceed max wheel animation duration of ~5s) */
+  BOT_SPIN_DELAY_MS: 5_500,
 } as const
 
 export const BIG_WHEEL_SETTINGS_SCHEMA: SettingsSchema = [

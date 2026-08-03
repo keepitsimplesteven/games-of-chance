@@ -35,6 +35,7 @@ export default function GameView() {
 
   // Only show leaderboard after animation completes (prevents spoiling the result)
   // During PICKING phase, show leaderboard (previous round's scores are already revealed)
+  // For Big Wheel: show after each spin animation completes (roundAnimationDone gates this)
   const showLeaderboard = phase === "PICKING" || roundAnimationDone
 
   // Dynamic game container based on gameType

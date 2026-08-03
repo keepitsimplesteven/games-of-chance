@@ -114,14 +114,10 @@ export const bigWheelPlugin: GamePlugin<BigWheelPick, BigWheelSpinResult> = {
     _players: Player[],
     _settings: GameSettings
   ): RoundScoreResult {
-    // After spin 1: no score yet — waiting for spin 2
-    if (result.spinNumber === 1) {
-      return { deltas: {} }
-    }
-
-    // After spin 2: score = spinTotal (sum of both spins)
-    const spinTotal = result.spinTotal ?? 0
-    return { deltas: { [result.spinnerPlayerId]: spinTotal } }
+    // Score each spin individually so the leaderboard updates progressively
+    // Spin 1: delta = the spin 1 value
+    // Spin 2: delta = the spin 2 value (just the second spin, not the total)
+    return { deltas: { [result.spinnerPlayerId]: result.value } }
   },
 
   computeGameLeaderboard(
