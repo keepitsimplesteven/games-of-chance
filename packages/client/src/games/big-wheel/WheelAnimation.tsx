@@ -2,14 +2,33 @@ import { useEffect, useRef, useState, useCallback } from "react"
 import { WheelSegment } from "./WheelSegment"
 import { WheelPointer } from "./WheelPointer"
 
-/** Carnival color palette cycling through segments */
-const SEGMENT_COLORS = [
-  "#e74c3c", // red
-  "#f1c40f", // yellow
-  "#27ae60", // green
-  "#2980b9", // blue
-  "#e67e22", // orange
-]
+/** Carnival color palette — ordered from lowest to highest value tier */
+const SEGMENT_COLORS = {
+  green: "#27ae60",   // lowest tier
+  blue: "#2980b9",    // low-mid tier
+  yellow: "#f1c40f",  // mid tier
+  orange: "#e67e22",  // high tier
+  red: "#e74c3c",     // max value only
+}
+
+/**
+ * Get segment color based on value relative to the reel strip's range.
+ * The max value in the strip gets red (exclusive).
+ * Remaining values are divided into 4 equal tiers: green, blue, yellow, orange.
+ */
+function getSegmentColor(value: number, minValue: number, maxValue: number): string {
+  if (value === maxValue) return SEGMENT_COLORS.red
+
+  // Normalize remaining values into 4 tiers
+  const range = maxValue - minValue
+  if (range <= 0) return SEGMENT_COLORS.green
+
+  const normalized = (value - minValue) / (maxValue - minValue) // 0 to <1 (never 1, since max is handled above)
+  if (normalized >= 0.75) return SEGMENT_COLORS.orange
+  if (normalized >= 0.50) return SEGMENT_COLORS.yellow
+  if (normalized >= 0.25) return SEGMENT_COLORS.blue
+  return SEGMENT_COLORS.green
+}
 
 interface WheelAnimationProps {
   /** Ordered array of numeric values on the wheel */
@@ -45,6 +64,8 @@ export function WheelAnimation({
 
   const totalSegments = reelStrip.length
   const anglePerSegment = 360 / totalSegments
+  const reelMin = Math.min(...reelStrip)
+  const reelMax = Math.max(...reelStrip)
 
   /**
    * Calculate target rotation to land on a given segment index.
@@ -168,7 +189,7 @@ export function WheelAnimation({
               value={value}
               index={index}
               totalSegments={totalSegments}
-              color={SEGMENT_COLORS[index % SEGMENT_COLORS.length]}
+              color={getSegmentColor(value, reelMin, reelMax)}
             />
           ))}
         </g>

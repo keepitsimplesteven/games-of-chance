@@ -6,7 +6,7 @@ export const BIG_WHEEL = {
   PICK_WINDOW_MS: 15_000,
 
   /** Default reel strip — 20 values from 5 to 100 in increments of 5 */
-  DEFAULT_REEL_STRIP: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100],
+  DEFAULT_REEL_STRIP: [15, 80, 35, 60, 20, 75, 40, 55, 95, 50, 85, 30, 65, 10, 45, 70, 25, 90, 5, 100],
 
   /** Minimum reel strip length */
   REEL_STRIP_MIN_LENGTH: 2,
