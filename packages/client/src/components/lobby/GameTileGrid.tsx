@@ -40,21 +40,32 @@ const games = [
 
 export default function GameTileGrid() {
   const role = useGameStore((s) => s.role)
+  const playerId = useGameStore((s) => s.playerId)
   const currentGameType = useGameStore((s) => s.roomState?.room.gameType)
+  const gameVotes = useGameStore((s) => s.roomState?.gameVotes) ?? {}
   const setGameType = useGameStore((s) => s.setGameType)
+  const voteGame = useGameStore((s) => s.voteGame)
 
   const isHost = role === "host"
 
   const handleTileClick = (gameId: string) => {
-    if (!isHost) return
-    setGameType(gameId)
+    if (isHost) {
+      // Host selects the game directly
+      setGameType(gameId)
+    } else {
+      // Non-host players vote
+      voteGame(gameId)
+    }
   }
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       {games.map((game) => {
         const isSelected = game.id === currentGameType
-        const isClickable = game.active && isHost
+        const isClickable = game.active
+        const votes = gameVotes[game.id] ?? []
+        const voteCount = votes.length
+        const playerVotedForThis = votes.includes(playerId ?? "")
 
         return (
           <button
@@ -67,9 +78,7 @@ export default function GameTileGrid() {
               isSelected
                 ? "border-amber-500 bg-gradient-to-br from-amber-100 to-yellow-100 ring-2 ring-amber-400"
                 : game.active
-                  ? isHost
-                    ? "cursor-pointer border-amber-400 bg-gradient-to-br from-amber-50 to-yellow-50 hover:shadow-lg hover:ring-2 hover:ring-amber-300"
-                    : "cursor-default border-amber-400 bg-gradient-to-br from-amber-50 to-yellow-50"
+                  ? "cursor-pointer border-amber-400 bg-gradient-to-br from-amber-50 to-yellow-50 hover:shadow-lg hover:ring-2 hover:ring-amber-300"
                   : "cursor-default border-gray-200 bg-gray-100"
             }`}
           >
@@ -85,10 +94,24 @@ export default function GameTileGrid() {
               </div>
             )}
 
-            {/* Selected checkmark */}
+            {/* Selected checkmark (host's choice) */}
             {isSelected && (
               <div className="absolute right-2 top-2">
                 <span className="text-sm text-amber-600">✓</span>
+              </div>
+            )}
+
+            {/* Vote count badge */}
+            {voteCount > 0 && game.active && (
+              <div className="absolute left-2 top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-500 px-1.5">
+                <span className="text-[10px] font-bold text-white">{voteCount}</span>
+              </div>
+            )}
+
+            {/* Player's own vote indicator */}
+            {playerVotedForThis && !isHost && (
+              <div className="absolute right-2 top-2">
+                <span className="text-sm text-indigo-500">🗳️</span>
               </div>
             )}
 

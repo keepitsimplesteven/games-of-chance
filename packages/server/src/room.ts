@@ -63,6 +63,8 @@ interface LiveRoomState {
   settingsLocked: boolean
   /** Plugin-specific state for multi-round games */
   pluginState: Record<string, unknown>
+  /** Game votes — gameType → set of player IDs who voted for it */
+  gameVotes: Record<string, string[]>
 }
 
 // ── Default configuration ──────────────────────────────────────────────────
@@ -157,6 +159,7 @@ export default class GameRoom implements Party.Server {
       gameSettings: buildDefaultGameSettings("coin-toss"),
       settingsLocked: false,
       pluginState: {},
+      gameVotes: {},
     }
   }
 
@@ -220,6 +223,9 @@ export default class GameRoom implements Party.Server {
         break
       case "RETURN_TO_LOBBY":
         this.handleReturnToLobby(sender)
+        break
+      case "VOTE_GAME":
+        this.handleVoteGame(sender, msg.payload)
         break
       default:
         this.sendError(
@@ -913,6 +919,53 @@ export default class GameRoom implements Party.Server {
     this.broadcastState()
   }
 
+  private handleVoteGame(
+    sender: Party.Connection,
+    payload: { gameType: string }
+  ) {
+    // Any connected player can vote — no role restriction
+    const playerId = this.getPlayerIdByConnectionId(sender.id)
+    if (!playerId) {
+      this.sendError(sender, "NOT_IN_ROOM", "Player not found in room")
+      return
+    }
+
+    // Only allow voting during LOBBY phase
+    if (this.state.round.phase !== "LOBBY") {
+      return
+    }
+
+    // Only allow voting on active (registered) games
+    const gameType = payload.gameType
+    try {
+      registry.lookup(gameType)
+    } catch {
+      return
+    }
+
+    // Check if player was already voting for this specific game (for toggle logic)
+    const previousVote = this.state.gameVotes[gameType]?.includes(playerId)
+
+    // Remove player's vote from ALL games first (one vote per player)
+    for (const gt of Object.keys(this.state.gameVotes)) {
+      this.state.gameVotes[gt] = this.state.gameVotes[gt].filter((id) => id !== playerId)
+      if (this.state.gameVotes[gt].length === 0) {
+        delete this.state.gameVotes[gt]
+      }
+    }
+
+    // If they were voting for this same game, toggle it off (don't re-add)
+    // If they weren't, add their vote
+    if (!previousVote) {
+      if (!this.state.gameVotes[gameType]) {
+        this.state.gameVotes[gameType] = []
+      }
+      this.state.gameVotes[gameType].push(playerId)
+    }
+
+    this.broadcastState()
+  }
+
   private handleGameTypeChange(
     sender: Party.Connection,
     payload: { gameType: string }
@@ -1029,6 +1082,9 @@ export default class GameRoom implements Party.Server {
 
     // Lock settings during active game
     this.state.settingsLocked = true
+
+    // Clear game votes when a game starts
+    this.state.gameVotes = {}
 
     const roundNumber = this.state.round.roundNumber + 1
 
@@ -1909,6 +1965,7 @@ export default class GameRoom implements Party.Server {
       gameSettings: this.state.gameSettings,
       settingsLocked: this.state.settingsLocked,
       bigWheelGameState,
+      gameVotes: this.state.gameVotes,
     }
   }
 }

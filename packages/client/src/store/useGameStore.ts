@@ -56,6 +56,7 @@ export interface GameStore {
   adjustScore: (targetPlayerId: string, delta: number, scoreType: "game" | "session", reason?: string) => void
   updateSettings: (changes: Partial<GameSettings>) => void
   setGameType: (gameType: GameType) => void
+  voteGame: (gameType: GameType) => void
 
   // Internal actions
   _onStateSync: (state: RoomState) => void
@@ -188,6 +189,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const { _socketSend } = get()
     if (_socketSend) {
       _socketSend({ type: "SET_GAME_TYPE", payload: { gameType } })
+    }
+  },
+
+  voteGame: (gameType: GameType) => {
+    const { _socketSend } = get()
+    if (_socketSend) {
+      _socketSend({ type: "VOTE_GAME", payload: { gameType } })
     }
   },
 

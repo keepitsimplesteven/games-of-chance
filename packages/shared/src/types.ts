@@ -180,6 +180,8 @@ export interface RoomState {
   settingsLocked: boolean
   /** Big Wheel game state — present only during a big-wheel game */
   bigWheelGameState?: BigWheelGameState | null
+  /** Game votes — gameType → array of player IDs who voted for it */
+  gameVotes?: Record<string, string[]>
 }
 
 // ── Battle Bots ────────────────────────────────────────────────────────────
@@ -245,6 +247,7 @@ export type ClientMessage =
   | { type: "STOP_SIMULATION"; payload?: never }
   | { type: "UPDATE_ROOM_SIZE"; payload: { roomSize: number } }
   | { type: "RETURN_TO_LOBBY"; payload?: never }
+  | { type: "VOTE_GAME"; payload: { gameType: GameType } }
 
 /** Server → Client messages */
 export type ServerMessage =
