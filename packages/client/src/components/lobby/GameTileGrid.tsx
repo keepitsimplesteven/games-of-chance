@@ -16,6 +16,13 @@ const games = [
     active: true,
   },
   {
+    id: "big-wheel",
+    name: "Big Wheel",
+    emoji: "🎡",
+    description: "Spin the wheel twice — highest total wins",
+    active: true,
+  },
+  {
     id: "dice-roll",
     name: "Dice Roll",
     emoji: "🎲",

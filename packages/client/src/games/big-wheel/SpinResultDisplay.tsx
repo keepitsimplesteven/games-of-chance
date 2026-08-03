@@ -1,0 +1,69 @@
+import { motion } from "framer-motion"
+
+interface SpinResultDisplayProps {
+  /** The value the wheel landed on for the current spin, or null if not yet resolved */
+  value: number | null
+  /** Which spin just completed (1 or 2) */
+  spinNumber: 1 | 2
+  /** Running total of all spins so far, or null if no spins completed */
+  spinTotal: number | null
+  /** Array of previous spin values for this player's turn */
+  previousSpins: number[]
+}
+
+/**
+ * SpinResultDisplay — Shows the landed value prominently when available,
+ * the running spin total, and both spin results if available.
+ *
+ * Validates: Requirements 9.5
+ */
+export function SpinResultDisplay({
+  value,
+  spinNumber,
+  spinTotal,
+  previousSpins,
+}: SpinResultDisplayProps) {
+  // Nothing to display if no value has been resolved
+  if (value === null && previousSpins.length === 0) {
+    return null
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className="flex flex-col items-center gap-2 rounded-lg bg-green-50 px-6 py-4"
+    >
+      {/* Current spin result */}
+      {value !== null && (
+        <>
+          <div className="text-sm text-gray-600">
+            Spin {spinNumber} landed on:
+          </div>
+          <div className="text-4xl font-extrabold text-green-700">
+            {value}
+          </div>
+        </>
+      )}
+
+      {/* Individual spin breakdown */}
+      {previousSpins.length > 0 && (
+        <div className="flex items-center gap-3 text-sm text-gray-600">
+          {previousSpins.map((val, i) => (
+            <span key={i} className="rounded bg-gray-100 px-2 py-0.5 font-medium">
+              Spin {i + 1}: {val}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Running total */}
+      {spinTotal !== null && (
+        <div className="text-base font-semibold text-gray-800">
+          Total: <span className="text-green-700">{spinTotal}</span>
+        </div>
+      )}
+    </motion.div>
+  )
+}

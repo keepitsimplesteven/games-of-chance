@@ -112,6 +112,10 @@ export class BotManager {
           picks[botId] = { robotTemplateId: selected.id }
           break
         }
+        case "big-wheel": {
+          picks[botId] = { type: "spin" }
+          break
+        }
         default: {
           // Fallback: no pick for unknown game types
           break

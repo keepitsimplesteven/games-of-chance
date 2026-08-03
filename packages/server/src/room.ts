@@ -12,17 +12,33 @@ import type {
   GameSettings,
   BattleTickUpdate,
   BattleHPSnapshot,
+  BigWheelGameState,
+  BigWheelSpinResult,
 } from "@games-of-chance/shared"
 import { registry } from "./games/GameRegistry"
 import { getStrategy } from "./scoring"
 import { COIN_TOSS } from "./games/coin-toss/constants"
 import { BATTLE_BOTS } from "./games/battle-bots/constants"
+import { BIG_WHEEL } from "./games/big-wheel/constants"
 import { getRobotTemplates, resetGameState as resetBattleBotsState } from "./games/battle-bots/BattleBotsPlugin"
 import { resetCoinTossStreakState } from "./games/coin-toss/CoinTossPlugin"
+import {
+  getBigWheelState,
+  setBigWheelState,
+  resetBigWheelState,
+} from "./games/big-wheel/BigWheelPlugin"
+import { determineSpinOrder } from "./games/big-wheel/spinOrder"
+import {
+  handleDisconnection as handleBigWheelDisconnection,
+  resolveDisconnectedTurn,
+  isPlayerDisconnected,
+} from "./games/big-wheel/disconnection"
 // Side-effect import: registers the coin-toss plugin in the global registry
 import "./games/coin-toss/CoinTossPlugin"
 // Side-effect import: registers the battle-bots plugin in the global registry
 import "./games/battle-bots/index"
+// Side-effect import: registers the big-wheel plugin in the global registry
+import "./games/big-wheel/BigWheelPlugin"
 import { validateSettingsUpdate } from "./settings/validateSettings"
 import { FastPlayAdapter } from "./simulation/FastPlayAdapter"
 import { BotManager } from "./bots/BotManager"
@@ -91,9 +107,16 @@ function buildDefaultGameSettings(gameType: string): GameSettings {
   }
 
   // Use game-specific round count: battle-bots always uses 3 rounds
-  const roundCount = gameType === "battle-bots"
-    ? BATTLE_BOTS.ROUND_COUNT
-    : COIN_TOSS.MAX_ROUNDS
+  // big-wheel round count equals number of players, determined at game launch
+  let roundCount: number
+  if (gameType === "battle-bots") {
+    roundCount = BATTLE_BOTS.ROUND_COUNT
+  } else if (gameType === "big-wheel") {
+    // Placeholder — actual round count set dynamically at game launch (equals player count)
+    roundCount = 0
+  } else {
+    roundCount = COIN_TOSS.MAX_ROUNDS
+  }
 
   return {
     roundCount,
@@ -238,6 +261,22 @@ export default class GameRoom implements Party.Server {
     // Remove the disconnected player from the roster so a bot can replace them
     delete this.state.players[player.id]
 
+    // ── Big Wheel: handle disconnection ───────────────────────────────────
+    if (this.state.config.gameType === "big-wheel") {
+      const bwState = getBigWheelState()
+      if (bwState) {
+        handleBigWheelDisconnection(player.id)
+
+        // If the active spinner disconnected during PICKING, auto-resolve their turn
+        const activeSpinnerId = bwState.spinOrder[bwState.currentTurnIndex]
+        if (player.id === activeSpinnerId && this.state.round.phase === "PICKING") {
+          this.cancelDeadlineTimer()
+          // Auto-resolve by triggering resolveRound (the pick will be auto-assigned)
+          this.scheduleResolve(0)
+        }
+      }
+    }
+
     // Disconnection during PICKING: if all remaining connected players have submitted picks,
     // cancel deadline timer and proceed to immediate resolution.
     // Note: disconnected player's pick is retained for scoring if already recorded.
@@ -331,12 +370,21 @@ export default class GameRoom implements Party.Server {
   }
 
   private handleStartRound(sender: Party.Connection) {
-    // Authorization: only host can start a round
+    // Authorization: host can always start a round. For Big Wheel, the active spinner can too.
     const hostId = this.getHostId()
     const senderId = this.getPlayerIdByConnectionId(sender.id)
 
-    if (senderId !== hostId) {
-      this.sendError(sender, "NOT_HOST", "Only the host can start a round")
+    let authorized = senderId === hostId
+    if (!authorized && this.state.config.gameType === "big-wheel") {
+      const bwState = getBigWheelState()
+      if (bwState) {
+        const activeSpinnerId = bwState.spinOrder[bwState.currentTurnIndex]
+        authorized = senderId === activeSpinnerId
+      }
+    }
+
+    if (!authorized) {
+      this.sendError(sender, "NOT_HOST", "Only the host or active spinner can advance the round")
       return
     }
 
@@ -354,14 +402,38 @@ export default class GameRoom implements Party.Server {
     }
 
     // If the last round just completed, transition to END_GAME instead of starting a new round
+    // (Big Wheel manages its own game end — skip this check for big-wheel)
     const maxRounds = this.getMaxRounds()
     if (
+      this.state.config.gameType !== "big-wheel" &&
       this.state.round.phase === "RESULT" &&
       maxRounds > 0 &&
       this.state.round.roundNumber >= maxRounds
     ) {
       this.autoEndGame()
       return
+    }
+
+    // Big Wheel: advance turn index after spin 2 before starting next round
+    if (this.state.config.gameType === "big-wheel" && this.state.round.phase === "RESULT") {
+      const bwState = getBigWheelState()
+      if (bwState) {
+        // Use the round result to determine what just happened
+        const lastResult = this.state.round.result as BigWheelSpinResult | null
+        if (lastResult && lastResult.spinNumber === 2) {
+          // Spin 2 just completed — advance to next player
+          bwState.currentTurnIndex++
+          bwState.currentSpinNumber = 1
+
+          // Check if all players are done
+          if (bwState.currentTurnIndex >= bwState.spinOrder.length) {
+            this.finalizeBigWheelGame()
+            return
+          }
+        }
+        // If spinNumber === 1, we're advancing from spin 1 to spin 2 (same player)
+        // currentSpinNumber is already set to 2 by resolveRound
+      }
     }
 
     this.beginRound()
@@ -401,6 +473,18 @@ export default class GameRoom implements Party.Server {
       return
     }
 
+    // ── Big Wheel: only the active spinner can submit a pick ──────────────
+    if (this.state.config.gameType === "big-wheel") {
+      const bwState = getBigWheelState()
+      if (bwState) {
+        const activeSpinnerId = bwState.spinOrder[bwState.currentTurnIndex]
+        if (playerId !== activeSpinnerId) {
+          this.sendError(sender, "NOT_ACTIVE_SPINNER", "Only the active spinner can submit a pick")
+          return
+        }
+      }
+    }
+
     // Guard: silently ignore if player already has a pick recorded (pick immutability)
     if (playerId in this.state.round.picks) {
       return
@@ -424,7 +508,11 @@ export default class GameRoom implements Party.Server {
     sender.send(JSON.stringify(ackMsg))
 
     // Check if all players (humans + bots) have picked — if yes, resolve immediately
-    if (this.allPlayersHavePicked()) {
+    // For big-wheel: resolve immediately after the active spinner picks (only 1 pick per round)
+    if (this.state.config.gameType === "big-wheel") {
+      this.cancelDeadlineTimer()
+      this.scheduleResolve(0)
+    } else if (this.allPlayersHavePicked()) {
       this.cancelDeadlineTimer()
       this.scheduleResolve(0)
     }
@@ -500,6 +588,7 @@ export default class GameRoom implements Party.Server {
     this.state.pluginState = {}
     resetBattleBotsState()
     resetCoinTossStreakState()
+    resetBigWheelState()
 
     this.broadcastState()
   }
@@ -819,6 +908,7 @@ export default class GameRoom implements Party.Server {
     this.state.pluginState = {}
     resetBattleBotsState()
     resetCoinTossStreakState()
+    resetBigWheelState()
 
     this.broadcastState()
   }
@@ -861,6 +951,8 @@ export default class GameRoom implements Party.Server {
     this.state.gameSettings = {
       roundCount: newGameType === "battle-bots"
         ? BATTLE_BOTS.ROUND_COUNT
+        : newGameType === "big-wheel"
+        ? 0  // determined at game launch (equals player count)
         : this.state.gameSettings.roundCount,  // retained for non-battle-bots
       pickWindowMs: plugin.pickWindowMs,               // reset to new plugin default
       tuning: newTuning,                               // reset to new plugin defaults
@@ -906,6 +998,11 @@ export default class GameRoom implements Party.Server {
       result.sanitized.roundCount = BATTLE_BOTS.ROUND_COUNT
     }
 
+    // Big-wheel round count equals player count — prevent manual overriding
+    if (this.state.config.gameType === "big-wheel" && result.sanitized.roundCount !== undefined) {
+      delete result.sanitized.roundCount
+    }
+
     // Merge sanitized changes into gameSettings
     this.state.gameSettings = {
       ...this.state.gameSettings,
@@ -938,6 +1035,56 @@ export default class GameRoom implements Party.Server {
     // Reset streak counters at the start of a new game (round 1)
     if (roundNumber === 1) {
       resetCoinTossStreakState()
+    }
+
+    // ── Big Wheel: initialize plugin state on first round ─────────────────
+    if (this.state.config.gameType === "big-wheel" && roundNumber === 1) {
+      const playerIds = Object.keys(this.state.players)
+      const spinOrder = determineSpinOrder(playerIds, this.state.sessionLeaderboard)
+      const reelStripSetting = this.state.gameSettings.tuning?.REEL_STRIP
+      const reelStrip = Array.isArray(reelStripSetting)
+        ? (reelStripSetting as number[])
+        : [...BIG_WHEEL.DEFAULT_REEL_STRIP]
+
+      setBigWheelState({
+        spinOrder,
+        currentTurnIndex: 0,
+        currentSpinNumber: 1,
+        reelStrip,
+        spinResults: {},
+        disconnectedPlayers: [],
+      })
+
+      // Set round count equal to player count * 2 spins (each spin is a "round")
+      // Actually each player's full turn (2 spins) maps to rounds in the server lifecycle
+      this.state.gameSettings.roundCount = spinOrder.length * BIG_WHEEL.SPINS_PER_TURN
+    }
+
+    // ── Big Wheel: check if current player is disconnected and skip ───────
+    if (this.state.config.gameType === "big-wheel") {
+      const bwState = getBigWheelState()
+      if (bwState) {
+        const activeSpinnerId = bwState.spinOrder[bwState.currentTurnIndex]
+        if (activeSpinnerId && isPlayerDisconnected(activeSpinnerId)) {
+          // Auto-resolve the disconnected player's turn
+          resolveDisconnectedTurn(activeSpinnerId)
+
+          // Advance to next player
+          bwState.currentTurnIndex++
+          bwState.currentSpinNumber = 1
+
+          // Check if all players are done
+          if (bwState.currentTurnIndex >= bwState.spinOrder.length) {
+            this.finalizeBigWheelGame()
+            return
+          }
+
+          // Recurse to start the next player's turn (which increments roundNumber again)
+          this.broadcastState()
+          this.beginRound()
+          return
+        }
+      }
     }
 
     // Battle-bots rounds 2 and 3 skip PICKING — no player input needed
@@ -980,11 +1127,19 @@ export default class GameRoom implements Party.Server {
 
       this.broadcastState()
 
-      // Schedule bot picks with random delays (500–2000ms per bot)
-      this.scheduleBotPicks()
+      // Schedule bot picks — for big-wheel, only the active spinner matters
+      if (this.state.config.gameType === "big-wheel") {
+        // If bot picks immediately, it handles resolution — don't set deadline
+        if (!this.scheduleBigWheelBotPick()) {
+          this.scheduleResolve(this.state.gameSettings.pickWindowMs)
+        }
+      } else {
+        // Schedule bot picks with random delays (500–2000ms per bot)
+        this.scheduleBotPicks()
 
-      // Schedule the deadline timer
-      this.scheduleResolve(this.state.gameSettings.pickWindowMs)
+        // Schedule the deadline timer
+        this.scheduleResolve(this.state.gameSettings.pickWindowMs)
+      }
     }
   }
 
@@ -1039,25 +1194,37 @@ export default class GameRoom implements Party.Server {
     // Cancel deadline timer BEFORE any resolution logic
     this.cancelDeadlineTimer()
 
-    // Assign random picks to connected human players who didn't submit in time
-    const connectedHumans = Object.values(this.state.players).filter(
-      p => p.connected && !this.botManager.isBot(p.id)
-    )
-    for (const player of connectedHumans) {
-      if (!(player.id in this.state.round.picks)) {
-        const randomSide = Math.random() < 0.5 ? "HEADS" : "TAILS"
-        this.state.round.picks[player.id] = { side: randomSide }
+    // ── Big Wheel: auto-assign spin pick if active spinner didn't submit ──
+    if (this.state.config.gameType === "big-wheel") {
+      const bwState = getBigWheelState()
+      if (bwState) {
+        const activeSpinnerId = bwState.spinOrder[bwState.currentTurnIndex]
+        if (!(activeSpinnerId in this.state.round.picks)) {
+          // Auto-resolve: assign the spin pick for the active spinner
+          this.state.round.picks[activeSpinnerId] = { type: "spin" }
+        }
       }
-    }
+    } else {
+      // Assign random picks to connected human players who didn't submit in time
+      const connectedHumans = Object.values(this.state.players).filter(
+        p => p.connected && !this.botManager.isBot(p.id)
+      )
+      for (const player of connectedHumans) {
+        if (!(player.id in this.state.round.picks)) {
+          const randomSide = Math.random() < 0.5 ? "HEADS" : "TAILS"
+          this.state.round.picks[player.id] = { side: randomSide }
+        }
+      }
 
-    // Assign picks for bots that haven't submitted yet (their timers may not have fired)
-    const botPicks = this.botManager.generatePicks(
-      this.state.config.gameType,
-      this.state.gameSettings
-    )
-    for (const [botId, pick] of Object.entries(botPicks)) {
-      if (!(botId in this.state.round.picks)) {
-        this.state.round.picks[botId] = pick
+      // Assign picks for bots that haven't submitted yet (their timers may not have fired)
+      const botPicks = this.botManager.generatePicks(
+        this.state.config.gameType,
+        this.state.gameSettings
+      )
+      for (const [botId, pick] of Object.entries(botPicks)) {
+        if (!(botId in this.state.round.picks)) {
+          this.state.round.picks[botId] = pick
+        }
       }
     }
 
@@ -1092,6 +1259,84 @@ export default class GameRoom implements Party.Server {
       Object.values(this.state.players),
       this.state.gameScores
     )
+
+    // ── Big Wheel: handle spin advancement after resolution ───────────────
+    if (this.state.config.gameType === "big-wheel") {
+      const bwState = getBigWheelState()
+      if (bwState) {
+        const spinResult = result as BigWheelSpinResult
+        const activeSpinnerId = spinResult.spinnerPlayerId
+
+        // Record the spin result in pluginState
+        if (!bwState.spinResults[activeSpinnerId]) {
+          bwState.spinResults[activeSpinnerId] = []
+        }
+        bwState.spinResults[activeSpinnerId].push(spinResult.value)
+
+        if (bwState.currentSpinNumber === 1) {
+          // After spin 1: advance to spin 2, stay on same player
+          bwState.currentSpinNumber = 2
+
+          // Transition to RESULT — stay here until player/host clicks to continue
+          this.state.round.phase = "RESULT"
+          this.state.round.result = result
+          this.state.round.resolvedAt = Date.now()
+          this.broadcastState()
+
+          // If active spinner is a bot, auto-advance after animation delay
+          if (this.botManager.isBot(activeSpinnerId)) {
+            this.deadlineTimerId = setTimeout(() => {
+              // Transition to PICKING for spin 2
+              this.state.round = {
+                phase: "PICKING",
+                roundNumber: this.state.round.roundNumber + 1,
+                picks: {},
+                result: null,
+                pickDeadlineMs: Date.now() + this.state.gameSettings.pickWindowMs,
+                resolvedAt: null,
+              }
+              this.broadcastState()
+
+              // Small delay before bot picks for spin 2 — lets client reset animation state
+              this.deadlineTimerId = setTimeout(() => {
+                if (!this.scheduleBigWheelBotPick()) {
+                  this.scheduleResolve(this.state.gameSettings.pickWindowMs)
+                }
+              }, 100)
+            }, BIG_WHEEL.BOT_SPIN_DELAY_MS)
+          }
+          return
+        } else {
+          // After spin 2: player's turn is complete
+          // DON'T increment currentTurnIndex yet — keep it pointing at the player
+          // whose result we're showing, so the client displays correctly
+
+          // Transition to RESULT to show spin 2 result
+          this.state.round.phase = "RESULT"
+          this.state.round.result = result
+          this.state.round.resolvedAt = Date.now()
+          this.broadcastState()
+
+          // If active spinner is a bot, auto-advance after animation delay
+          if (this.botManager.isBot(activeSpinnerId)) {
+            this.deadlineTimerId = setTimeout(() => {
+              bwState.currentTurnIndex++
+              bwState.currentSpinNumber = 1
+              if (bwState.currentTurnIndex >= bwState.spinOrder.length) {
+                this.finalizeBigWheelGame()
+                return
+              }
+              this.beginRound()
+            }, BIG_WHEEL.BOT_SPIN_DELAY_MS)
+            return
+          }
+
+          // Human player — stay in RESULT until host/player clicks to continue
+          // (includes the last player — host must click "Next Player" / "View Results")
+          return
+        }
+      }
+    }
 
     // Transition to RESULT, store result and resolvedAt
     this.state.round.phase = "RESULT"
@@ -1387,6 +1632,77 @@ export default class GameRoom implements Party.Server {
   }
 
   /**
+   * Finalize a Big Wheel game after all players have completed their turns.
+   * Transitions to END_GAME phase with session scoring applied.
+   */
+  private finalizeBigWheelGame() {
+    this.cancelDeadlineTimer()
+    this.cancelTickReplay()
+
+    // Compute final leaderboard
+    const plugin = registry.lookup(this.state.config.gameType)
+    this.state.gameLeaderboard = plugin.computeGameLeaderboard(
+      Object.values(this.state.players),
+      this.state.gameScores
+    )
+
+    // Apply session scoring before transitioning to END_GAME
+    const strategy = getStrategy(
+      this.state.config.scoringMode,
+      this.state.config.placementPoints
+    )
+    const sessionUpdate = strategy.applyGameResult(
+      Object.values(this.state.players),
+      this.state.gameLeaderboard,
+      this.state.gameScores
+    )
+
+    for (const [playerId, points] of Object.entries(sessionUpdate.sessionScores)) {
+      this.state.sessionScores[playerId] =
+        (this.state.sessionScores[playerId] ?? 0) + points
+    }
+
+    for (const playerId of Object.keys(this.state.players)) {
+      this.state.sessionGamesPlayed[playerId] =
+        (this.state.sessionGamesPlayed[playerId] ?? 0) + 1
+    }
+
+    this.state.sessionLeaderboard = this.computeSessionLeaderboard()
+
+    // Transition to END_GAME phase
+    this.state.round.phase = "END_GAME"
+
+    this.broadcastState()
+  }
+
+  /**
+   * Schedule a bot's spin pick for Big Wheel if the active spinner is a bot.
+   * Bots auto-submit their spin pick immediately.
+   * Returns true if the bot submitted a pick and resolution was scheduled.
+   */
+  private scheduleBigWheelBotPick(): boolean {
+    const bwState = getBigWheelState()
+    if (!bwState) return false
+
+    const activeSpinnerId = bwState.spinOrder[bwState.currentTurnIndex]
+    if (!activeSpinnerId) return false
+
+    // Only schedule if the active spinner is a bot
+    if (!this.botManager.isBot(activeSpinnerId)) return false
+
+    // Submit the spin pick immediately for the bot
+    if (!(activeSpinnerId in this.state.round.picks)) {
+      this.state.round.picks[activeSpinnerId] = { type: "spin" }
+
+      // Resolve immediately since the only player that matters (active spinner) has picked
+      this.cancelDeadlineTimer()
+      this.scheduleResolve(0)
+      return true
+    }
+    return false
+  }
+
+  /**
    * Get the max rounds for the current game type.
    * Returns the configured round count from game settings.
    */
@@ -1567,6 +1883,22 @@ export default class GameRoom implements Party.Server {
    * Converts players from Record to Array for the client.
    */
   private getPublicState(): RoomState {
+    // Build Big Wheel game state if active
+    let bigWheelGameState: BigWheelGameState | null = null
+    if (this.state.config.gameType === "big-wheel") {
+      const bwState = getBigWheelState()
+      if (bwState) {
+        bigWheelGameState = {
+          spinOrder: bwState.spinOrder,
+          currentTurnIndex: bwState.currentTurnIndex,
+          currentSpinNumber: bwState.currentSpinNumber,
+          activeSpinnerId: bwState.spinOrder[bwState.currentTurnIndex] ?? "",
+          spinResults: bwState.spinResults,
+          reelStrip: bwState.reelStrip,
+        }
+      }
+    }
+
     return {
       room: this.state.config,
       players: Object.values(this.state.players),
@@ -1576,6 +1908,7 @@ export default class GameRoom implements Party.Server {
       adjustmentLog: this.state.adjustmentLog ?? [],
       gameSettings: this.state.gameSettings,
       settingsLocked: this.state.settingsLocked,
+      bigWheelGameState,
     }
   }
 }

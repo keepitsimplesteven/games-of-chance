@@ -1,6 +1,7 @@
 import { useGameStore } from "../../store/useGameStore"
 import { CoinTossContainer } from "../../games/coin-toss/CoinTossContainer"
 import { BattleBotsView } from "../../games/battle-bots/BattleBotsView"
+import { BigWheelContainer } from "../../games/big-wheel/BigWheelContainer"
 import GameLeaderboard from "./GameLeaderboard"
 import PhaseIndicator from "./PhaseIndicator"
 import FinalResultsScreen from "./FinalResultsScreen"
@@ -34,6 +35,7 @@ export default function GameView() {
 
   // Only show leaderboard after animation completes (prevents spoiling the result)
   // During PICKING phase, show leaderboard (previous round's scores are already revealed)
+  // For Big Wheel: show after each spin animation completes (roundAnimationDone gates this)
   const showLeaderboard = phase === "PICKING" || roundAnimationDone
 
   // Dynamic game container based on gameType
@@ -43,6 +45,8 @@ export default function GameView() {
         return <CoinTossContainer />
       case "battle-bots":
         return <BattleBotsView />
+      case "big-wheel":
+        return <BigWheelContainer />
       default:
         return (
           <div className="py-8 text-center text-gray-500">
@@ -55,7 +59,7 @@ export default function GameView() {
   return (
     <div className="flex flex-col gap-4">
       {/* Phase indicator — shows current game phase */}
-      <PhaseIndicator phase={phase} />
+      <PhaseIndicator phase={phase} gameType={gameType} />
 
       {/* Game-specific UI (pick widget, animation, result) */}
       {renderGameContainer()}
