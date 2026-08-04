@@ -196,6 +196,8 @@ export interface RoomState {
   settingsLocked: boolean
   /** Big Wheel game state — present only during a big-wheel game */
   bigWheelGameState?: BigWheelGameState | null
+  /** Playcaller game state — present only during a playcaller game */
+  playcallerGameState?: PlaycallerGameState | null
   /** Game votes — gameType → array of player IDs who voted for it */
   gameVotes?: Record<string, string[]>
   /** Tournament progress — present when progressionMode is "tournament" */
@@ -274,3 +276,72 @@ export type ServerMessage =
   | { type: "SKIP_ANIMATION"; payload?: never }
   | { type: "ERROR"; payload: { code: string; message: string } }
   | BattleTickUpdate
+
+
+// ── Playcaller Tournament ──────────────────────────────────────────────────
+
+/** Playcaller pick — Phase 1: any value accepted (unused) */
+export interface PlaycallerPick {
+  type: "ready"  // placeholder for Phase 1
+}
+
+/** A single matchup in a bracket round */
+export interface Matchup {
+  /** Unique matchup identifier within the bracket */
+  matchupId: string
+  /** Seed 1 player (higher seed) */
+  playerA: string
+  /** Seed 2 player (lower seed) */
+  playerB: string
+  /** Winner (null if unresolved) */
+  winner: string | null
+}
+
+/** A single round in the bracket */
+export interface BracketRound {
+  /** Round index (0 = first round) */
+  roundIndex: number
+  /** Matchups in this round */
+  matchups: Matchup[]
+  /** Players with byes this round (first round only) */
+  byes: string[]
+  /** Whether this round has been resolved */
+  resolved: boolean
+}
+
+/** Complete bracket state */
+export interface Bracket {
+  /** All rounds in the bracket */
+  rounds: BracketRound[]
+  /** Index of the current active round */
+  currentRoundIndex: number
+  /** Total number of rounds */
+  totalRounds: number
+  /** Player seed assignments: playerId → seed number (1-based) */
+  seeds: Record<string, number>
+  /** Eliminated players and the round they were eliminated in */
+  eliminated: Record<string, number>
+}
+
+/** Result of resolving a bracket round */
+export interface PlaycallerRoundResult {
+  /** Which bracket round was just resolved */
+  bracketRound: number
+  /** Resolved matchups with winners */
+  matchups: Matchup[]
+  /** Whether the tournament is complete (champion found) */
+  isComplete: boolean
+}
+
+/** Playcaller game state broadcast to clients */
+export interface PlaycallerGameState {
+  /** Full bracket structure */
+  bracket: Bracket
+  /** Current spectators (eliminated + bye players) */
+  spectators: string[]
+  /** Active competitors in current round */
+  activeCompetitors: string[]
+}
+
+/** Match resolver function signature */
+export type MatchResolver = (playerA: string, playerB: string) => string

@@ -16,7 +16,7 @@ const games = [
     emoji: "🤖",
     description: "3-round robot combat: select, battle, and survive",
     active: true,
-    isFinale: true,
+    isFinale: false,
   },
   {
     id: "big-wheel",
@@ -25,6 +25,14 @@ const games = [
     description: "Spin the wheel twice — highest total wins",
     active: true,
     isFinale: false,
+  },
+  {
+    id: "playcaller",
+    name: "Playcaller",
+    emoji: "🏈",
+    description: "Single-elimination bracket tournament",
+    active: true,
+    isFinale: true,
   },
 ] as const
 

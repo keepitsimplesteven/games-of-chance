@@ -14,6 +14,7 @@ import type {
   BattleHPSnapshot,
   BigWheelGameState,
   BigWheelSpinResult,
+  PlaycallerGameState,
   TournamentProgress,
   ProgressionMode,
 } from "@games-of-chance/shared"
@@ -29,6 +30,9 @@ import {
   setBigWheelState,
   resetBigWheelState,
 } from "./games/big-wheel/BigWheelPlugin"
+import { generateBracket } from "./games/playcaller/BracketEngine"
+import { setPlaycallerState, resetPlaycallerState, getPlaycallerState, getSpectators, getActiveCompetitors } from "./games/playcaller/PlaycallerPlugin"
+import { PLAYCALLER } from "./games/playcaller/constants"
 import { determineSpinOrder } from "./games/big-wheel/spinOrder"
 import {
   handleDisconnection as handleBigWheelDisconnection,
@@ -41,6 +45,8 @@ import "./games/coin-toss/CoinTossPlugin"
 import "./games/battle-bots/index"
 // Side-effect import: registers the big-wheel plugin in the global registry
 import "./games/big-wheel/BigWheelPlugin"
+// Side-effect import: registers the playcaller plugin in the global registry
+import "./games/playcaller/PlaycallerPlugin"
 import { validateSettingsUpdate } from "./settings/validateSettings"
 import { evaluateAvailability } from "./tournament/UnlockCriteriaHarness"
 import { FastPlayAdapter } from "./simulation/FastPlayAdapter"
@@ -84,7 +90,7 @@ function createDefaultConfig(roomId: string): RoomConfig {
     autoRoundIntervalMs: 5000,
     placementPoints: [10, 5, 3, 1, 1, 1, 1, 0, 0, 0],
     roomSize: 4,
-    progressionMode: "tournament",
+    progressionMode: "endless",
   }
 }
 
@@ -116,11 +122,15 @@ function buildDefaultGameSettings(gameType: string): GameSettings {
 
   // Use game-specific round count: battle-bots always uses 3 rounds
   // big-wheel round count equals number of players, determined at game launch
+  // playcaller round count equals bracket totalRounds, determined at game launch
   let roundCount: number
   if (gameType === "battle-bots") {
     roundCount = BATTLE_BOTS.ROUND_COUNT
   } else if (gameType === "big-wheel") {
     // Placeholder — actual round count set dynamically at game launch (equals player count)
+    roundCount = 0
+  } else if (gameType === "playcaller") {
+    // Placeholder — actual round count set dynamically at game launch (equals bracket totalRounds)
     roundCount = 0
   } else {
     roundCount = COIN_TOSS.MAX_ROUNDS
@@ -623,6 +633,7 @@ export default class GameRoom implements Party.Server {
     resetBattleBotsState()
     resetCoinTossStreakState()
     resetBigWheelState()
+    resetPlaycallerState()
 
     // ── Tournament mode: lock the completed game and re-evaluate availability ──
     if (
@@ -967,6 +978,7 @@ export default class GameRoom implements Party.Server {
     resetBattleBotsState()
     resetCoinTossStreakState()
     resetBigWheelState()
+    resetPlaycallerState()
 
     // ── Tournament mode: lock the completed game and re-evaluate availability ──
     if (
@@ -1098,6 +1110,8 @@ export default class GameRoom implements Party.Server {
         ? BATTLE_BOTS.ROUND_COUNT
         : newGameType === "big-wheel"
         ? 0  // determined at game launch (equals player count)
+        : newGameType === "playcaller"
+        ? 0  // determined at game launch (equals bracket totalRounds)
         : this.state.gameSettings.roundCount,  // retained for non-battle-bots
       pickWindowMs: plugin.pickWindowMs,               // reset to new plugin default
       tuning: newTuning,                               // reset to new plugin defaults
@@ -1145,6 +1159,11 @@ export default class GameRoom implements Party.Server {
 
     // Big-wheel round count equals player count — prevent manual overriding
     if (this.state.config.gameType === "big-wheel" && result.sanitized.roundCount !== undefined) {
+      delete result.sanitized.roundCount
+    }
+
+    // Playcaller round count equals bracket totalRounds — prevent manual overriding
+    if (this.state.config.gameType === "playcaller" && result.sanitized.roundCount !== undefined) {
       delete result.sanitized.roundCount
     }
 
@@ -1206,6 +1225,51 @@ export default class GameRoom implements Party.Server {
       // Set round count equal to player count * 2 spins (each spin is a "round")
       // Actually each player's full turn (2 spins) maps to rounds in the server lifecycle
       this.state.gameSettings.roundCount = spinOrder.length * BIG_WHEEL.SPINS_PER_TURN
+    }
+
+    // ── Playcaller: initialize bracket on first round ─────────────────────
+    if (this.state.config.gameType === "playcaller" && roundNumber === 1) {
+      const playerIds = Object.keys(this.state.players)
+
+      // Validate player count
+      if (playerIds.length < PLAYCALLER.MIN_PLAYERS) {
+        const hostConn = this.getHostConnection()
+        if (hostConn) {
+          this.sendError(hostConn, "INVALID_PLAYER_COUNT", "Playcaller requires at least 2 players")
+        }
+        return
+      }
+
+      // Build session leaderboard sorted by session score descending
+      const leaderboard = playerIds
+        .map((id) => ({ id, score: this.state.sessionScores[id] ?? 0 }))
+        .sort((a, b) => b.score - a.score)
+
+      // Group by score and shuffle tied groups (random tiebreaker, never alphabetical)
+      const rankedPlayerIds: string[] = []
+      let i = 0
+      while (i < leaderboard.length) {
+        let j = i
+        while (j < leaderboard.length && leaderboard[j].score === leaderboard[i].score) {
+          j++
+        }
+        // Shuffle the tied group
+        const tiedGroup = leaderboard.slice(i, j).map((e) => e.id)
+        for (let k = tiedGroup.length - 1; k > 0; k--) {
+          const r = Math.floor(Math.random() * (k + 1));
+          [tiedGroup[k], tiedGroup[r]] = [tiedGroup[r], tiedGroup[k]]
+        }
+        rankedPlayerIds.push(...tiedGroup)
+        i = j
+      }
+
+      // Generate bracket and store state
+      const bracket = generateBracket(rankedPlayerIds)
+      setPlaycallerState(bracket)
+      this.state.pluginState["playcaller"] = bracket
+
+      // Set round count to bracket's totalRounds
+      this.state.gameSettings.roundCount = bracket.totalRounds
     }
 
     // ── Big Wheel: check if current player is disconnected and skip ───────
@@ -1884,6 +1948,17 @@ export default class GameRoom implements Party.Server {
     return host?.id ?? null
   }
 
+  /** Get the WebSocket connection for the current host */
+  private getHostConnection(): Party.Connection | null {
+    const host = Object.values(this.state.players).find(
+      (p) => p.role === "host" && p.connected
+    )
+    if (!host?.connectionId) return null
+    return [...this.room.getConnections()].find(
+      (c) => c.id === host.connectionId
+    ) ?? null
+  }
+
   /** Get the player ID for a given connection ID */
   private getPlayerIdByConnectionId(connectionId: string): string | null {
     const player = Object.values(this.state.players).find(
@@ -2047,6 +2122,19 @@ export default class GameRoom implements Party.Server {
       }
     }
 
+    // Build Playcaller game state if active
+    let playcallerGameState: PlaycallerGameState | null = null
+    if (this.state.config.gameType === "playcaller") {
+      const bracket = getPlaycallerState()
+      if (bracket) {
+        playcallerGameState = {
+          bracket,
+          spectators: getSpectators(),
+          activeCompetitors: getActiveCompetitors(),
+        }
+      }
+    }
+
     return {
       room: this.state.config,
       players: Object.values(this.state.players),
@@ -2057,6 +2145,7 @@ export default class GameRoom implements Party.Server {
       gameSettings: this.state.gameSettings,
       settingsLocked: this.state.settingsLocked,
       bigWheelGameState,
+      playcallerGameState,
       gameVotes: this.state.gameVotes,
       tournamentProgress: this.state.tournamentProgress,
     }
