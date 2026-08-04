@@ -9,6 +9,20 @@ export type GameType = string
 /** Session scoring mode — selected by host at room creation */
 export type ScoringMode = "grand-prix" | "chips"
 
+/** Progression mode — selected by host at room creation, orthogonal to ScoringMode */
+export type ProgressionMode = "endless" | "tournament"
+
+/** Status of a game tile in tournament mode */
+export type TournamentTileStatus = "available" | "locked" | "unavailable"
+
+/** Tournament progress record — tracks completed games in the current session */
+export interface TournamentProgress {
+  /** Set of gameType identifiers that have been completed and locked */
+  completedGames: string[]
+  /** Computed availability map for all registered games */
+  availability: Record<string, TournamentTileStatus>
+}
+
 // ── Settings Schema ────────────────────────────────────────────────────────
 
 /** A single configurable field in a game plugin's settings schema */
@@ -57,6 +71,8 @@ export interface RoomConfig {
   placementPoints: number[]
   /** Total number of player slots (humans + bots). Integer 2–10, default 4. */
   roomSize: number
+  /** Progression mode — "endless" (default) or "tournament" */
+  progressionMode: ProgressionMode
 }
 
 export interface Player {
@@ -75,7 +91,7 @@ export interface Player {
  * Valid room phases. NO BETWEEN_ROUNDS phase exists.
  * RESULT transitions directly to PICKING (next round) or LOBBY (game ended).
  */
-export type RoundPhase = "LOBBY" | "PICKING" | "RESOLVING" | "RESULT" | "END_GAME"
+export type RoundPhase = "LOBBY" | "PICKING" | "RESOLVING" | "RESULT" | "END_GAME" | "END_TOURNAMENT"
 
 export interface RoundState {
   phase: RoundPhase
@@ -182,6 +198,8 @@ export interface RoomState {
   bigWheelGameState?: BigWheelGameState | null
   /** Game votes — gameType → array of player IDs who voted for it */
   gameVotes?: Record<string, string[]>
+  /** Tournament progress — present when progressionMode is "tournament" */
+  tournamentProgress?: TournamentProgress | null
 }
 
 // ── Battle Bots ────────────────────────────────────────────────────────────
@@ -231,7 +249,7 @@ export interface BigWheelGameState {
 
 /** Client → Server messages */
 export type ClientMessage =
-  | { type: "JOIN"; payload: { name: string; role: "host" | "player"; clientId: string; scoringMode?: ScoringMode; roomSize?: number } }
+  | { type: "JOIN"; payload: { name: string; role: "host" | "player"; clientId: string; scoringMode?: ScoringMode; roomSize?: number; progressionMode?: ProgressionMode } }
   | { type: "SUBMIT_PICK"; payload: { pick: unknown } }
   | { type: "START_ROUND"; payload?: never }
   | { type: "END_GAME"; payload?: never }

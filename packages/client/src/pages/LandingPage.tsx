@@ -1,16 +1,17 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import type { ScoringMode } from "@games-of-chance/shared"
+import type { ScoringMode, ProgressionMode } from "@games-of-chance/shared"
 
 export default function LandingPage() {
   const navigate = useNavigate()
   const [roomCode, setRoomCode] = useState("")
   const [scoringMode, setScoringMode] = useState<ScoringMode>("chips")
+  const [progressionMode, setProgressionMode] = useState<ProgressionMode>("tournament")
   const [roomSize, setRoomSize] = useState(4)
 
   function handleCreateRoom() {
     const roomId = crypto.randomUUID()
-    navigate(`/${roomId}`, { state: { scoringMode, roomSize } })
+    navigate(`/${roomId}`, { state: { scoringMode, progressionMode, roomSize } })
   }
 
   function handleJoinRoom(e: React.FormEvent) {
@@ -62,6 +63,42 @@ export default function LandingPage() {
             {scoringMode === "grand-prix"
               ? "Points awarded by placement each game"
               : "Raw scores accumulate across games"}
+          </p>
+        </div>
+
+        {/* Progression mode selector */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-300">
+            Progression Mode
+          </label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setProgressionMode("endless")}
+              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                progressionMode === "endless"
+                  ? "bg-indigo-600 text-white ring-2 ring-indigo-400"
+                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+              }`}
+            >
+              ♾️ Endless
+            </button>
+            <button
+              type="button"
+              onClick={() => setProgressionMode("tournament")}
+              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                progressionMode === "tournament"
+                  ? "bg-indigo-600 text-white ring-2 ring-indigo-400"
+                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+              }`}
+            >
+              🏆 Tournament
+            </button>
+          </div>
+          <p className="text-xs text-gray-500">
+            {progressionMode === "tournament"
+              ? "Each game played once, building to a finale"
+              : "Play any game as many times as you want"}
           </p>
         </div>
 

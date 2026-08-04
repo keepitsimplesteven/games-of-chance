@@ -9,6 +9,7 @@ import ConnectionStatus from "../shared/ConnectionStatus"
 import GameView from "../game/GameView"
 import HostControlPanel from "../../host-panel/HostControlPanel"
 import ScoreAdjustmentNotification from "../../host-panel/ScoreAdjustmentNotification"
+import TournamentEndView from "./TournamentEndView"
 
 interface LobbyShellProps {
   children?: ReactNode
@@ -19,6 +20,9 @@ export default function LobbyShell({ children }: LobbyShellProps) {
 
   // Show lobby content (game tiles + host controls) when in LOBBY phase
   const isLobby = !phase || phase === "LOBBY"
+
+  // END_TOURNAMENT is a terminal state — show celebration view, no game selection
+  const isTournamentEnd = phase === "END_TOURNAMENT"
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50 p-4">
@@ -34,8 +38,15 @@ export default function LobbyShell({ children }: LobbyShellProps) {
       {/* Standings — collapsible, expanded in lobby, collapsed in game */}
       <PlayerList />
 
+      {/* Tournament End — terminal celebration view replaces all lobby/game UI */}
+      {isTournamentEnd && (
+        <div className="mt-4 flex flex-1 flex-col">
+          <TournamentEndView />
+        </div>
+      )}
+
       {/* Lobby content: game tiles + settings + start button — only in LOBBY phase */}
-      {isLobby && (
+      {isLobby && !isTournamentEnd && (
         <>
           <div className="mt-4">
             <GameTileGrid />
@@ -49,8 +60,8 @@ export default function LobbyShell({ children }: LobbyShellProps) {
         </>
       )}
 
-      {/* Game view — renders when a game is active (phase ≠ LOBBY) */}
-      {!isLobby && (
+      {/* Game view — renders when a game is active (phase ≠ LOBBY and not END_TOURNAMENT) */}
+      {!isLobby && !isTournamentEnd && (
         <div className="mt-4 flex flex-1 flex-col">
           <GameView />
         </div>

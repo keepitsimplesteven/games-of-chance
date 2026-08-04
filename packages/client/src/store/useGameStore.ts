@@ -1,5 +1,5 @@
 import { create } from "zustand"
-import type { RoomState, ClientMessage, ScoringMode, GameSettings, GameType, BattleHPSnapshot } from "@games-of-chance/shared"
+import type { RoomState, ClientMessage, ScoringMode, ProgressionMode, TournamentProgress, GameSettings, GameType, BattleHPSnapshot } from "@games-of-chance/shared"
 
 // ── Join Flow State Machine ────────────────────────────────────────────────
 
@@ -22,6 +22,7 @@ export interface GameStore {
   playerName: string | null
   role: "host" | "player" | null
   scoringMode: ScoringMode | undefined
+  progressionMode: ProgressionMode | undefined
   roomSize: number | undefined
 
   // Connection
@@ -45,7 +46,7 @@ export interface GameStore {
   _socketSend: ((msg: ClientMessage) => void) | null
 
   // Actions
-  connect: (roomId: string, name: string, role: "host" | "player", scoringMode?: ScoringMode, roomSize?: number) => void
+  connect: (roomId: string, name: string, role: "host" | "player", scoringMode?: ScoringMode, roomSize?: number, progressionMode?: ProgressionMode) => void
   submitPick: (pick: unknown) => void
   startRound: () => void
   endGame: () => void
@@ -75,6 +76,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   playerName: null,
   role: null,
   scoringMode: undefined,
+  progressionMode: undefined,
   roomSize: undefined,
   connectionStatus: "disconnected",
   roomState: null,
@@ -87,7 +89,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   // ── Actions ────────────────────────────────────────────────────────────
 
-  connect: (roomId, name, role, scoringMode, roomSize) => {
+  connect: (roomId, name, role, scoringMode, roomSize, progressionMode) => {
     const current = get().joinState
     // Non-regression guard: once IN_ROOM, never transition backwards
     if (current === "IN_ROOM") return
@@ -101,6 +103,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       clientId,
       role,
       scoringMode,
+      progressionMode,
       roomSize,
       joinState: "CONNECTING",
       connectionStatus: "connecting",
@@ -270,4 +273,22 @@ export function setJoinState(nextState: JoinState): void {
   const current = useGameStore.getState().joinState
   if (current === "IN_ROOM") return // permanent — no backwards transitions
   useGameStore.setState({ joinState: nextState })
+}
+
+// ── Tournament Mode Selectors ──────────────────────────────────────────────
+
+/**
+ * Selector: returns the current progression mode from the room config.
+ * Defaults to "endless" when room state is not yet available.
+ */
+export function selectProgressionMode(state: GameStore): ProgressionMode {
+  return state.roomState?.room.progressionMode ?? "endless"
+}
+
+/**
+ * Selector: returns the tournament progress object, or null if not in tournament mode
+ * or room state is not yet available.
+ */
+export function selectTournamentProgress(state: GameStore): TournamentProgress | null {
+  return state.roomState?.tournamentProgress ?? null
 }
