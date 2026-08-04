@@ -1,4 +1,4 @@
-import type { Player, GameLeaderboardEntry, RoundScoreResult, GameType, SettingsSchema, GameSettings } from "@games-of-chance/shared"
+import type { Player, GameLeaderboardEntry, RoundScoreResult, GameType, SettingsSchema, GameSettings, TournamentProgress } from "@games-of-chance/shared"
 
 /**
  * Interface that each game plugin must implement.
@@ -42,4 +42,14 @@ export interface GamePlugin<TPick = unknown, TResult = unknown> {
 
   /** How long the pick window stays open (ms) */
   pickWindowMs: number
+
+  /** Whether this game is the tournament finale (default: false) */
+  isFinale?: boolean
+
+  /**
+   * Custom unlock criteria for tournament mode.
+   * Receives the current tournament progress and returns whether this game is playable.
+   * If not defined, defaults to: available when not in completedGames.
+   */
+  unlockCriteria?: (progress: TournamentProgress) => boolean
 }

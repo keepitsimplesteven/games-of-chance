@@ -14,6 +14,8 @@ import type {
   BattleHPSnapshot,
   BigWheelGameState,
   BigWheelSpinResult,
+  TournamentProgress,
+  ProgressionMode,
 } from "@games-of-chance/shared"
 import { registry } from "./games/GameRegistry"
 import { getStrategy } from "./scoring"
@@ -40,6 +42,7 @@ import "./games/battle-bots/index"
 // Side-effect import: registers the big-wheel plugin in the global registry
 import "./games/big-wheel/BigWheelPlugin"
 import { validateSettingsUpdate } from "./settings/validateSettings"
+import { evaluateAvailability } from "./tournament/UnlockCriteriaHarness"
 import { FastPlayAdapter } from "./simulation/FastPlayAdapter"
 import { BotManager } from "./bots/BotManager"
 // Side-effect import: registers coin-toss pick generator in the simulation registry
@@ -63,6 +66,10 @@ interface LiveRoomState {
   settingsLocked: boolean
   /** Plugin-specific state for multi-round games */
   pluginState: Record<string, unknown>
+  /** Game votes — gameType → set of player IDs who voted for it */
+  gameVotes: Record<string, string[]>
+  /** Tournament progress — only tracked when progressionMode is "tournament" */
+  tournamentProgress: TournamentProgress | null
 }
 
 // ── Default configuration ──────────────────────────────────────────────────
@@ -77,6 +84,7 @@ function createDefaultConfig(roomId: string): RoomConfig {
     autoRoundIntervalMs: 5000,
     placementPoints: [10, 5, 3, 1, 1, 1, 1, 0, 0, 0],
     roomSize: 4,
+    progressionMode: "tournament",
   }
 }
 
@@ -157,6 +165,8 @@ export default class GameRoom implements Party.Server {
       gameSettings: buildDefaultGameSettings("coin-toss"),
       settingsLocked: false,
       pluginState: {},
+      gameVotes: {},
+      tournamentProgress: null,
     }
   }
 
@@ -220,6 +230,9 @@ export default class GameRoom implements Party.Server {
         break
       case "RETURN_TO_LOBBY":
         this.handleReturnToLobby(sender)
+        break
+      case "VOTE_GAME":
+        this.handleVoteGame(sender, msg.payload)
         break
       default:
         this.sendError(
@@ -302,7 +315,7 @@ export default class GameRoom implements Party.Server {
 
   private handleJoin(
     connection: Party.Connection,
-    payload: { name: string; role: "host" | "player"; clientId: string; scoringMode?: "grand-prix" | "chips"; roomSize?: number }
+    payload: { name: string; role: "host" | "player"; clientId: string; scoringMode?: "grand-prix" | "chips"; roomSize?: number; progressionMode?: ProgressionMode }
   ) {
     const playerCount = Object.keys(this.state.players).length
 
@@ -339,6 +352,21 @@ export default class GameRoom implements Party.Server {
     // If this is the host creating the room and they provided a room size, apply it
     if (role === "host" && payload.roomSize && Number.isInteger(payload.roomSize) && payload.roomSize >= 2 && payload.roomSize <= 10) {
       this.state.config.roomSize = payload.roomSize
+    }
+
+    // If this is the host creating the room and they provided a progression mode, apply it
+    if (role === "host" && payload.progressionMode) {
+      this.state.config.progressionMode = payload.progressionMode
+    }
+
+    // Initialize tournament progress for the host when in tournament mode
+    if (role === "host" && this.state.config.progressionMode === "tournament" && !this.state.tournamentProgress) {
+      this.state.tournamentProgress = {
+        completedGames: [],
+        availability: evaluateAvailability({ completedGames: [], availability: {} }),
+      }
+    } else if (role === "host" && this.state.config.progressionMode === "endless") {
+      this.state.tournamentProgress = null
     }
 
     // Create the player
@@ -385,6 +413,12 @@ export default class GameRoom implements Party.Server {
 
     if (!authorized) {
       this.sendError(sender, "NOT_HOST", "Only the host or active spinner can advance the round")
+      return
+    }
+
+    // Tournament terminal state guard
+    if (this.state.round.phase === "END_TOURNAMENT") {
+      this.sendError(sender, "TOURNAMENT_ENDED", "The tournament has concluded")
       return
     }
 
@@ -589,6 +623,30 @@ export default class GameRoom implements Party.Server {
     resetBattleBotsState()
     resetCoinTossStreakState()
     resetBigWheelState()
+
+    // ── Tournament mode: lock the completed game and re-evaluate availability ──
+    if (
+      this.state.config.progressionMode === "tournament" &&
+      this.state.tournamentProgress
+    ) {
+      const currentGameType = this.state.config.gameType
+      const plugin = registry.lookup(currentGameType)
+
+      // 1. Mark this game as completed (locked)
+      if (!this.state.tournamentProgress.completedGames.includes(currentGameType)) {
+        this.state.tournamentProgress.completedGames.push(currentGameType)
+      }
+
+      // 2. Re-evaluate all game availability based on updated progress
+      this.state.tournamentProgress.availability = evaluateAvailability(
+        this.state.tournamentProgress
+      )
+
+      // 3. If the completed game was the finale, transition to terminal state
+      if (plugin.isFinale) {
+        this.state.round.phase = "END_TOURNAMENT"
+      }
+    }
 
     this.broadcastState()
   }
@@ -910,6 +968,77 @@ export default class GameRoom implements Party.Server {
     resetCoinTossStreakState()
     resetBigWheelState()
 
+    // ── Tournament mode: lock the completed game and re-evaluate availability ──
+    if (
+      this.state.config.progressionMode === "tournament" &&
+      this.state.tournamentProgress
+    ) {
+      const currentGameType = this.state.config.gameType
+      const plugin = registry.lookup(currentGameType)
+
+      // 1. Mark this game as completed (locked)
+      if (!this.state.tournamentProgress.completedGames.includes(currentGameType)) {
+        this.state.tournamentProgress.completedGames.push(currentGameType)
+      }
+
+      // 2. Re-evaluate all game availability based on updated progress
+      this.state.tournamentProgress.availability = evaluateAvailability(
+        this.state.tournamentProgress
+      )
+
+      // 3. If the completed game was the finale, transition to terminal state
+      if (plugin.isFinale) {
+        this.state.round.phase = "END_TOURNAMENT"
+      }
+    }
+
+    this.broadcastState()
+  }
+
+  private handleVoteGame(
+    sender: Party.Connection,
+    payload: { gameType: string }
+  ) {
+    // Any connected player can vote — no role restriction
+    const playerId = this.getPlayerIdByConnectionId(sender.id)
+    if (!playerId) {
+      this.sendError(sender, "NOT_IN_ROOM", "Player not found in room")
+      return
+    }
+
+    // Only allow voting during LOBBY phase
+    if (this.state.round.phase !== "LOBBY") {
+      return
+    }
+
+    // Only allow voting on active (registered) games
+    const gameType = payload.gameType
+    try {
+      registry.lookup(gameType)
+    } catch {
+      return
+    }
+
+    // Check if player was already voting for this specific game (for toggle logic)
+    const previousVote = this.state.gameVotes[gameType]?.includes(playerId)
+
+    // Remove player's vote from ALL games first (one vote per player)
+    for (const gt of Object.keys(this.state.gameVotes)) {
+      this.state.gameVotes[gt] = this.state.gameVotes[gt].filter((id) => id !== playerId)
+      if (this.state.gameVotes[gt].length === 0) {
+        delete this.state.gameVotes[gt]
+      }
+    }
+
+    // If they were voting for this same game, toggle it off (don't re-add)
+    // If they weren't, add their vote
+    if (!previousVote) {
+      if (!this.state.gameVotes[gameType]) {
+        this.state.gameVotes[gameType] = []
+      }
+      this.state.gameVotes[gameType].push(playerId)
+    }
+
     this.broadcastState()
   }
 
@@ -929,6 +1058,22 @@ export default class GameRoom implements Party.Server {
     if (this.state.settingsLocked) {
       this.sendError(sender, "SETTINGS_LOCKED", "Cannot change game type during an active game")
       return
+    }
+
+    // Tournament guard: reject if game is locked or unavailable in tournament mode
+    if (
+      this.state.config.progressionMode === "tournament" &&
+      this.state.tournamentProgress
+    ) {
+      const tileStatus = this.state.tournamentProgress.availability[payload.gameType]
+      if (tileStatus === "locked") {
+        this.sendError(sender, "GAME_LOCKED", "This game has already been played in the current tournament")
+        return
+      }
+      if (tileStatus === "unavailable") {
+        this.sendError(sender, "GAME_UNAVAILABLE", "This game's unlock criteria are not met")
+        return
+      }
     }
 
     // No-op if same game type
@@ -1029,6 +1174,9 @@ export default class GameRoom implements Party.Server {
 
     // Lock settings during active game
     this.state.settingsLocked = true
+
+    // Clear game votes when a game starts
+    this.state.gameVotes = {}
 
     const roundNumber = this.state.round.roundNumber + 1
 
@@ -1909,6 +2057,8 @@ export default class GameRoom implements Party.Server {
       gameSettings: this.state.gameSettings,
       settingsLocked: this.state.settingsLocked,
       bigWheelGameState,
+      gameVotes: this.state.gameVotes,
+      tournamentProgress: this.state.tournamentProgress,
     }
   }
 }
