@@ -56,7 +56,12 @@ export interface GameSettings {
   pickWindowMs: number
   /** Game-specific tuning constants (keyed by constant name) */
   tuning: Record<string, number | boolean | string>
+  /** Visual theme applied to all players in the room (defaults to "retro-casino") */
+  theme?: ThemeId
 }
+
+/** Available visual theme identifiers */
+export type ThemeId = "pixel-vapor" | "retro-casino"
 
 // ── Room & Player ──────────────────────────────────────────────────────────
 

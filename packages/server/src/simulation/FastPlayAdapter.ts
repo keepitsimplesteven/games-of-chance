@@ -68,6 +68,7 @@ export class FastPlayAdapter {
       roundCount,
       pickWindowMs: plugin.pickWindowMs,
       tuning,
+      theme: "retro-casino",
     }
 
     const gameScores: Record<string, number> = {}

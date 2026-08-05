@@ -1,4 +1,5 @@
 import { useGameStore } from "../../store/useGameStore"
+import { useTheme } from "../../theme"
 
 /**
  * HostControls — "Start Game" and "Simulate Game" buttons in the lobby.
@@ -14,6 +15,7 @@ export default function HostControls() {
   const startRound = useGameStore((s) => s.startRound)
   const startSimulation = useGameStore((s) => s.startSimulation)
   const stopSimulation = useGameStore((s) => s.stopSimulation)
+  const theme = useTheme()
 
   // Only render for host
   if (role !== "host") return null
@@ -25,14 +27,14 @@ export default function HostControls() {
   if (isSimulationActive) {
     return (
       <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-center gap-2 rounded-lg bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700">
-          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-indigo-500" />
+        <div className={`flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium ${theme.listItem} ${theme.accentText}`}>
+          <span className={`inline-block h-2 w-2 animate-pulse rounded-full bg-current`} />
           Simulation Running
         </div>
         <button
           type="button"
           onClick={stopSimulation}
-          className="w-full rounded-lg bg-red-600 px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-red-700 active:scale-[0.98]"
+          className={`w-full rounded-lg px-4 py-3 text-base font-semibold shadow-sm transition active:scale-[0.98] ${theme.btnPrimary}`}
         >
           Stop Simulation
         </button>
@@ -48,14 +50,14 @@ export default function HostControls() {
       <button
         type="button"
         onClick={startRound}
-        className="w-full rounded-lg bg-green-600 px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-green-700 active:scale-[0.98]"
+        className={`w-full rounded-lg px-4 py-3 text-base font-semibold shadow-sm transition active:scale-[0.98] ${theme.btnPrimary}`}
       >
         Start Game
       </button>
       <button
         type="button"
         onClick={() => startSimulation()}
-        className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-indigo-700 active:scale-[0.98]"
+        className={`w-full rounded-lg px-4 py-3 text-base font-semibold shadow-sm transition active:scale-[0.98] ${theme.btnSecondary}`}
       >
         Simulate Game
       </button>

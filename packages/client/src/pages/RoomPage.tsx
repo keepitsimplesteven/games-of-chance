@@ -4,6 +4,7 @@ import type { ScoringMode, ProgressionMode } from "@games-of-chance/shared"
 import { useGameStore, setJoinState } from "../store/useGameStore"
 import { usePartySocket } from "../hooks/usePartySocket"
 import LobbyShell from "../components/lobby/LobbyShell"
+import { useTheme } from "../theme"
 
 export default function RoomPage() {
   const { roomId } = useParams<{ roomId: string }>()
@@ -12,6 +13,7 @@ export default function RoomPage() {
   const connectionStatus = useGameStore((s) => s.connectionStatus)
   const playerName = useGameStore((s) => s.playerName)
   const role = useGameStore((s) => s.role)
+  const theme = useTheme()
 
   // Read scoring mode, progression mode, and room size from navigation state (set by LandingPage "Create Room")
   const scoringMode = (location.state as { scoringMode?: ScoringMode; progressionMode?: ProgressionMode; roomSize?: number } | null)?.scoringMode ?? undefined
@@ -55,13 +57,13 @@ export default function RoomPage() {
       <div className="flex min-h-screen items-center justify-center p-4">
         <form
           onSubmit={handleNameSubmit}
-          className="w-full max-w-sm space-y-4 rounded-lg bg-white p-6 shadow-md"
+          className={`w-full max-w-sm space-y-4 rounded-lg p-6 ${theme.card}`}
         >
-          <h2 className="text-xl font-semibold text-gray-800">Join Room</h2>
-          <p className="text-sm text-gray-500">Room: {roomId}</p>
+          <h2 className={`text-xl font-semibold ${theme.headingText}`}>Join Room</h2>
+          <p className={`text-sm ${theme.mutedText}`}>Room: {roomId}</p>
 
           {error && (
-            <p className="text-sm text-red-600">{error}</p>
+            <p className={`text-sm ${theme.statusDanger}`}>{error}</p>
           )}
 
           <input
@@ -69,14 +71,14 @@ export default function RoomPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Enter your name"
-            className="w-full rounded border border-gray-300 px-3 py-2 text-gray-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className={`w-full rounded border-2 bg-transparent px-3 py-2 ${theme.bodyText} ${theme.listItem} focus:outline-none focus:ring-1`}
             autoFocus
           />
 
           <button
             type="submit"
             disabled={!name.trim()}
-            className="w-full rounded bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className={`w-full rounded px-4 py-2 font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${theme.btnPrimary}`}
           >
             Join
           </button>
@@ -90,8 +92,8 @@ export default function RoomPage() {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
         <div className="flex flex-col items-center space-y-4">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-          <p className="text-gray-600">Connecting to room...</p>
+          <div className={`h-3 w-3 animate-pulse rounded-full ${theme.accentText} bg-current`} />
+          <p className={theme.mutedText}>Connecting to room...</p>
         </div>
       </div>
     )
