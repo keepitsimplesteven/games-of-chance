@@ -9,7 +9,8 @@
     "dev": "npx partykit dev --config ../../partykit.json --port 1999",
     "deploy": "npx partykit deploy --config ../../partykit.json",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "drive:cli": "npx tsx src/games/playcaller/drive/cli.ts"
   },
   "dependencies": {
     "@games-of-chance/shared": "workspace:*",

@@ -438,6 +438,4 @@ export const battleBotsPlugin: GamePlugin<BattleBotsPick, BattleBotsRoundResult>
     return filterBotPersonasFromLeaderboard(leaderboard, botPersonaIds)
   },
 
-  /** Battle Bots is the tournament finale */
-  isFinale: true,
 }
