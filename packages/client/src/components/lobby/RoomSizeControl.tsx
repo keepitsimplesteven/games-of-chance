@@ -1,3 +1,5 @@
+import { useTheme } from "../../theme"
+
 interface RoomSizeControlProps {
   currentSize: number
   minSize?: number
@@ -20,6 +22,8 @@ export default function RoomSizeControl({
   disabled,
   onSizeChange,
 }: RoomSizeControlProps) {
+  const theme = useTheme()
+
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const val = parseInt(e.target.value, 10)
     if (!isNaN(val)) {
@@ -44,7 +48,7 @@ export default function RoomSizeControl({
     <div className="flex flex-col gap-1">
       <label
         htmlFor="room-size-control"
-        className="text-sm font-medium text-gray-700"
+        className={`text-sm font-medium ${theme.bodyText}`}
       >
         Room Size
       </label>
@@ -54,7 +58,7 @@ export default function RoomSizeControl({
           onClick={decrement}
           disabled={disabled || currentSize <= minSize}
           aria-label="Decrease room size"
-          className="flex h-[44px] w-[44px] items-center justify-center rounded-lg border border-gray-300 bg-white text-lg font-bold text-gray-700 shadow-sm transition hover:bg-gray-50 active:scale-[0.96] disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+          className={`flex h-[44px] w-[44px] items-center justify-center rounded-lg text-lg font-bold shadow-sm transition active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50 ${theme.btnGhost}`}
         >
           −
         </button>
@@ -70,14 +74,14 @@ export default function RoomSizeControl({
           aria-valuemin={minSize}
           aria-valuemax={maxSize}
           aria-valuenow={currentSize}
-          className="min-h-[44px] w-16 rounded-lg border border-gray-300 px-3 py-2 text-center text-base font-semibold text-gray-900 shadow-sm transition focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-300 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
+          className={`min-h-[44px] w-16 rounded-lg border-2 bg-transparent px-3 py-2 text-center text-base font-semibold shadow-sm transition focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-50 ${theme.bodyText} ${theme.listItem}`}
         />
         <button
           type="button"
           onClick={increment}
           disabled={disabled || currentSize >= maxSize}
           aria-label="Increase room size"
-          className="flex h-[44px] w-[44px] items-center justify-center rounded-lg border border-gray-300 bg-white text-lg font-bold text-gray-700 shadow-sm transition hover:bg-gray-50 active:scale-[0.96] disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+          className={`flex h-[44px] w-[44px] items-center justify-center rounded-lg text-lg font-bold shadow-sm transition active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50 ${theme.btnGhost}`}
         >
           +
         </button>

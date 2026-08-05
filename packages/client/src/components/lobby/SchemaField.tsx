@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useTheme } from "../../theme"
 import type { SettingsFieldSchema } from "@games-of-chance/shared"
 
 interface SchemaFieldProps {
@@ -76,6 +77,7 @@ function NumberField({
   validationMsg: string | null
   setValidationMsg: (msg: string | null) => void
 }) {
+  const theme = useTheme()
   const min = field.constraints?.min
   const max = field.constraints?.max
   const step = field.constraints?.step
@@ -114,7 +116,7 @@ function NumberField({
     <div className="flex flex-col gap-1">
       <label
         htmlFor={`field-${field.key}`}
-        className="text-sm font-medium text-gray-700"
+        className={`text-sm font-medium ${theme.bodyText}`}
       >
         {field.label}
       </label>
@@ -128,10 +130,10 @@ function NumberField({
         max={max}
         step={step}
         disabled={disabled}
-        className="min-h-[44px] w-full rounded-lg border border-gray-300 px-3 py-2 text-base text-gray-900 shadow-sm transition focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-300 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
+        className={`min-h-[44px] w-full rounded-lg border-2 bg-transparent px-3 py-2 text-base shadow-sm transition focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-50 ${theme.bodyText} ${theme.listItem}`}
       />
       {validationMsg && (
-        <p className="text-xs text-red-600" role="alert">
+        <p className={`text-xs ${theme.statusDanger}`} role="alert">
           {validationMsg}
         </p>
       )}
@@ -152,6 +154,8 @@ function BooleanField({
   onChange: (key: string, value: number | boolean | string) => void
   disabled: boolean
 }) {
+  const theme = useTheme()
+
   function handleToggle() {
     if (disabled) return
     onChange(field.key, !value)
@@ -161,7 +165,7 @@ function BooleanField({
     <div className="flex items-center justify-between gap-3">
       <label
         htmlFor={`field-${field.key}`}
-        className="text-sm font-medium text-gray-700"
+        className={`text-sm font-medium ${theme.bodyText}`}
       >
         {field.label}
       </label>
@@ -199,6 +203,7 @@ function SelectField({
   onChange: (key: string, value: number | boolean | string) => void
   disabled: boolean
 }) {
+  const theme = useTheme()
   const options = field.constraints?.options ?? []
 
   function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
@@ -209,7 +214,7 @@ function SelectField({
     <div className="flex flex-col gap-1">
       <label
         htmlFor={`field-${field.key}`}
-        className="text-sm font-medium text-gray-700"
+        className={`text-sm font-medium ${theme.bodyText}`}
       >
         {field.label}
       </label>
@@ -218,7 +223,7 @@ function SelectField({
         value={value}
         onChange={handleChange}
         disabled={disabled}
-        className="min-h-[44px] w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 shadow-sm transition focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-300 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
+        className={`min-h-[44px] w-full appearance-none rounded-lg border-2 bg-transparent px-3 py-2 text-base shadow-sm transition focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-50 ${theme.bodyText} ${theme.listItem}`}
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>

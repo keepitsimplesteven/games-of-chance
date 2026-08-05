@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { useGameStore } from "../../store/useGameStore"
+import { useTheme } from "../../theme"
 
 /** Check if a player ID belongs to a bot */
 function isBot(playerId: string): boolean {
@@ -10,6 +11,7 @@ export default function PlayerList() {
   const roomState = useGameStore((s) => s.roomState)
   const playerId = useGameStore((s) => s.playerId)
   const phase = useGameStore((s) => s.roomState?.round.phase)
+  const theme = useTheme()
 
   const isLobby = !phase || phase === "LOBBY"
 
@@ -43,7 +45,7 @@ export default function PlayerList() {
   })
 
   return (
-    <div className="rounded-lg bg-white shadow-sm">
+    <div className={`rounded-lg shadow-sm ${theme.card}`}>
       {/* Collapsible header */}
       <button
         type="button"
@@ -51,11 +53,11 @@ export default function PlayerList() {
         className="flex w-full items-center justify-between px-4 py-3 text-left"
         aria-expanded={open}
       >
-        <span className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+        <span className={`text-sm font-semibold uppercase tracking-wide ${theme.mutedText}`}>
           {open ? "Hide Standings" : "Show Standings"}
         </span>
         <svg
-          className={`h-4 w-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`h-4 w-4 transition-transform ${theme.mutedText} ${open ? "rotate-180" : ""}`}
           viewBox="0 0 20 20"
           fill="currentColor"
           aria-hidden="true"
@@ -78,28 +80,14 @@ export default function PlayerList() {
             const sessionScore = sessionEntry?.sessionPoints ?? 0
             const rank = sessionEntry?.rank ?? index + 1
 
-            // Color the rank badge for positions 1-3 in the list
-            const rankBadgeClass =
-              index === 0
-                ? "bg-yellow-400 text-yellow-900"
-                : index === 1
-                  ? "bg-gray-300 text-gray-700"
-                  : index === 2
-                    ? "bg-amber-600 text-amber-50"
-                    : "bg-gray-200 text-gray-700"
-
             return (
               <li
                 key={player.id}
-                className={`flex items-center justify-between rounded-md px-3 py-2 ${
-                  isCurrentPlayer
-                    ? "bg-indigo-50 ring-1 ring-indigo-200"
-                    : "bg-gray-50"
-                }`}
+                className={`flex items-center justify-between rounded-md px-3 py-2 ${theme.listItem}`}
               >
                 <div className="flex items-center gap-2">
                   {/* Rank badge */}
-                  <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${rankBadgeClass}`}>
+                  <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${theme.listItem}`}>
                     {rank}
                   </span>
 
@@ -119,10 +107,10 @@ export default function PlayerList() {
                   )}
 
                   {/* Player name */}
-                  <span className="text-sm font-medium text-gray-800">
+                  <span className={`text-sm font-medium ${theme.bodyText}`}>
                     {player.name}
                     {isCurrentPlayer && (
-                      <span className="ml-1 text-xs text-gray-500">(you)</span>
+                      <span className={`ml-1 text-xs ${theme.mutedText}`}>(you)</span>
                     )}
                   </span>
 
@@ -135,7 +123,7 @@ export default function PlayerList() {
                 </div>
 
                 {/* Score */}
-                <span className="text-sm font-semibold text-indigo-600">
+                <span className={`text-sm font-semibold ${theme.accentText}`}>
                   {sessionScore} pts
                 </span>
               </li>

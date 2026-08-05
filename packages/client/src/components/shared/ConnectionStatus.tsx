@@ -1,4 +1,5 @@
 import { useGameStore } from "../../store/useGameStore"
+import { useTheme } from "../../theme"
 import type { ConnectionStatus as ConnectionStatusType } from "../../store/useGameStore"
 
 const statusConfig: Record<
@@ -13,10 +14,11 @@ const statusConfig: Record<
 
 export default function ConnectionStatus() {
   const connectionStatus = useGameStore((s) => s.connectionStatus)
+  const theme = useTheme()
   const { dotColor, label } = statusConfig[connectionStatus]
 
   return (
-    <div className="flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700">
+    <div className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${theme.listItem} ${theme.bodyText}`}>
       <span
         className={`inline-block h-2 w-2 rounded-full ${dotColor}`}
         aria-hidden="true"

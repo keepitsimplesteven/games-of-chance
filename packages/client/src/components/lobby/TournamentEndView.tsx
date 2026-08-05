@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { useGameStore } from "../../store/useGameStore"
+import { useTheme } from "../../theme"
 
 /**
  * TournamentEndView — displayed when round.phase === "END_TOURNAMENT".
@@ -11,11 +12,12 @@ import { useGameStore } from "../../store/useGameStore"
 export default function TournamentEndView() {
   const sessionLeaderboard = useGameStore((s) => s.roomState?.sessionLeaderboard)
   const playerId = useGameStore((s) => s.playerId)
+  const theme = useTheme()
 
   if (!sessionLeaderboard || sessionLeaderboard.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
-        <p className="text-gray-500">No results available.</p>
+        <p className={theme.mutedText}>No results available.</p>
       </div>
     )
   }
@@ -36,8 +38,8 @@ export default function TournamentEndView() {
       <div className="animate-bounce text-center">
         <span className="text-5xl" role="img" aria-label="trophy">🏆</span>
       </div>
-      <h2 className="text-2xl font-bold text-gray-800">Tournament Complete!</h2>
-      <p className="text-sm text-gray-500">Final standings are in — congratulations to all players!</p>
+      <h2 className={`text-2xl font-bold ${theme.titleText}`}>Tournament Complete!</h2>
+      <p className={`text-sm ${theme.mutedText}`}>Final standings are in — congratulations to all players!</p>
 
       {/* Podium */}
       <div className="flex w-full max-w-md items-end justify-center gap-3 px-4 pt-4">
@@ -72,7 +74,7 @@ export default function TournamentEndView() {
       {/* Remaining players */}
       {rest.length > 0 && (
         <div className="w-full max-w-md px-4">
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+          <h3 className={`mb-2 text-xs font-semibold uppercase tracking-wide ${theme.mutedText}`}>
             Other Finishers
           </h3>
           <div className="space-y-1">
@@ -81,22 +83,20 @@ export default function TournamentEndView() {
               return (
                 <div
                   key={entry.playerId}
-                  className={`flex items-center justify-between rounded-md px-3 py-2 ${
-                    isCurrentPlayer ? "bg-indigo-50 ring-1 ring-indigo-200" : "bg-gray-50"
-                  }`}
+                  className={`flex items-center justify-between rounded-md px-3 py-2 ${theme.listItem}`}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 text-xs font-bold text-gray-700">
+                    <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${theme.listItem}`}>
                       {entry.rank}
                     </span>
-                    <span className="text-sm font-medium text-gray-800">
+                    <span className={`text-sm font-medium ${theme.bodyText}`}>
                       {entry.playerName}
                       {isCurrentPlayer && (
-                        <span className="ml-1 text-xs text-gray-500">(you)</span>
+                        <span className={`ml-1 text-xs ${theme.mutedText}`}>(you)</span>
                       )}
                     </span>
                   </div>
-                  <span className="text-sm font-semibold text-indigo-600">
+                  <span className={`text-sm font-semibold ${theme.accentText}`}>
                     {entry.sessionPoints} pts
                   </span>
                 </div>
@@ -212,41 +212,38 @@ interface PodiumSlotProps {
   isCurrentPlayer: boolean
 }
 
-const PODIUM_CONFIG = {
-  1: { height: "h-28", bg: "bg-yellow-100", border: "ring-yellow-400", emoji: "🥇", textColor: "text-yellow-700" },
-  2: { height: "h-20", bg: "bg-gray-100", border: "ring-gray-300", emoji: "🥈", textColor: "text-gray-600" },
-  3: { height: "h-16", bg: "bg-orange-50", border: "ring-orange-300", emoji: "🥉", textColor: "text-orange-600" },
-} as const
-
 function PodiumSlot({ entry, position, isCurrentPlayer }: PodiumSlotProps) {
-  const config = PODIUM_CONFIG[position]
+  const theme = useTheme()
   const isWinner = position === 1
+
+  const heightClass = position === 1 ? "h-28" : position === 2 ? "h-20" : "h-16"
+  const medal = position === 1 ? "🥇" : position === 2 ? "🥈" : "🥉"
 
   return (
     <div className="flex flex-1 flex-col items-center gap-1">
       {/* Medal emoji */}
       <span className={`text-2xl ${isWinner ? "animate-pulse" : ""}`} role="img" aria-label={`Position ${position}`}>
-        {config.emoji}
+        {medal}
       </span>
 
       {/* Player name */}
-      <span className={`text-center text-xs font-semibold ${config.textColor} max-w-full truncate`}>
+      <span className={`text-center text-xs font-semibold max-w-full truncate ${theme.bodyText}`}>
         {entry.playerName}
-        {isCurrentPlayer && <span className="ml-0.5 text-gray-400">(you)</span>}
+        {isCurrentPlayer && <span className={`ml-0.5 ${theme.mutedText}`}>(you)</span>}
       </span>
 
       {/* Points */}
-      <span className="text-xs font-bold text-gray-800">
+      <span className={`text-xs font-bold ${theme.accentText}`}>
         {entry.sessionPoints} pts
       </span>
 
       {/* Podium block */}
       <div
-        className={`${config.height} w-full rounded-t-lg ${config.bg} ring-2 ${config.border} flex items-center justify-center ${
+        className={`${heightClass} w-full rounded-t-lg flex items-center justify-center ${theme.card} ${
           isWinner ? "shadow-lg" : ""
         }`}
       >
-        <span className="text-lg font-bold text-gray-700">{position}</span>
+        <span className={`text-lg font-bold ${theme.headingText}`}>{position}</span>
       </div>
     </div>
   )

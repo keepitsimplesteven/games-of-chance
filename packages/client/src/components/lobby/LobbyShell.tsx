@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 import { useGameStore } from "../../store/useGameStore"
+import { useTheme } from "../../theme"
 import PlayerList from "./PlayerList"
 import ShareLink from "./ShareLink"
 import GameTileGrid from "./GameTileGrid"
@@ -17,6 +18,7 @@ interface LobbyShellProps {
 
 export default function LobbyShell({ children }: LobbyShellProps) {
   const phase = useGameStore((s) => s.roomState?.round.phase)
+  const theme = useTheme()
 
   // Show lobby content (game tiles + host controls) when in LOBBY phase
   const isLobby = !phase || phase === "LOBBY"
@@ -25,10 +27,10 @@ export default function LobbyShell({ children }: LobbyShellProps) {
   const isTournamentEnd = phase === "END_TOURNAMENT"
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50 p-4">
+    <div className="flex min-h-screen flex-col p-4">
       {/* Header with connection status and share icon */}
       <header className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-gray-800">Games of Chance</h1>
+        <h1 className={`text-lg font-bold ${theme.titleText}`}>Games of Chance</h1>
         <div className="flex items-center gap-1.5">
           <ShareLink />
           <ConnectionStatus />

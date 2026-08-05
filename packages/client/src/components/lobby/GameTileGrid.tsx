@@ -1,4 +1,5 @@
 import { useGameStore } from "../../store/useGameStore"
+import { useTheme } from "../../theme"
 import type { TournamentTileStatus } from "@games-of-chance/shared"
 
 const games = [
@@ -9,6 +10,8 @@ const games = [
     description: "Heads or tails — simple luck",
     active: true,
     isFinale: false,
+    // Poker chip color: green
+    tileColor: "border-4 border-[#2a7a3a] bg-[#1b5e2a] shadow-[inset_0_0_12px_rgba(0,0,0,0.3),0_3px_0_#0f3d18]",
   },
   {
     id: "battle-bots",
@@ -17,6 +20,8 @@ const games = [
     description: "3-round robot combat: select, battle, and survive",
     active: true,
     isFinale: false,
+    // Poker chip color: blue
+    tileColor: "border-4 border-[#143d7a] bg-[#2255aa] shadow-[inset_0_0_12px_rgba(0,0,0,0.3),0_3px_0_#0f2d5c]",
   },
   {
     id: "big-wheel",
@@ -25,6 +30,8 @@ const games = [
     description: "Spin the wheel twice — highest total wins",
     active: true,
     isFinale: false,
+    // Poker chip color: red
+    tileColor: "border-4 border-[#8b1a1a] bg-[#cc3333] shadow-[inset_0_0_12px_rgba(0,0,0,0.3),0_3px_0_#661a1a]",
   },
   {
     id: "playcaller",
@@ -33,6 +40,8 @@ const games = [
     description: "Single-elimination bracket tournament",
     active: true,
     isFinale: true,
+    // Poker chip color: black
+    tileColor: "border-4 border-[#333333] bg-[#1a1a1a] shadow-[inset_0_0_12px_rgba(0,0,0,0.4),0_3px_0_#0a0a0a]",
   },
 ] as const
 
@@ -45,6 +54,7 @@ export default function GameTileGrid() {
   const voteGame = useGameStore((s) => s.voteGame)
   const progressionMode = useGameStore((s) => s.roomState?.room.progressionMode)
   const tournamentProgress = useGameStore((s) => s.roomState?.tournamentProgress)
+  const theme = useTheme()
 
   const isHost = role === "host"
   const isTournament = progressionMode === "tournament"
@@ -87,24 +97,24 @@ export default function GameTileGrid() {
             disabled={!isClickable}
             onClick={() => isClickable && handleTileClick(game.id)}
             aria-pressed={isSelected}
-            className={`relative flex flex-col items-center justify-center rounded-xl border-2 p-4 shadow-md transition ${
+            className={`relative flex flex-col items-center justify-center rounded-xl p-4 shadow-md transition ${
               // Tournament: locked tile
               tileStatus === "locked"
-                ? "cursor-default border-gray-300 bg-gradient-to-br from-gray-100 to-gray-200 opacity-75"
+                ? `cursor-default opacity-75 ${theme.listItem}`
                 // Tournament: unavailable tile
                 : tileStatus === "unavailable"
-                  ? "cursor-default border-gray-200 bg-gray-100 opacity-50"
+                  ? `cursor-default opacity-50 ${theme.listItem}`
                   // Tournament: finale available — distinct golden glow
                   : isTournament && game.isFinale && tileStatus === "available"
-                    ? "cursor-pointer border-yellow-500 bg-gradient-to-br from-yellow-100 to-amber-200 ring-2 ring-yellow-400 hover:shadow-lg hover:ring-yellow-500"
+                    ? `cursor-pointer ${game.tileColor} ring-2 ring-[#f5c542] hover:shadow-lg`
                     // Normal: selected
                     : isSelected
-                      ? "border-amber-500 bg-gradient-to-br from-amber-100 to-yellow-100 ring-2 ring-amber-400"
+                      ? `${game.tileColor} ring-2 ring-[#f5c542]`
                       // Normal: active/clickable
                       : game.active
-                        ? "cursor-pointer border-amber-400 bg-gradient-to-br from-amber-50 to-yellow-50 hover:shadow-lg hover:ring-2 hover:ring-amber-300"
+                        ? `cursor-pointer ${game.tileColor} hover:shadow-lg hover:ring-2 hover:ring-[#f5c542]/50`
                         // Normal: inactive (coming soon)
-                        : "cursor-default border-gray-200 bg-gray-100"
+                        : `cursor-default ${theme.listItem}`
             }`}
           >
             {/* Tournament: Locked overlay */}
@@ -150,21 +160,21 @@ export default function GameTileGrid() {
             {/* Selected checkmark (host's choice) */}
             {isSelected && (
               <div className="absolute right-2 top-2">
-                <span className="text-sm text-amber-600">✓</span>
+                <span className={`text-sm ${theme.accentText}`}>✓</span>
               </div>
             )}
 
             {/* Vote count badge */}
             {voteCount > 0 && isClickable && (
-              <div className="absolute left-2 top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-500 px-1.5">
-                <span className="text-[10px] font-bold text-white">{voteCount}</span>
+              <div className={`absolute left-2 top-2 flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 ${theme.btnSecondary}`}>
+                <span className="text-[10px] font-bold">{voteCount}</span>
               </div>
             )}
 
             {/* Player's own vote indicator */}
             {playerVotedForThis && !isHost && (
               <div className="absolute right-2 top-2">
-                <span className="text-sm text-indigo-500">🗳️</span>
+                <span className={`text-sm ${theme.accentText}`}>🗳️</span>
               </div>
             )}
 
@@ -175,18 +185,14 @@ export default function GameTileGrid() {
             <span
               className={`mt-2 text-center text-sm font-bold ${
                 tileStatus === "locked" || tileStatus === "unavailable"
-                  ? "text-gray-500"
-                  : isSelected
-                    ? "text-amber-900"
-                    : game.active
-                      ? "text-amber-900"
-                      : "text-gray-600"
+                  ? theme.mutedText
+                  : "text-white"
               }`}
             >
               {game.name}
             </span>
             {game.active && tileStatus !== "locked" && tileStatus !== "unavailable" && (
-              <span className="mt-1 text-center text-xs text-gray-500">
+              <span className="mt-1 text-center text-xs text-white/70">
                 {game.description}
               </span>
             )}
