@@ -1,9 +1,11 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import type { ScoringMode, ProgressionMode } from "@games-of-chance/shared"
+import { useTheme } from "../theme"
 
 export default function LandingPage() {
   const navigate = useNavigate()
+  const theme = useTheme()
   const [roomCode, setRoomCode] = useState("")
   const [scoringMode, setScoringMode] = useState<ScoringMode>("chips")
   const [progressionMode, setProgressionMode] = useState<ProgressionMode>("tournament")
@@ -22,27 +24,30 @@ export default function LandingPage() {
     }
   }
 
+  const toggleActive = theme.btnPrimary
+  const toggleInactive = theme.btnGhost
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4">
+    <div className="flex items-center justify-center min-h-screen px-4">
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-white">Games of Chance</h1>
-          <p className="mt-2 text-gray-400">Create or join a room to play</p>
+          <h1 className={`text-3xl font-bold uppercase tracking-widest ${theme.titleText}`}>
+            Games of Chance
+          </h1>
+          <p className={`mt-2 text-sm ${theme.mutedText}`}>Create or join a room to play</p>
         </div>
 
         {/* Scoring mode selector */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-300">
+          <label className={`block text-sm font-bold uppercase tracking-wider ${theme.headingText}`}>
             Scoring Mode
           </label>
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => setScoringMode("chips")}
-              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                scoringMode === "chips"
-                  ? "bg-indigo-600 text-white ring-2 ring-indigo-400"
-                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+              className={`flex-1 px-3 py-2 text-sm font-bold uppercase transition ${
+                scoringMode === "chips" ? toggleActive : toggleInactive
               }`}
             >
               🪙 Chips
@@ -50,16 +55,14 @@ export default function LandingPage() {
             <button
               type="button"
               onClick={() => setScoringMode("grand-prix")}
-              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                scoringMode === "grand-prix"
-                  ? "bg-indigo-600 text-white ring-2 ring-indigo-400"
-                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+              className={`flex-1 px-3 py-2 text-sm font-bold uppercase transition ${
+                scoringMode === "grand-prix" ? toggleActive : toggleInactive
               }`}
             >
               🏆 Grand Prix
             </button>
           </div>
-          <p className="text-xs text-gray-500">
+          <p className={`text-xs ${theme.mutedText}`}>
             {scoringMode === "grand-prix"
               ? "Points awarded by placement each game"
               : "Raw scores accumulate across games"}
@@ -68,17 +71,15 @@ export default function LandingPage() {
 
         {/* Progression mode selector */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-300">
+          <label className={`block text-sm font-bold uppercase tracking-wider ${theme.headingText}`}>
             Progression Mode
           </label>
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => setProgressionMode("endless")}
-              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                progressionMode === "endless"
-                  ? "bg-indigo-600 text-white ring-2 ring-indigo-400"
-                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+              className={`flex-1 px-3 py-2 text-sm font-bold uppercase transition ${
+                progressionMode === "endless" ? toggleActive : toggleInactive
               }`}
             >
               ♾️ Endless
@@ -86,16 +87,14 @@ export default function LandingPage() {
             <button
               type="button"
               onClick={() => setProgressionMode("tournament")}
-              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                progressionMode === "tournament"
-                  ? "bg-indigo-600 text-white ring-2 ring-indigo-400"
-                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+              className={`flex-1 px-3 py-2 text-sm font-bold uppercase transition ${
+                progressionMode === "tournament" ? toggleActive : toggleInactive
               }`}
             >
               🏆 Tournament
             </button>
           </div>
-          <p className="text-xs text-gray-500">
+          <p className={`text-xs ${theme.mutedText}`}>
             {progressionMode === "tournament"
               ? "Each game played once, building to a finale"
               : "Play any game as many times as you want"}
@@ -104,7 +103,7 @@ export default function LandingPage() {
 
         {/* Room size selector */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-300">
+          <label className={`block text-sm font-bold uppercase tracking-wider ${theme.headingText}`}>
             Room Size
           </label>
           <div className="flex items-center gap-3">
@@ -112,38 +111,38 @@ export default function LandingPage() {
               type="button"
               onClick={() => setRoomSize((s) => Math.max(2, s - 1))}
               disabled={roomSize <= 2}
-              className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-800 text-lg font-bold text-gray-300 transition hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`flex h-10 w-10 items-center justify-center text-lg font-bold transition disabled:opacity-50 disabled:cursor-not-allowed ${theme.btnGhost}`}
             >
               −
             </button>
-            <span className="w-8 text-center text-lg font-semibold text-white">
+            <span className={`w-8 text-center text-lg font-bold ${theme.accentText}`}>
               {roomSize}
             </span>
             <button
               type="button"
               onClick={() => setRoomSize((s) => Math.min(10, s + 1))}
               disabled={roomSize >= 10}
-              className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-800 text-lg font-bold text-gray-300 transition hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`flex h-10 w-10 items-center justify-center text-lg font-bold transition disabled:opacity-50 disabled:cursor-not-allowed ${theme.btnGhost}`}
             >
               +
             </button>
           </div>
-          <p className="text-xs text-gray-500">
+          <p className={`text-xs ${theme.mutedText}`}>
             Total player slots (empty slots filled by bots)
           </p>
         </div>
 
         <button
           onClick={handleCreateRoom}
-          className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-lg font-semibold text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+          className={`w-full px-4 py-3 text-lg font-bold uppercase tracking-wider ${theme.btnPrimary}`}
         >
           Create Room
         </button>
 
         <div className="flex items-center gap-3">
-          <div className="h-px flex-1 bg-gray-700" />
-          <span className="text-sm text-gray-500">or</span>
-          <div className="h-px flex-1 bg-gray-700" />
+          <div className={`h-px flex-1 opacity-30 ${theme.mutedText} bg-current`} />
+          <span className={`text-sm ${theme.mutedText}`}>or</span>
+          <div className={`h-px flex-1 opacity-30 ${theme.mutedText} bg-current`} />
         </div>
 
         <form onSubmit={handleJoinRoom} className="space-y-3">
@@ -152,12 +151,12 @@ export default function LandingPage() {
             value={roomCode}
             onChange={(e) => setRoomCode(e.target.value)}
             placeholder="Enter room code"
-            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className={`w-full px-4 py-3 border-2 bg-transparent placeholder:opacity-50 focus:outline-none ${theme.bodyText} ${theme.listItem}`}
           />
           <button
             type="submit"
             disabled={!roomCode.trim()}
-            className="w-full rounded-lg bg-gray-700 px-4 py-3 text-lg font-semibold text-white hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            className={`w-full px-4 py-3 text-lg font-bold uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed ${theme.btnSecondary}`}
           >
             Join Room
           </button>

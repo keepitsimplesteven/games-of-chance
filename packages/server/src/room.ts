@@ -140,6 +140,7 @@ function buildDefaultGameSettings(gameType: string): GameSettings {
     roundCount,
     pickWindowMs: plugin.pickWindowMs,
     tuning,
+    theme: "retro-casino",
   }
 }
 
