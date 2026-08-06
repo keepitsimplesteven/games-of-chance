@@ -30,8 +30,10 @@ import {
   setBigWheelState,
   resetBigWheelState,
 } from "./games/big-wheel/BigWheelPlugin"
-import { generateBracket } from "./games/playcaller/BracketEngine"
-import { setPlaycallerState, resetPlaycallerState, getPlaycallerState, getSpectators, getActiveCompetitors } from "./games/playcaller/PlaycallerPlugin"
+import { generateBracket, resolveCurrentRound, isComplete } from "./games/playcaller/BracketEngine"
+import { setPlaycallerState, resetPlaycallerState, getPlaycallerState, getSpectators, getActiveCompetitors, recordPlaySelection, resolveMatchupDown, allDrivesComplete, clearDownPicks, getDriveStates, fillMissingPicks, initializeDrives, getActiveDriveMatchups, resetDriveStates } from "./games/playcaller/PlaycallerPlugin"
+import { selectRandomPlay } from "./games/playcaller/drive"
+import type { OffensivePlayId, DefensivePlayId } from "./games/playcaller/drive"
 import { PLAYCALLER } from "./games/playcaller/constants"
 import { determineSpinOrder } from "./games/big-wheel/spinOrder"
 import {
@@ -53,6 +55,10 @@ import { FastPlayAdapter } from "./simulation/FastPlayAdapter"
 import { BotManager } from "./bots/BotManager"
 // Side-effect import: registers coin-toss pick generator in the simulation registry
 import "@games-of-chance/simulation/src/pick-generators/coin-toss"
+
+// ── Playcaller play lists for bot pick generation ──────────────────────────
+const OFFENSIVE_PLAYS: OffensivePlayId[] = ["run-safe", "run-aggressive", "pass-safe", "pass-aggressive"]
+const DEFENSIVE_PLAYS: DefensivePlayId[] = ["run-safe", "run-aggressive", "pass-safe", "pass-aggressive"]
 
 // ── Server-side live state (not sent to clients directly) ──────────────────
 
@@ -244,6 +250,9 @@ export default class GameRoom implements Party.Server {
         break
       case "VOTE_GAME":
         this.handleVoteGame(sender, msg.payload)
+        break
+      case "PLAY_SELECTION":
+        this.handlePlaySelection(sender, msg.payload)
         break
       default:
         this.sendError(
@@ -444,6 +453,22 @@ export default class GameRoom implements Party.Server {
         "Cannot start round in current phase"
       )
       return
+    }
+
+    // Playcaller: advance to next bracket round when SKIP_GAMEPLAY is false
+    if (
+      this.state.config.gameType === "playcaller" &&
+      this.state.round.phase === "RESULT" &&
+      this.state.gameSettings.tuning?.SKIP_GAMEPLAY === false
+    ) {
+      const bracket = getPlaycallerState()!
+      if (!isComplete(bracket)) {
+        const currentRound = bracket.rounds[bracket.currentRoundIndex]
+        initializeDrives(currentRound.matchups)
+        this.state.round.roundNumber++
+        this.beginPlaycallerDown()
+        return
+      }
     }
 
     // If the last round just completed, transition to END_GAME instead of starting a new round
@@ -1055,6 +1080,212 @@ export default class GameRoom implements Party.Server {
     this.broadcastState()
   }
 
+  private handlePlaySelection(
+    sender: Party.Connection,
+    payload: { matchupId: string; play: string }
+  ) {
+    // Validate sender is a player
+    const playerId = this.getPlayerIdByConnectionId(sender.id)
+    if (!playerId) {
+      this.sendError(sender, "NOT_IN_ROOM", "Player not found")
+      return
+    }
+
+    // Validate phase is PICKING
+    if (this.state.round.phase !== "PICKING") {
+      this.sendError(sender, "WRONG_PHASE", "Not in picking phase")
+      return
+    }
+
+    const result = recordPlaySelection(playerId, payload.matchupId, payload.play as any)
+
+    if ("error" in result) {
+      // "Already picked" is silently ignored per requirement 9.1
+      if (result.error !== "Already picked") {
+        this.sendError(sender, "INVALID_PICK", result.error)
+      }
+      return
+    }
+
+    // Send PICK_ACK to the sender
+    const ackMsg: ServerMessage = { type: "PICK_ACK", payload: { playerId } }
+    sender.send(JSON.stringify(ackMsg))
+
+    if (result.resolved) {
+      // Resolve this matchup's down
+      resolveMatchupDown(result.matchupId)
+      this.broadcastState()
+
+      // Check if all drives are now complete
+      if (allDrivesComplete()) {
+        this.cancelDeadlineTimer()
+        this.advancePlaycallerBracket()
+      }
+    }
+  }
+
+  /**
+   * Advance the bracket after all drives in the round complete.
+   * Determines winners from drive completions, advances the bracket,
+   * transitions to RESULT phase, and scores if tournament is complete.
+   */
+  private advancePlaycallerBracket() {
+    // Determine winners from drive completions
+    const drives = getDriveStates()!
+    const winners: Record<string, string> = {}
+
+    for (const [matchupId, drive] of Object.entries(drives)) {
+      winners[matchupId] = drive.completion!.winner
+    }
+
+    // Advance bracket using the drive winners
+    const bracket = getPlaycallerState()!
+    const currentRound = bracket.rounds[bracket.currentRoundIndex]
+
+    // Build a resolver that returns the pre-determined winner from drives
+    const driveResolver = (playerA: string, playerB: string): string => {
+      const matchup = currentRound.matchups.find(
+        m => (m.playerA === playerA && m.playerB === playerB) ||
+             (m.playerA === playerB && m.playerB === playerA)
+      )
+      return matchup ? winners[matchup.matchupId] : playerA
+    }
+
+    const updatedBracket = resolveCurrentRound(bracket, driveResolver)
+    setPlaycallerState(updatedBracket)
+
+    // Reset drive states
+    resetDriveStates()
+
+    // Transition to RESULT
+    const resolvedRoundIndex = updatedBracket.currentRoundIndex - 1
+    const resolvedRound = updatedBracket.rounds[resolvedRoundIndex]
+
+    this.state.round.phase = "RESULT"
+    this.state.round.result = {
+      bracketRound: resolvedRoundIndex,
+      matchups: resolvedRound.matchups,
+      isComplete: isComplete(updatedBracket),
+    }
+    this.state.round.resolvedAt = Date.now()
+
+    // Score if tournament complete
+    if (isComplete(updatedBracket)) {
+      const plugin = registry.lookup("playcaller")
+      const scoreResult = plugin.scoreRound(
+        {},
+        this.state.round.result,
+        Object.values(this.state.players),
+        this.state.gameSettings
+      )
+      for (const [playerId, delta] of Object.entries(scoreResult.deltas)) {
+        this.state.gameScores[playerId] = (this.state.gameScores[playerId] ?? 0) + delta
+      }
+      this.state.gameLeaderboard = plugin.computeGameLeaderboard(
+        Object.values(this.state.players),
+        this.state.gameScores
+      )
+    }
+
+    this.broadcastState()
+  }
+
+  /**
+   * Enter the playcaller per-down picking phase.
+   * Resets picks, sets a new deadline, and broadcasts state.
+   */
+  private beginPlaycallerDown() {
+    clearDownPicks()
+
+    this.state.round = {
+      ...this.state.round,
+      phase: "PICKING",
+      picks: {},
+      pickDeadlineMs: Date.now() + PLAYCALLER.PICK_WINDOW_MS,
+    }
+
+    this.broadcastState()
+
+    // Schedule bot picks for bots in active matchups
+    this.schedulePlaycallerBotPicks()
+
+    // Schedule play clock expiry
+    this.scheduleResolve(PLAYCALLER.PICK_WINDOW_MS)
+  }
+
+  /**
+   * Schedule bot picks for the playcaller down loop.
+   * Bots in active matchups submit a random play after a short delay.
+   */
+  private schedulePlaycallerBotPicks() {
+    this.cancelBotPickTimers()
+
+    const botIds = this.botManager.getBotIds()
+    const activeDrives = getDriveStates()
+    if (!activeDrives || botIds.length === 0) return
+
+    for (const [matchupId, drive] of Object.entries(activeDrives)) {
+      if (drive.isComplete) continue
+
+      for (const botId of botIds) {
+        if (botId !== drive.offensePlayerId && botId !== drive.defensePlayerId) continue
+
+        const isOffense = botId === drive.offensePlayerId
+        const delay = 300 + Math.random() * 700 // 300–1000ms delay
+
+        const timerId = setTimeout(() => {
+          const play = isOffense
+            ? selectRandomPlay(OFFENSIVE_PLAYS, Math.random)
+            : selectRandomPlay(DEFENSIVE_PLAYS, Math.random)
+
+          // Submit via the same recordPlaySelection path
+          const result = recordPlaySelection(botId, matchupId, play)
+          if ("resolved" in result && result.resolved) {
+            resolveMatchupDown(result.matchupId)
+
+            if (allDrivesComplete()) {
+              this.cancelDeadlineTimer()
+              this.advancePlaycallerBracket()
+            } else {
+              this.broadcastState()
+            }
+          }
+        }, delay)
+
+        this.botPickTimerIds.push(timerId)
+      }
+    }
+  }
+
+  /**
+   * Handle play clock expiry for the playcaller down loop.
+   * Fills missing picks with random plays and resolves all active matchups.
+   */
+  private resolvePlaycallerTimeout() {
+    if (this.state.round.phase !== "PICKING") return
+
+    this.cancelDeadlineTimer()
+
+    // Fill missing picks with random plays
+    const matchupsToResolve = fillMissingPicks()
+
+    // Resolve all matchups that now have both picks
+    for (const matchupId of matchupsToResolve) {
+      resolveMatchupDown(matchupId)
+    }
+
+    // Clear picks for next down
+    clearDownPicks()
+
+    // Check if all drives complete
+    if (allDrivesComplete()) {
+      this.advancePlaycallerBracket()
+    } else {
+      // Start next down
+      this.beginPlaycallerDown()
+    }
+  }
+
   private handleGameTypeChange(
     sender: Party.Connection,
     payload: { gameType: string }
@@ -1271,6 +1502,15 @@ export default class GameRoom implements Party.Server {
 
       // Set round count to bracket's totalRounds
       this.state.gameSettings.roundCount = bracket.totalRounds
+    }
+
+    // ── Playcaller: start down loop if SKIP_GAMEPLAY is false ──────────
+    if (this.state.config.gameType === "playcaller" && this.state.gameSettings.tuning?.SKIP_GAMEPLAY === false) {
+      const bracket = getPlaycallerState()!
+      const currentRound = bracket.rounds[bracket.currentRoundIndex]
+      initializeDrives(currentRound.matchups)
+      this.beginPlaycallerDown()
+      return
     }
 
     // ── Big Wheel: check if current player is disconnected and skip ───────
@@ -1929,7 +2169,13 @@ export default class GameRoom implements Party.Server {
    */
   private scheduleResolve(delayMs: number) {
     this.cancelDeadlineTimer()
-    this.deadlineTimerId = setTimeout(() => this.resolveRound(), delayMs)
+    this.deadlineTimerId = setTimeout(() => {
+      if (this.state.config.gameType === "playcaller" && getDriveStates() !== null) {
+        this.resolvePlaycallerTimeout()
+      } else {
+        this.resolveRound()
+      }
+    }, delayMs)
   }
 
   // ── Utilities ──────────────────────────────────────────────────────────
@@ -2128,10 +2374,26 @@ export default class GameRoom implements Party.Server {
     if (this.state.config.gameType === "playcaller") {
       const bracket = getPlaycallerState()
       if (bracket) {
+        // Strip circular finalState from drive completions before serialization
+        const rawDrives = getDriveStates()
+        let serializableDrives: Record<string, unknown> | null = null
+        if (rawDrives) {
+          serializableDrives = {}
+          for (const [id, drive] of Object.entries(rawDrives)) {
+            if (drive.completion) {
+              const { finalState, ...rest } = drive.completion
+              serializableDrives[id] = { ...drive, completion: rest }
+            } else {
+              serializableDrives[id] = drive
+            }
+          }
+        }
+
         playcallerGameState = {
           bracket,
           spectators: getSpectators(),
           activeCompetitors: getActiveCompetitors(),
+          driveStates: serializableDrives as any,
         }
       }
     }

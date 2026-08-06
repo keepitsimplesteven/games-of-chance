@@ -273,6 +273,7 @@ export type ClientMessage =
   | { type: "UPDATE_ROOM_SIZE"; payload: { roomSize: number } }
   | { type: "RETURN_TO_LOBBY"; payload?: never }
   | { type: "VOTE_GAME"; payload: { gameType: GameType } }
+  | { type: "PLAY_SELECTION"; payload: { matchupId: string; play: string } }
 
 /** Server → Client messages */
 export type ServerMessage =

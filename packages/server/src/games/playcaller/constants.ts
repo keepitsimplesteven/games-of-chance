@@ -26,6 +26,6 @@ export const PLAYCALLER_SETTINGS_SCHEMA: SettingsSchema = [
     key: "SKIP_GAMEPLAY",
     label: "Skip Gameplay (random resolution)",
     type: "boolean",
-    defaultValue: true,
+    defaultValue: false,
   },
 ]
