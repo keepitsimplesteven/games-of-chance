@@ -28,8 +28,8 @@ export function BallMarker({ config, x = 50, initialY = 0 }: BallMarkerProps) {
         transition={{ duration: 0.4, ease: "easeOut" }}
         style={{ x }}
       >
-        <ellipse cx={0} cy={0} rx={4} ry={2.5} fill="var(--field-accent, #8B4513)" />
-        <line x1={-2} y1={0} x2={2} y2={0} stroke="white" strokeWidth={0.5} />
+        <ellipse cx={0} cy={0} rx={8} ry={5} fill="var(--field-accent, #8B4513)" />
+        <line x1={-4} y1={0} x2={4} y2={0} stroke="white" strokeWidth={1} />
       </motion.g>
     )
   }
@@ -43,8 +43,8 @@ export function BallMarker({ config, x = 50, initialY = 0 }: BallMarkerProps) {
       custom={config}
       style={{ x }}
     >
-      <ellipse cx={0} cy={0} rx={4} ry={2.5} fill="var(--field-accent, #8B4513)" />
-      <line x1={-2} y1={0} x2={2} y2={0} stroke="white" strokeWidth={0.5} />
+      <ellipse cx={0} cy={0} rx={8} ry={5} fill="var(--field-accent, #8B4513)" />
+      <line x1={-4} y1={0} x2={4} y2={0} stroke="white" strokeWidth={1} />
     </motion.g>
   )
 }

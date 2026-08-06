@@ -94,7 +94,6 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
           down={down}
           yardsToGo={yardsToGo}
           ballAnimConfig={ballAnimConfig}
-          maxWidth={200}
         />
       </div>
 

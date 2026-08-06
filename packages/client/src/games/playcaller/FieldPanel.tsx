@@ -18,8 +18,6 @@ interface FieldPanelProps {
   down: number
   yardsToGo: number
   ballAnimConfig: BallAnimationConfig
-  /** Max width in px for the field container. Defaults to 125. */
-  maxWidth?: number
 }
 
 /**
@@ -41,7 +39,6 @@ export function FieldPanel({
   down,
   yardsToGo,
   ballAnimConfig,
-  maxWidth = 125,
 }: FieldPanelProps) {
   const theme = useTheme()
   const { field } = theme
@@ -50,8 +47,8 @@ export function FieldPanel({
 
   return (
     <div
-      className="mx-auto max-h-full overflow-hidden"
-      style={{ display: "grid", gridTemplateRows: "auto 1fr", maxWidth: `${maxWidth}px` }}
+      className="w-full h-full overflow-hidden"
+      style={{ display: "grid", gridTemplateRows: "auto 1fr" }}
     >
       {/* Down/Distance text */}
       <div className="text-center text-[11px] py-0.5">

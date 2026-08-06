@@ -134,14 +134,13 @@ export function DriveView({
       {/* ═══ Field + Side panel ═══ */}
       <div className="shrink-0 flex gap-2" style={{ height: "42dvh" }}>
         {/* Field */}
-        <div className="h-full w-full flex items-start justify-center overflow-hidden">
+        <div className="h-full flex-1 min-w-0 overflow-hidden">
           <FieldPanel
             yardLine={driveState.yardLine}
             maxYards={MAX_YARDS}
             down={driveState.down}
             yardsToGo={driveState.yardsToGo}
             ballAnimConfig={ballAnimConfig}
-            maxWidth={showSidePanel ? 125 : 180}
           />
         </div>
 
