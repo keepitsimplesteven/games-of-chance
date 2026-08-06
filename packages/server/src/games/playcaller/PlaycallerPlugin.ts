@@ -64,6 +64,22 @@ export function clearDownPicks(): void {
 }
 
 /**
+ * Check if all active (non-complete) matchups have both picks submitted for the current down.
+ * Returns true when every active drive has both offense and defense picks recorded.
+ */
+export function allActiveMatchupsResolved(): boolean {
+  if (!driveStates) return true
+  for (const [matchupId, drive] of Object.entries(driveStates)) {
+    if (drive.isComplete) continue
+    const picks = downPicks[matchupId]
+    if (!picks || picks.offense === undefined || picks.defense === undefined) {
+      return false
+    }
+  }
+  return true
+}
+
+/**
  * Check if all active (non-complete) drives have been resolved for this down cycle.
  */
 export function allDrivesComplete(): boolean {
