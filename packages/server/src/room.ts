@@ -468,6 +468,10 @@ export default class GameRoom implements Party.Server {
         this.state.round.roundNumber++
         this.beginPlaycallerDown()
         return
+      } else {
+        // Bracket is fully complete — end the game
+        this.autoEndGame()
+        return
       }
     }
 
@@ -553,6 +557,19 @@ export default class GameRoom implements Party.Server {
           return
         }
       }
+    }
+
+    // ── Playcaller drive mode: route play selections to drive handler ─────
+    if (
+      this.state.config.gameType === "playcaller" &&
+      getDriveStates() !== null &&
+      payload.pick &&
+      typeof payload.pick === "object" &&
+      (payload.pick as any).type === "play_selection"
+    ) {
+      const { matchupId, play } = payload.pick as { type: string; matchupId: string; play: string }
+      this.handlePlaySelection(sender, { matchupId, play })
+      return
     }
 
     // Guard: silently ignore if player already has a pick recorded (pick immutability)
@@ -1119,7 +1136,16 @@ export default class GameRoom implements Party.Server {
       // Check if all drives are now complete
       if (allDrivesComplete()) {
         this.cancelDeadlineTimer()
+        this.cancelBotPickTimers()
         this.advancePlaycallerBracket()
+      } else {
+        // Down resolved — advance to next down after brief delay to show result
+        this.cancelDeadlineTimer()
+        this.cancelBotPickTimers()
+        clearDownPicks()
+        setTimeout(() => {
+          this.beginPlaycallerDown()
+        }, PLAYCALLER.PLAY_RESULT_DELAY_MS)
       }
     }
   }
@@ -1231,7 +1257,7 @@ export default class GameRoom implements Party.Server {
         if (botId !== drive.offensePlayerId && botId !== drive.defensePlayerId) continue
 
         const isOffense = botId === drive.offensePlayerId
-        const delay = 300 + Math.random() * 700 // 300–1000ms delay
+        const delay = 1500 + Math.random() * 2000 // 1.5–3.5s delay (gives humans time to see UI)
 
         const timerId = setTimeout(() => {
           const play = isOffense
@@ -1241,14 +1267,26 @@ export default class GameRoom implements Party.Server {
           // Submit via the same recordPlaySelection path
           const result = recordPlaySelection(botId, matchupId, play)
           if ("resolved" in result && result.resolved) {
+            // Both picks are in — resolve the down
             resolveMatchupDown(result.matchupId)
+            this.broadcastState()
 
             if (allDrivesComplete()) {
               this.cancelDeadlineTimer()
+              this.cancelBotPickTimers()
               this.advancePlaycallerBracket()
             } else {
-              this.broadcastState()
+              // Advance to next down after brief delay
+              this.cancelDeadlineTimer()
+              this.cancelBotPickTimers()
+              clearDownPicks()
+              setTimeout(() => {
+                this.beginPlaycallerDown()
+              }, PLAYCALLER.PLAY_RESULT_DELAY_MS)
             }
+          } else if ("resolved" in result && !result.resolved) {
+            // Bot submitted but opponent hasn't yet — just broadcast the updated state
+            this.broadcastState()
           }
         }, delay)
 
@@ -1507,6 +1545,11 @@ export default class GameRoom implements Party.Server {
     // ── Playcaller: start down loop if SKIP_GAMEPLAY is false ──────────
     if (this.state.config.gameType === "playcaller" && this.state.gameSettings.tuning?.SKIP_GAMEPLAY === false) {
       const bracket = getPlaycallerState()!
+      if (isComplete(bracket)) {
+        // Bracket is done — end the game
+        this.autoEndGame()
+        return
+      }
       const currentRound = bracket.rounds[bracket.currentRoundIndex]
       initializeDrives(currentRound.matchups)
       this.beginPlaycallerDown()

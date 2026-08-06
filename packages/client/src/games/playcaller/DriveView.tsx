@@ -7,6 +7,7 @@ import { MiniScoreboard } from "./MiniScoreboard"
 import { PlayResultLine } from "./PlayResultLine"
 import { HistoryDrawer } from "./HistoryDrawer"
 import { PlayCardGrid } from "./PlayCardGrid"
+import { PlayClock } from "./PlayClock"
 import { DriveCompletionOverlay } from "./DriveCompletionOverlay"
 import { formatPlayResult, yardLineToY } from "./field-utils"
 import { getDramaLevel, getAnimationDuration, getBallAnimationType } from "./animations/timing"
@@ -138,13 +139,16 @@ export function DriveView({
         />
       </div>
 
-      {/* ═══ ROW 3: PlayResultLine + HistoryDrawer (spans 2 cols) ═══ */}
+      {/* ═══ ROW 3: PlayResultLine + PlayClock + HistoryDrawer (spans 2 cols) ═══ */}
       <div style={{ gridColumn: "1 / -1" }} className="relative">
-        <PlayResultLine
-          resultText={latestResultText}
-          onToggleHistory={() => setHistoryOpen((prev) => !prev)}
-          historyOpen={historyOpen}
-        />
+        <div className="flex items-center justify-between">
+          <PlayResultLine
+            resultText={latestResultText}
+            onToggleHistory={() => setHistoryOpen((prev) => !prev)}
+            historyOpen={historyOpen}
+          />
+          {!driveState.isComplete && <PlayClock />}
+        </div>
         <HistoryDrawer
           entries={historyEntries}
           isOpen={historyOpen}
