@@ -16,6 +16,9 @@ import RoundControls from "./RoundControls"
  * - GameLeaderboard (only shown during RESULT phase after animation completes, or during PICKING)
  * - RoundControls (host: next round / end game)
  *
+ * Playcaller games render full-viewport — phase indicator, leaderboard, and
+ * round controls are omitted so the DriveView can fill the screen without scroll.
+ *
  * On END_GAME response (phase returns to LOBBY): this component returns null,
  * effectively hiding the game view and allowing the lobby tiles to show again.
  *
@@ -34,10 +37,13 @@ export default function GameView() {
     return <FinalResultsScreen />
   }
 
+  // Playcaller renders full-viewport — omit phase indicator, leaderboard, round controls
+  const isPlaycaller = gameType === "playcaller"
+
   // Only show leaderboard after animation completes (prevents spoiling the result)
   // During PICKING phase, show leaderboard (previous round's scores are already revealed)
   // For Big Wheel: show after each spin animation completes (roundAnimationDone gates this)
-  const showLeaderboard = phase === "PICKING" || roundAnimationDone
+  const showLeaderboard = !isPlaycaller && (phase === "PICKING" || roundAnimationDone)
 
   // Dynamic game container based on gameType
   const renderGameContainer = () => {
@@ -57,6 +63,11 @@ export default function GameView() {
           </div>
         )
     }
+  }
+
+  // Playcaller: render just the game container (takes full viewport)
+  if (isPlaycaller) {
+    return renderGameContainer()
   }
 
   return (

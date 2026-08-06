@@ -99,8 +99,8 @@ export function FieldPanel({
             strokeWidth={2}
           />
 
-          {/* Yard line markers at 10-yard intervals */}
-          {Array.from({ length: Math.floor(maxYards / 10) + 1 }, (_, i) => i * 10)
+          {/* Yard line markers at 5-yard intervals */}
+          {Array.from({ length: Math.floor(maxYards / 5) + 1 }, (_, i) => i * 5)
             .filter((yd) => yd > 0 && yd <= maxYards)
             .map((yd) => {
               const y = yardLineToY(yd, maxYards, FIELD_HEIGHT, FIELD_TOP)
@@ -117,16 +117,18 @@ export function FieldPanel({
                     strokeDasharray={isMajor ? "none" : "4,3"}
                     opacity={0.8}
                   />
-                  <text
-                    x={FIELD_X - 1}
-                    y={y + 3}
-                    textAnchor="end"
-                    fill={field.accent}
-                    fontSize="7"
-                    fontFamily="monospace"
-                  >
-                    {yd}
-                  </text>
+                  {isMajor && (
+                    <text
+                      x={FIELD_X - 3}
+                      y={y + 3}
+                      textAnchor="end"
+                      fill={field.accent}
+                      fontSize="7"
+                      fontFamily="monospace"
+                    >
+                      {yd}
+                    </text>
+                  )}
                 </g>
               )
             })}

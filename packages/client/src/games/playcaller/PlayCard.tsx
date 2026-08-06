@@ -16,8 +16,9 @@ export interface PlayCardProps {
 /**
  * PlayCard — A tappable card showing play art SVG, play name, and formation label.
  *
+ * Pass plays render with a blue background; run plays render with green.
  * Uses Framer Motion `playCardVariants` for selection feedback (idle, selected,
- * unselected, disabled states). Theme-derived styles for background, border, text.
+ * unselected, disabled states).
  *
  * Validates: Requirements 4.2, 4.3, 4.4, 6.1, 6.2, 12.3, 13.3
  */
@@ -25,6 +26,12 @@ export function PlayCard({ playId, displayName, formation, artData, state, onSel
   const theme = useTheme()
 
   const isDisabled = state === "disabled"
+  const isPass = playId.startsWith("pass")
+
+  // Pass plays = blue, run plays = green (matches comp)
+  const cardStyle = isPass
+    ? "bg-[#2255aa] border-4 border-[#143d7a] shadow-[inset_0_0_20px_rgba(0,0,0,0.4),0_4px_0_#0f2d5c]"
+    : "bg-[#1b5e2a] border-4 border-[#2a7a3a] shadow-[inset_0_0_20px_rgba(0,0,0,0.4),0_4px_0_#0f3d18]"
 
   return (
     <motion.button
@@ -38,13 +45,13 @@ export function PlayCard({ playId, displayName, formation, artData, state, onSel
         }
       }}
       disabled={isDisabled}
-      className={`${theme.card} rounded overflow-hidden grid place-items-center p-1 cursor-pointer border-2 transition-colors`}
+      className={`${cardStyle} rounded overflow-hidden grid place-items-center p-2 cursor-pointer transition-colors`}
       style={{ gridTemplateRows: "1fr auto auto" }}
       aria-label={`Select play: ${displayName}`}
       aria-disabled={isDisabled}
     >
-      {/* Play art SVG */}
-      <PlayArtSvg data={artData} className="w-full max-h-[5dvh]" />
+      {/* Play art SVG — larger to fill the card */}
+      <PlayArtSvg data={artData} className="w-full max-h-[8dvh]" />
 
       {/* Play name */}
       <span className={`${theme.bodyText} text-[16px] font-bold leading-none pb-1`}>
@@ -52,7 +59,7 @@ export function PlayCard({ playId, displayName, formation, artData, state, onSel
       </span>
 
       {/* Formation label */}
-      <span className={`${theme.mutedText} text-[9px] leading-none mb-1`}>
+      <span className="text-[9px] text-white/50 leading-none mb-1">
         {formation}
       </span>
     </motion.button>

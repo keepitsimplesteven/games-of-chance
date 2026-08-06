@@ -59,7 +59,7 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
   const maxYards = 35
 
   return (
-    <div className="flex flex-col h-[100dvh] overflow-hidden font-mono p-2">
+    <div className="flex flex-col h-full overflow-hidden font-mono p-2">
       {/* ═══ Top bar: Back button + Spectating label ═══ */}
       <div className="flex items-center justify-between py-1">
         <button

@@ -11,6 +11,7 @@ import { DriveCompletionOverlay } from "./DriveCompletionOverlay"
 import { SpectatorGrid } from "./SpectatorGrid"
 import { SpectatorDriveView } from "./SpectatorDriveView"
 import { MatchupIntro } from "../../components/game/MatchupIntro"
+import RoundControls from "../../components/game/RoundControls"
 import { getRoundName } from "./field-utils"
 import { usePlayerName } from "./hooks/usePlayerName"
 
@@ -169,7 +170,7 @@ export function PlaycallerContainer() {
               )
             }
             return (
-              <div className="flex flex-col h-[100dvh] overflow-hidden">
+              <div className="flex flex-col h-full overflow-hidden">
                 <div className="px-2 py-1 text-center text-xs text-amber-300 font-medium">
                   Your drive is complete — watching other games
                 </div>
@@ -298,8 +299,8 @@ export function PlaycallerContainer() {
           Round Complete
         </div>
         <BracketVisualization bracket={bracket} />
-        <div className="text-xs text-gray-500 mt-2">
-          Waiting for host to advance...
+        <div className="w-full max-w-sm mt-2">
+          <RoundControls />
         </div>
       </div>
     )
@@ -384,7 +385,7 @@ function DriveCompletionOverlayWithTimer({
   }, [onTransitionToSpectator])
 
   return (
-    <div className="flex items-center justify-center h-[100dvh]">
+    <div className="flex items-center justify-center h-full">
       <DriveCompletionOverlay
         driveState={driveState}
         onAnimationDone={() => {

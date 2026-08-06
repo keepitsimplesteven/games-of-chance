@@ -103,7 +103,7 @@ export function DriveView({
 
   return (
     <div
-      className="h-[100dvh] overflow-hidden font-mono p-2 flex flex-col"
+      className="h-full overflow-hidden font-mono p-2 flex flex-col"
       style={{ gap: "4px" }}
     >
       {/* ═══ Header ═══ */}
@@ -132,7 +132,7 @@ export function DriveView({
       )}
 
       {/* ═══ Field + Side panel ═══ */}
-      <div className="shrink-0 flex gap-2" style={{ height: "42dvh" }}>
+      <div className="shrink-0 flex gap-2" style={{ height: "38dvh" }}>
         {/* Field */}
         <div className="h-full flex-1 min-w-0 overflow-hidden">
           <FieldPanel
@@ -167,7 +167,7 @@ export function DriveView({
       </div>
 
       {/* ═══ Play Result + PlayClock ═══ */}
-      <div className="relative shrink-0">
+      <div className="relative shrink-0 py-3">
         <div className="flex items-center justify-between">
           <PlayResultLine
             resultText={latestResultText}
