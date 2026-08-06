@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useGameStore } from "../../store/useGameStore"
 import type { PlaycallerGameState, Matchup } from "@games-of-chance/shared"
 import { BracketVisualization } from "./BracketVisualization"
@@ -6,21 +6,33 @@ import { MatchPanel } from "./MatchPanel"
 import { SideMatchPanels } from "./SideMatchPanels"
 import { SpectatorView } from "./SpectatorView"
 import { RoundHeader } from "./RoundHeader"
+import { DriveView } from "./DriveView"
+import { SpectatorGrid } from "./SpectatorGrid"
+import { SpectatorDriveView } from "./SpectatorDriveView"
+import { getRoundName } from "./field-utils"
 
 /**
  * PlaycallerContainer — top-level game view for the Playcaller tournament.
  * Determines which sub-view to show based on player state.
  *
- * View modes:
+ * View modes (Phase 2 — when driveStates present):
+ * - Active competitor: shows DriveView (full interactive drive experience)
+ * - Spectator: shows SpectatorGrid → SpectatorDriveView (read-only)
+ *
+ * View modes (Phase 1 fallback — no driveStates):
  * - Active competitor: shows MatchPanel (center) + SideMatchPanels
  * - Spectator (eliminated or on bye): shows SpectatorView (all matches equally)
  * - Between rounds (RESULT phase): shows BracketVisualization full-size
  *
- * Validates: Requirements 8.1, 8.3
+ * Validates: Requirements 8.1, 8.3, 14.1, 14.2, 14.4
  */
 export function PlaycallerContainer() {
   const roomState = useGameStore((s) => s.roomState)
   const playerId = useGameStore((s) => s.playerId)
+
+  // Spectator navigation state: which matchup is the spectator viewing?
+  // null = show grid, string = show that matchup's drive view
+  const [selectedMatchupId, setSelectedMatchupId] = useState<string | null>(null)
 
   if (!roomState) return null
 
@@ -38,9 +50,10 @@ export function PlaycallerContainer() {
     )
   }
 
-  const { bracket, spectators, activeCompetitors } = playcallerGameState
+  const { bracket, spectators, activeCompetitors, driveStates } = playcallerGameState
   const isSpectator = spectators.includes(playerId ?? "")
   const isActiveCompetitor = activeCompetitors.includes(playerId ?? "")
+  const hasDriveStates = !!driveStates
 
   // Phase 1: no animation — mark round animation as done immediately when
   // entering RESULT or RESOLVING phase so the host can advance.
@@ -49,6 +62,11 @@ export function PlaycallerContainer() {
       useGameStore.setState({ roundAnimationDone: true })
     }
   }, [phase])
+
+  // Reset spectator selection when round changes or drive states disappear
+  useEffect(() => {
+    setSelectedMatchupId(null)
+  }, [bracket.currentRoundIndex, hasDriveStates])
 
   // Get current round's matchups for display
   const currentRound = bracket.rounds[bracket.currentRoundIndex]
@@ -62,6 +80,73 @@ export function PlaycallerContainer() {
   const otherMatchups = activeMatchups.filter(
     (m) => m.playerA !== playerId && m.playerB !== playerId
   )
+
+  // Derive round name for Phase 2 DriveView
+  const roundName = getRoundName(bracket.currentRoundIndex, bracket.totalRounds)
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Phase 2: Drive states present — render interactive drive experience
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  if (hasDriveStates) {
+    // Active competitor with an active matchup → full interactive DriveView
+    if (isActiveCompetitor && playerMatchup) {
+      const matchupDriveState = driveStates[playerMatchup.matchupId]
+      if (matchupDriveState) {
+        // Determine the player's role (offense or defense)
+        const role: "offense" | "defense" =
+          matchupDriveState.offensePlayerId === playerId ? "offense" : "defense"
+
+        // Determine opponent name
+        const opponentName =
+          role === "offense"
+            ? matchupDriveState.defensePlayerId
+            : matchupDriveState.offensePlayerId
+
+        return (
+          <DriveView
+            matchupId={playerMatchup.matchupId}
+            driveState={matchupDriveState}
+            roundName={roundName}
+            opponentName={opponentName}
+            role={role}
+          />
+        )
+      }
+    }
+
+    // Spectator → SpectatorGrid with tap-to-view or SpectatorDriveView
+    if (isSpectator) {
+      // If a matchup is selected, show the read-only drive view
+      if (selectedMatchupId && driveStates[selectedMatchupId]) {
+        return (
+          <SpectatorDriveView
+            driveState={driveStates[selectedMatchupId]}
+            onBack={() => setSelectedMatchupId(null)}
+          />
+        )
+      }
+
+      // Otherwise, show the grid of all active matchups
+      const spectatorMatchups = activeMatchups
+        .filter((m) => driveStates[m.matchupId])
+        .map((m) => ({
+          matchupId: m.matchupId,
+          driveState: driveStates[m.matchupId]!,
+        }))
+
+      return (
+        <SpectatorGrid
+          matchups={spectatorMatchups}
+          onSelectMatchup={(matchupId) => setSelectedMatchupId(matchupId)}
+        />
+      )
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Phase 1 fallback: No drive states — bracket visualization behavior
+  // ═══════════════════════════════════════════════════════════════════════════
 
   // Between rounds (RESULT phase): show full bracket visualization
   if (phase === "RESULT") {

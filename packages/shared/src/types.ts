@@ -338,6 +338,66 @@ export interface PlaycallerRoundResult {
   isComplete: boolean
 }
 
+// ── Playcaller Drive State ─────────────────────────────────────────────────
+
+/** Offensive play identifier */
+export type OffensivePlayId = "run-safe" | "run-aggressive" | "pass-safe" | "pass-aggressive"
+
+/** Defensive play identifier */
+export type DefensivePlayId = "run-safe" | "run-aggressive" | "pass-safe" | "pass-aggressive"
+
+/** Outcome type for a single play */
+export type PlayOutcome =
+  | "success"
+  | "critical_success"
+  | "incomplete_pass"
+  | "tackle_for_loss"
+  | "interception"
+  | "fumble"
+
+/** Result of resolving a single down */
+export interface PlayResult {
+  outcome: PlayOutcome
+  yardsGained: number
+  playByPlayText: string
+  offensivePlay: OffensivePlayId
+  defensivePlay: DefensivePlayId
+}
+
+/** A single entry in the play history */
+export interface PlayHistoryEntry {
+  down: number
+  yardsToGo: number
+  yardLine: number
+  offensivePlay: OffensivePlayId
+  defensivePlay: DefensivePlayId
+  result: PlayResult
+  resultingYardLine: number
+}
+
+/** How the drive ended */
+export type DriveEndingType = "touchdown" | "interception" | "fumble" | "turnover_on_downs"
+
+/** Completion status of a finished drive */
+export interface DriveCompletion {
+  winner: string
+  loser: string
+  endingType: DriveEndingType
+  finalState?: DriveState
+}
+
+/** Complete drive state for a single matchup */
+export interface DriveState {
+  offensePlayerId: string
+  defensePlayerId: string
+  yardLine: number
+  down: number
+  yardsToGo: number
+  playHistory: PlayHistoryEntry[]
+  isComplete: boolean
+  completion: DriveCompletion | null
+}
+
 /** Playcaller game state broadcast to clients */
 export interface PlaycallerGameState {
   /** Full bracket structure */
@@ -346,6 +406,8 @@ export interface PlaycallerGameState {
   spectators: string[]
   /** Active competitors in current round */
   activeCompetitors: string[]
+  /** Phase 2: per-matchup drive states. Null when SKIP_GAMEPLAY is true. */
+  driveStates?: Record<string, DriveState> | null
 }
 
 /** Match resolver function signature */
