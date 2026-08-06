@@ -47,7 +47,7 @@ export function FieldPanel({
 
   return (
     <div
-      className="w-[125px] overflow-hidden"
+      className="w-[125px] mx-auto overflow-hidden"
       style={{ display: "grid", gridTemplateRows: "auto 1fr" }}
     >
       {/* Down/Distance text */}
@@ -55,7 +55,7 @@ export function FieldPanel({
         <span className="font-bold" style={{ color: field.accent }}>
           {formatDownDistance(down, yardsToGo)}
         </span>
-        <span className="ml-1 text-[9px] opacity-60">&bull; {yardLine} yd</span>
+        <span className="ml-1 text-[9px] text-white">&bull; {yardLine} yd</span>
       </div>
 
       {/* Field SVG */}
@@ -131,10 +131,8 @@ export function FieldPanel({
               )
             })}
 
-          {/* Ball marker — positioned via yardLineToY */}
-          <g transform={`translate(0, ${ballY})`}>
-            <BallMarker config={ballAnimConfig} x={60} />
-          </g>
+          {/* Ball marker — positioned at field center, Y from yardLineToY */}
+          <BallMarker config={ballAnimConfig} x={FIELD_X + FIELD_W / 2} initialY={ballY} />
 
           {/* Outer border */}
           <rect

@@ -1,4 +1,4 @@
-export type BallAnimationType = "run" | "pass" | "turnover" | "touchdown"
+export type BallAnimationType = "idle" | "run" | "pass" | "turnover" | "touchdown"
 
 export interface BallAnimationConfig {
   type: BallAnimationType

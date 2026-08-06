@@ -7,20 +7,21 @@ import type { DriveState } from "./field-utils.types"
 export interface DriveCompletionOverlayProps {
   driveState: DriveState // must be complete (isComplete === true)
   onAnimationDone: () => void // called after celebration animation completes
+  onDismiss?: () => void // optional: called when user taps to dismiss
 }
 
 /**
  * DriveCompletionOverlay — Shows touchdown celebration or turnover indicator,
  * drive summary stats, and signals `roundAnimationDone` after animation completes.
  *
- * Uses Framer Motion for entrance animation (fade in + scale up).
- * Calls `onAnimationDone` after the animation finishes via `onAnimationComplete`.
+ * Tap anywhere to dismiss (calls onDismiss if provided).
  *
  * Validates: Requirements 11.1, 11.2, 11.3, 11.4
  */
 export function DriveCompletionOverlay({
   driveState,
   onAnimationDone,
+  onDismiss,
 }: DriveCompletionOverlayProps) {
   const theme = useTheme()
   const getPlayerName = usePlayerName()
@@ -33,7 +34,11 @@ export function DriveCompletionOverlay({
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
       onAnimationComplete={onAnimationDone}
-      className={`${theme.card} rounded-lg p-4 text-center flex flex-col items-center gap-3`}
+      onClick={onDismiss}
+      className={`${theme.card} rounded-lg p-4 text-center flex flex-col items-center gap-3 cursor-pointer`}
+      role="button"
+      tabIndex={0}
+      aria-label="Tap to dismiss"
     >
       {/* Outcome indicator */}
       {isTouchdown ? (
@@ -76,6 +81,13 @@ export function DriveCompletionOverlay({
           <span className={`text-[10px] ${theme.mutedText}`}>Yards</span>
         </div>
       </div>
+
+      {/* Dismiss hint */}
+      {onDismiss && (
+        <span className={`text-[10px] ${theme.mutedText} mt-2`}>
+          Tap to dismiss
+        </span>
+      )}
     </motion.div>
   )
 }

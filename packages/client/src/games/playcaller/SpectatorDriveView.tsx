@@ -5,9 +5,10 @@ import { FieldPanel } from "./FieldPanel"
 import { MiniScoreboard } from "./MiniScoreboard"
 import { PlayResultLine } from "./PlayResultLine"
 import { HistoryDrawer } from "./HistoryDrawer"
+import { DriveCompletionOverlay } from "./DriveCompletionOverlay"
 import { formatPlayResult } from "./field-utils"
 import type { DriveState } from "./field-utils.types"
-import type { BallAnimationConfig } from "./animations/types"
+import type { BallAnimationConfig } from "./animations/types" // idle | run | pass | turnover | touchdown
 
 export interface SpectatorDriveViewProps {
   driveState: DriveState
@@ -40,10 +41,9 @@ export function SpectatorDriveView({ driveState, onBack }: SpectatorDriveViewPro
   // Build history entries list (chronological)
   const historyEntries = playHistory.map((entry) => formatPlayResult(entry.result))
 
-  // Ball animation config — for spectator view we use idle/static positioning
-  // since we don't track the previous yard line in this view
+  // Ball animation config — spectator view uses idle so ball stays at initialY (computed by FieldPanel)
   const ballAnimConfig: BallAnimationConfig = {
-    type: "run",
+    type: "idle",
     duration: 0,
     fromY: 0,
     toY: 0,
@@ -105,6 +105,16 @@ export function SpectatorDriveView({ driveState, onBack }: SpectatorDriveViewPro
           onClose={() => setHistoryOpen(false)}
         />
       </div>
+
+      {/* Drive Completion Overlay — shown when drive is finished */}
+      {driveState.isComplete && (
+        <div className="px-2 py-2">
+          <DriveCompletionOverlay
+            driveState={driveState}
+            onAnimationDone={() => {}}
+          />
+        </div>
+      )}
     </div>
   )
 }

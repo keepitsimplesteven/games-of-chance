@@ -9,12 +9,11 @@ export interface SpectatorGridProps {
 }
 
 /**
- * SpectatorGrid — Renders a card per active matchup showing player names
- * and current drive progress. Tapping a card triggers onSelectMatchup to
- * navigate to a read-only drive view for that matchup.
+ * SpectatorGrid — Renders a card per matchup showing player names
+ * and current drive progress. When a drive is complete, shows the outcome
+ * and strikes through the eliminated player.
  *
- * Layout: flex column of bordered cards matching the visual comp
- * (Row 2, Col 2: stacked mini scoreboards).
+ * Tapping a card triggers onSelectMatchup to navigate to a read-only drive view.
  *
  * Validates: Requirements 9.1, 9.5
  */
@@ -36,39 +35,81 @@ export function SpectatorGrid({ matchups, onSelectMatchup }: SpectatorGridProps)
         Other Games
       </div>
       <div className="flex flex-col gap-2">
-        {matchups.map(({ matchupId, driveState }) => (
-          <button
-            key={matchupId}
-            data-testid="spectator-matchup-card"
-            type="button"
-            onClick={() => onSelectMatchup(matchupId)}
-            className={`${theme.listItem} rounded-lg border border-current/10 px-3 py-2 text-left w-full transition-transform active:scale-[0.97]`}
-          >
-            {/* Player names */}
-            <div className="flex justify-between items-center">
-              <span className={`text-[12px] font-bold ${theme.bodyText} truncate`}>
-                {getPlayerName(driveState.offensePlayerId)}
-              </span>
-              <span className={`text-[8px] ${theme.mutedText} opacity-60 mx-1`}>
-                vs
-              </span>
-              <span className={`text-[12px] font-bold ${theme.bodyText} truncate`}>
-                {getPlayerName(driveState.defensePlayerId)}
-              </span>
-            </div>
+        {matchups.map(({ matchupId, driveState }) => {
+          const isComplete = driveState.isComplete
+          const winnerId = driveState.completion?.winner
+          const endingType = driveState.completion?.endingType
 
-            {/* Down, distance, and ball position */}
-            <div className="text-center mt-1">
-              <span className={`text-[10px] font-bold ${theme.accentText}`}>
-                {formatDownDistance(driveState.down, driveState.yardsToGo)}
-              </span>
-              <span className={`text-[9px] ${theme.mutedText} ml-1`}>
-                • Ball on {driveState.yardLine}
-              </span>
-            </div>
-          </button>
-        ))}
+          return (
+            <button
+              key={matchupId}
+              data-testid="spectator-matchup-card"
+              type="button"
+              onClick={() => onSelectMatchup(matchupId)}
+              className={`${theme.listItem} rounded-lg border border-current/10 px-3 py-2 text-left w-full transition-transform active:scale-[0.97]`}
+            >
+              {/* Player names */}
+              <div className="flex justify-between items-center">
+                <span
+                  className={`text-[12px] font-bold truncate ${
+                    isComplete && winnerId !== driveState.offensePlayerId
+                      ? "line-through text-gray-500"
+                      : isComplete && winnerId === driveState.offensePlayerId
+                        ? theme.statusSuccess
+                        : theme.bodyText
+                  }`}
+                >
+                  {getPlayerName(driveState.offensePlayerId)}
+                </span>
+                <span className={`text-[8px] ${theme.mutedText} opacity-60 mx-1`}>
+                  vs
+                </span>
+                <span
+                  className={`text-[12px] font-bold truncate ${
+                    isComplete && winnerId !== driveState.defensePlayerId
+                      ? "line-through text-gray-500"
+                      : isComplete && winnerId === driveState.defensePlayerId
+                        ? theme.statusSuccess
+                        : theme.bodyText
+                  }`}
+                >
+                  {getPlayerName(driveState.defensePlayerId)}
+                </span>
+              </div>
+
+              {/* Status: outcome when complete, down/distance when active */}
+              <div className="text-center mt-1">
+                {isComplete && endingType ? (
+                  <span className={`text-[10px] font-bold ${
+                    endingType === "touchdown" ? theme.statusSuccess : theme.statusDanger
+                  }`}>
+                    {formatEndingType(endingType)}
+                  </span>
+                ) : (
+                  <>
+                    <span className={`text-[10px] font-bold ${theme.accentText}`}>
+                      {formatDownDistance(driveState.down, driveState.yardsToGo)}
+                    </span>
+                    <span className={`text-[9px] ${theme.mutedText} ml-1`}>
+                      • Ball on {driveState.yardLine}
+                    </span>
+                  </>
+                )}
+              </div>
+            </button>
+          )
+        })}
       </div>
     </div>
   )
+}
+
+function formatEndingType(endingType: string): string {
+  switch (endingType) {
+    case "touchdown": return "🏈 TOUCHDOWN"
+    case "interception": return "🚫 INTERCEPTION"
+    case "fumble": return "🚫 FUMBLE"
+    case "turnover_on_downs": return "🚫 TURNOVER ON DOWNS"
+    default: return "GAME OVER"
+  }
 }

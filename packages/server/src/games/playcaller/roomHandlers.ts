@@ -100,7 +100,10 @@ export function handlePlaySelection(
     if (allDrivesComplete()) {
       ctx.cancelDeadlineTimer()
       ctx.cancelBotPickTimers()
-      advancePlaycallerBracket(ctx)
+      // Delay before advancing so clients see final drive completion
+      setTimeout(() => {
+        advancePlaycallerBracket(ctx)
+      }, PLAYCALLER.DRIVE_COMPLETION_DELAY_MS)
     } else if (allActiveMatchupsResolved()) {
       // All active matchups have both picks in — resolve them all and advance
       // (other matchups were already resolved individually above or by bots)
@@ -184,24 +187,47 @@ export function advancePlaycallerBracket(ctx: PlaycallerRoomContext): void {
 /**
  * Enter the playcaller per-down picking phase.
  * Resets picks, sets a new deadline, and broadcasts state.
+ * If this is the first down of a bracket round, delays the play clock to allow
+ * clients to show a VS intro animation.
  */
 export function beginPlaycallerDown(ctx: PlaycallerRoomContext): void {
   clearDownPicks()
 
-  ctx.state.round = {
-    ...ctx.state.round,
-    phase: "PICKING",
-    picks: {},
-    pickDeadlineMs: Date.now() + PLAYCALLER.PICK_WINDOW_MS,
+  // Determine if this is the first down of the round (all active drives have empty playHistory)
+  const activeDrives = getDriveStates()
+  const isFirstDown = activeDrives
+    ? Object.values(activeDrives).every(
+        (d) => !d.isComplete && d.playHistory.length === 0
+      )
+    : false
+
+  const startDelay = isFirstDown ? PLAYCALLER.ROUND_INTRO_DELAY_MS : 0
+
+  if (startDelay > 0) {
+    // Adjust deadline to account for intro animation
+    ctx.state.round = {
+      ...ctx.state.round,
+      phase: "PICKING",
+      picks: {},
+      pickDeadlineMs: Date.now() + startDelay + PLAYCALLER.PICK_WINDOW_MS,
+    }
+    ctx.broadcastState()
+
+    setTimeout(() => {
+      schedulePlaycallerBotPicks(ctx)
+      ctx.scheduleResolve(PLAYCALLER.PICK_WINDOW_MS)
+    }, startDelay)
+  } else {
+    ctx.state.round = {
+      ...ctx.state.round,
+      phase: "PICKING",
+      picks: {},
+      pickDeadlineMs: Date.now() + PLAYCALLER.PICK_WINDOW_MS,
+    }
+    ctx.broadcastState()
+    schedulePlaycallerBotPicks(ctx)
+    ctx.scheduleResolve(PLAYCALLER.PICK_WINDOW_MS)
   }
-
-  ctx.broadcastState()
-
-  // Schedule bot picks for bots in active matchups
-  schedulePlaycallerBotPicks(ctx)
-
-  // Schedule play clock expiry
-  ctx.scheduleResolve(PLAYCALLER.PICK_WINDOW_MS)
 }
 
 /**
@@ -239,7 +265,10 @@ export function schedulePlaycallerBotPicks(ctx: PlaycallerRoomContext): void {
           if (allDrivesComplete()) {
             ctx.cancelDeadlineTimer()
             ctx.cancelBotPickTimers()
-            advancePlaycallerBracket(ctx)
+            // Delay before advancing so clients see final drive completion
+            setTimeout(() => {
+              advancePlaycallerBracket(ctx)
+            }, PLAYCALLER.DRIVE_COMPLETION_DELAY_MS)
           } else if (allActiveMatchupsResolved()) {
             // All active matchups resolved — advance to next down
             ctx.cancelDeadlineTimer()
@@ -283,7 +312,11 @@ export function resolvePlaycallerTimeout(ctx: PlaycallerRoomContext): void {
 
   // Check if all drives complete
   if (allDrivesComplete()) {
-    advancePlaycallerBracket(ctx)
+    ctx.broadcastState()
+    // Delay before advancing so clients see final drive completion
+    setTimeout(() => {
+      advancePlaycallerBracket(ctx)
+    }, PLAYCALLER.DRIVE_COMPLETION_DELAY_MS)
   } else {
     // Start next down
     beginPlaycallerDown(ctx)
