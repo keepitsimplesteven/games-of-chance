@@ -1,4 +1,5 @@
 # Implementation Plan: Game Settings
+# Implementation Plan: Game Settings
 
 ## Overview
 
