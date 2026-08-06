@@ -164,6 +164,7 @@ export function PlaycallerContainer() {
                 <SpectatorDriveView
                   driveState={driveStates[selectedMatchupId]}
                   onBack={() => setSelectedMatchupId(null)}
+                  roundName={roundName}
                 />
               )
             }
@@ -243,6 +244,7 @@ export function PlaycallerContainer() {
           <SpectatorDriveView
             driveState={driveStates[selectedMatchupId]}
             onBack={() => setSelectedMatchupId(null)}
+            roundName={roundName}
           />
         )
       }
@@ -261,6 +263,7 @@ export function PlaycallerContainer() {
           <SpectatorDriveView
             driveState={spectatorMatchups[0].driveState}
             onBack={() => {}} // No grid to go back to
+            roundName={roundName}
           />
         )
       }

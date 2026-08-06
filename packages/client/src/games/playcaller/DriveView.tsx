@@ -98,22 +98,16 @@ export function DriveView({
   const defensePlayerName = getPlayerName(driveState.defensePlayerId)
 
   const hasOtherGames = otherDrives.length > 0
+  const [otherGamesOpen, setOtherGamesOpen] = useState(true)
+  const showSidePanel = otherGamesOpen && hasOtherGames
 
   return (
     <div
-      className="h-[100dvh] overflow-hidden font-mono p-2"
-      style={{
-        display: "grid",
-        gridTemplateColumns: hasOtherGames ? "60fr 40fr" : "1fr",
-        gridTemplateRows: "auto 40dvh auto 33dvh",
-        gap: "6px",
-      }}
+      className="h-[100dvh] overflow-hidden font-mono p-2 flex flex-col"
+      style={{ gap: "4px" }}
     >
-      {/* ═══ ROW 1: Header (spans all cols) ═══ */}
-      <header
-        style={{ gridColumn: "1 / -1" }}
-        className="flex items-center justify-between"
-      >
+      {/* ═══ Header ═══ */}
+      <header className="flex items-center justify-between shrink-0">
         <span
           className={`text-xl font-bold uppercase tracking-widest ${theme.accentText}`}
         >
@@ -124,40 +118,57 @@ export function DriveView({
         </span>
       </header>
 
-      {/* ═══ ROW 2, COL 1: Field Panel ═══ */}
-      <div className="overflow-hidden flex items-center justify-center">
-        <FieldPanel
-          yardLine={driveState.yardLine}
-          maxYards={MAX_YARDS}
-          down={driveState.down}
-          yardsToGo={driveState.yardsToGo}
-          ballAnimConfig={ballAnimConfig}
-        />
-      </div>
-
-      {/* ═══ ROW 2, COL 2: Other Games (only when other matchups exist) ═══ */}
+      {/* ═══ Show/Hide toggle row (right-aligned, only when other games exist) ═══ */}
       {hasOtherGames && (
-        <div className="overflow-auto flex flex-col gap-1.5 justify-start">
-          {otherDrives.map(({ matchupId: mId, driveState: ds }) => (
-            <MiniScoreboard
-              key={mId}
-              down={ds.down}
-              yardsToGo={ds.yardsToGo}
-              yardLine={ds.yardLine}
-              offensePlayerName={getPlayerName(ds.offensePlayerId)}
-              defensePlayerName={getPlayerName(ds.defensePlayerId)}
-              isComplete={ds.isComplete}
-              endingType={ds.completion?.endingType}
-              winnerId={ds.completion?.winner}
-              offensePlayerId={ds.offensePlayerId}
-              defensePlayerId={ds.defensePlayerId}
-            />
-          ))}
+        <div className="text-right shrink-0">
+          <button
+            type="button"
+            onClick={() => setOtherGamesOpen((prev) => !prev)}
+            className={`text-[10px] ${theme.mutedText} hover:text-white transition-colors`}
+          >
+            {showSidePanel ? "▼ Hide other games" : `▶ Show other games (${otherDrives.length})`}
+          </button>
         </div>
       )}
 
-      {/* ═══ ROW 3: PlayResultLine + PlayClock + HistoryDrawer (spans 2 cols) ═══ */}
-      <div style={{ gridColumn: "1 / -1" }} className="relative">
+      {/* ═══ Field + Side panel ═══ */}
+      <div className="shrink-0 flex gap-2" style={{ height: "42dvh" }}>
+        {/* Field */}
+        <div className="h-full w-full flex items-start justify-center overflow-hidden">
+          <FieldPanel
+            yardLine={driveState.yardLine}
+            maxYards={MAX_YARDS}
+            down={driveState.down}
+            yardsToGo={driveState.yardsToGo}
+            ballAnimConfig={ballAnimConfig}
+            maxWidth={showSidePanel ? 125 : 180}
+          />
+        </div>
+
+        {/* Other Games sidebar */}
+        {showSidePanel && (
+          <div className="overflow-auto flex flex-col mt-6 gap-1.5 w-[140px] shrink-0">
+            {otherDrives.map(({ matchupId: mId, driveState: ds }) => (
+              <MiniScoreboard
+                key={mId}
+                down={ds.down}
+                yardsToGo={ds.yardsToGo}
+                yardLine={ds.yardLine}
+                offensePlayerName={getPlayerName(ds.offensePlayerId)}
+                defensePlayerName={getPlayerName(ds.defensePlayerId)}
+                isComplete={ds.isComplete}
+                endingType={ds.completion?.endingType}
+                winnerId={ds.completion?.winner}
+                offensePlayerId={ds.offensePlayerId}
+                defensePlayerId={ds.defensePlayerId}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ═══ Play Result + PlayClock ═══ */}
+      <div className="relative shrink-0">
         <div className="flex items-center justify-between">
           <PlayResultLine
             resultText={latestResultText}
@@ -173,14 +184,12 @@ export function DriveView({
         />
       </div>
 
-      {/* ═══ ROW 4: PlayCardGrid or DriveCompletionOverlay (spans 2 cols) ═══ */}
-      <div style={{ gridColumn: "1 / -1" }} className="overflow-hidden min-h-0">
+      {/* ═══ Play Cards or Completion Overlay ═══ */}
+      <div className="flex-1 min-h-0 overflow-hidden">
         {driveState.isComplete ? (
           <DriveCompletionOverlay
             driveState={driveState}
-            onAnimationDone={() => {
-              // Signal round animation complete — container handles next steps
-            }}
+            onAnimationDone={() => {}}
           />
         ) : (
           <PlayCardGrid cards={cards} matchupId={matchupId} />
