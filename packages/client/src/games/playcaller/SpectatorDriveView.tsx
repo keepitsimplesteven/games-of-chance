@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useTheme } from "../../theme"
+import { usePlayerName } from "./hooks/usePlayerName"
 import { FieldPanel } from "./FieldPanel"
 import { MiniScoreboard } from "./MiniScoreboard"
 import { PlayResultLine } from "./PlayResultLine"
@@ -27,6 +28,7 @@ export interface SpectatorDriveViewProps {
 export function SpectatorDriveView({ driveState, onBack }: SpectatorDriveViewProps) {
   const theme = useTheme()
   const [historyOpen, setHistoryOpen] = useState(false)
+  const getPlayerName = usePlayerName()
 
   const { yardLine, down, yardsToGo, playHistory, offensePlayerId, defensePlayerId } =
     driveState
@@ -84,8 +86,8 @@ export function SpectatorDriveView({ driveState, onBack }: SpectatorDriveViewPro
             down={down}
             yardsToGo={yardsToGo}
             yardLine={yardLine}
-            offensePlayerName={offensePlayerId}
-            defensePlayerName={defensePlayerId}
+            offensePlayerName={getPlayerName(offensePlayerId)}
+            defensePlayerName={getPlayerName(defensePlayerId)}
           />
         </div>
       </div>

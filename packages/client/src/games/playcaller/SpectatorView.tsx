@@ -1,4 +1,5 @@
 import type { Matchup, RoundPhase } from "@games-of-chance/shared"
+import { usePlayerName } from "./hooks/usePlayerName"
 
 interface SpectatorViewProps {
   matchups: Matchup[]
@@ -13,6 +14,8 @@ interface SpectatorViewProps {
  * Validates: Requirements 8.3, 9.1
  */
 export function SpectatorView({ matchups, seeds, phase }: SpectatorViewProps) {
+  const getPlayerName = usePlayerName()
+
   if (matchups.length === 0) {
     return (
       <div className="text-center text-gray-400 py-4">
@@ -33,6 +36,7 @@ export function SpectatorView({ matchups, seeds, phase }: SpectatorViewProps) {
             matchup={matchup}
             seeds={seeds}
             phase={phase}
+            getPlayerName={getPlayerName}
           />
         ))}
       </div>
@@ -44,9 +48,10 @@ interface MatchupCardProps {
   matchup: Matchup
   seeds: Record<string, number>
   phase: RoundPhase
+  getPlayerName: (id: string | null | undefined) => string
 }
 
-function MatchupCard({ matchup, seeds, phase }: MatchupCardProps) {
+function MatchupCard({ matchup, seeds, phase, getPlayerName }: MatchupCardProps) {
   const { playerA, playerB, winner } = matchup
   const seedA = seeds[playerA] ?? "?"
   const seedB = seeds[playerB] ?? "?"
@@ -56,6 +61,7 @@ function MatchupCard({ matchup, seeds, phase }: MatchupCardProps) {
     <div className="rounded-lg border border-gray-700 bg-gray-800 p-4 flex flex-col gap-2">
       <PlayerRow
         playerId={playerA}
+        displayName={getPlayerName(playerA)}
         seed={seedA}
         isWinner={winner === playerA}
         isResolved={isResolved}
@@ -65,6 +71,7 @@ function MatchupCard({ matchup, seeds, phase }: MatchupCardProps) {
       </div>
       <PlayerRow
         playerId={playerB}
+        displayName={getPlayerName(playerB)}
         seed={seedB}
         isWinner={winner === playerB}
         isResolved={isResolved}
@@ -75,12 +82,13 @@ function MatchupCard({ matchup, seeds, phase }: MatchupCardProps) {
 
 interface PlayerRowProps {
   playerId: string
+  displayName: string
   seed: number | string
   isWinner: boolean
   isResolved: boolean
 }
 
-function PlayerRow({ playerId, seed, isWinner, isResolved }: PlayerRowProps) {
+function PlayerRow({ playerId, displayName, seed, isWinner, isResolved }: PlayerRowProps) {
   const textColor = isResolved
     ? isWinner
       ? "text-green-400 font-semibold"
@@ -89,7 +97,7 @@ function PlayerRow({ playerId, seed, isWinner, isResolved }: PlayerRowProps) {
 
   return (
     <div className={`flex items-center justify-between ${textColor}`}>
-      <span className="truncate">{playerId}</span>
+      <span className="truncate">{displayName}</span>
       <span className="text-xs text-gray-400 ml-2">#{seed}</span>
     </div>
   )

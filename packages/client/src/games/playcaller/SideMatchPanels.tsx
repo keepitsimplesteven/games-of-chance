@@ -1,4 +1,5 @@
 import type { Matchup, RoundPhase } from "@games-of-chance/shared"
+import { usePlayerName } from "./hooks/usePlayerName"
 
 interface SideMatchPanelsProps {
   matchups: Matchup[]
@@ -13,6 +14,8 @@ interface SideMatchPanelsProps {
  * Validates: Requirements 8.1, 8.2
  */
 export function SideMatchPanels({ matchups, seeds, phase }: SideMatchPanelsProps) {
+  const getPlayerName = usePlayerName()
+
   if (matchups.length === 0) return null
 
   return (
@@ -26,6 +29,7 @@ export function SideMatchPanels({ matchups, seeds, phase }: SideMatchPanelsProps
           matchup={matchup}
           seeds={seeds}
           phase={phase}
+          getPlayerName={getPlayerName}
         />
       ))}
     </div>
@@ -36,9 +40,10 @@ interface SideMatchCardProps {
   matchup: Matchup
   seeds: Record<string, number>
   phase: RoundPhase
+  getPlayerName: (id: string | null | undefined) => string
 }
 
-function SideMatchCard({ matchup, seeds, phase }: SideMatchCardProps) {
+function SideMatchCard({ matchup, seeds, phase, getPlayerName }: SideMatchCardProps) {
   const seedA = seeds[matchup.playerA] ?? "?"
   const seedB = seeds[matchup.playerB] ?? "?"
   const isResolving = phase === "RESOLVING"
@@ -56,7 +61,7 @@ function SideMatchCard({ matchup, seeds, phase }: SideMatchCardProps) {
               : "text-gray-200"
         }`}
       >
-        <span>{matchup.playerA}</span>
+        <span>{getPlayerName(matchup.playerA)}</span>
         <span className="text-xs text-gray-500">#{seedA}</span>
       </div>
 
@@ -81,7 +86,7 @@ function SideMatchCard({ matchup, seeds, phase }: SideMatchCardProps) {
               : "text-gray-200"
         }`}
       >
-        <span>{matchup.playerB}</span>
+        <span>{getPlayerName(matchup.playerB)}</span>
         <span className="text-xs text-gray-500">#{seedB}</span>
       </div>
     </div>

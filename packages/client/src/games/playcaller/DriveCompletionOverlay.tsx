@@ -1,5 +1,6 @@
 import { motion } from "framer-motion"
 import { useTheme } from "../../theme"
+import { usePlayerName } from "./hooks/usePlayerName"
 import { computeDriveSummary } from "./field-utils"
 import type { DriveState } from "./field-utils.types"
 
@@ -22,6 +23,7 @@ export function DriveCompletionOverlay({
   onAnimationDone,
 }: DriveCompletionOverlayProps) {
   const theme = useTheme()
+  const getPlayerName = usePlayerName()
   const summary = computeDriveSummary(driveState)
   const isTouchdown = summary.endingType === "touchdown"
 
@@ -56,7 +58,7 @@ export function DriveCompletionOverlay({
 
       {/* Winner name */}
       <span className={`text-base font-bold ${theme.accentText}`}>
-        Winner: {summary.winner}
+        Winner: {getPlayerName(summary.winner)}
       </span>
 
       {/* Drive summary stats */}

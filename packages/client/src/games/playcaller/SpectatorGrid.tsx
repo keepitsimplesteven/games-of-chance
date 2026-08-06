@@ -1,4 +1,5 @@
 import { useTheme } from "../../theme"
+import { usePlayerName } from "./hooks/usePlayerName"
 import { formatDownDistance } from "./field-utils"
 import type { DriveState } from "./field-utils.types"
 
@@ -19,6 +20,7 @@ export interface SpectatorGridProps {
  */
 export function SpectatorGrid({ matchups, onSelectMatchup }: SpectatorGridProps) {
   const theme = useTheme()
+  const getPlayerName = usePlayerName()
 
   if (matchups.length === 0) {
     return (
@@ -45,13 +47,13 @@ export function SpectatorGrid({ matchups, onSelectMatchup }: SpectatorGridProps)
             {/* Player names */}
             <div className="flex justify-between items-center">
               <span className={`text-[12px] font-bold ${theme.bodyText} truncate`}>
-                {driveState.offensePlayerId}
+                {getPlayerName(driveState.offensePlayerId)}
               </span>
               <span className={`text-[8px] ${theme.mutedText} opacity-60 mx-1`}>
                 vs
               </span>
               <span className={`text-[12px] font-bold ${theme.bodyText} truncate`}>
-                {driveState.defensePlayerId}
+                {getPlayerName(driveState.defensePlayerId)}
               </span>
             </div>
 

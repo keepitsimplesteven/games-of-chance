@@ -3,7 +3,7 @@ import type { SettingsSchema } from "@games-of-chance/shared"
 /** All tunable values for the Playcaller plugin */
 export const PLAYCALLER = {
   /** Duration of the play clock per down (20 seconds for interactive play) */
-  PICK_WINDOW_MS: 5_000,
+  PICK_WINDOW_MS: 500_000,
 
   /** Brief delay after both picks are in before starting next down (shows result) */
   PLAY_RESULT_DELAY_MS: 500,

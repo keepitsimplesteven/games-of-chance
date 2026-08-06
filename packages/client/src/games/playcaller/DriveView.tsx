@@ -2,6 +2,7 @@ import { useState, useMemo } from "react"
 import { useTheme } from "../../theme"
 import { useCircumstance } from "./hooks/useCircumstance"
 import { usePlayCards } from "./hooks/usePlayCards"
+import { usePlayerName } from "./hooks/usePlayerName"
 import { FieldPanel } from "./FieldPanel"
 import { MiniScoreboard } from "./MiniScoreboard"
 import { PlayResultLine } from "./PlayResultLine"
@@ -50,6 +51,7 @@ export function DriveView({
 }: DriveViewProps) {
   const theme = useTheme()
   const [historyOpen, setHistoryOpen] = useState(false)
+  const getPlayerName = usePlayerName()
 
   // Derive circumstance from current down/distance
   const circumstance = useCircumstance(driveState)
@@ -89,8 +91,8 @@ export function DriveView({
   const roleLabel = role === "offense" ? "OFF" : "DEF"
 
   // Determine player names for scoreboard
-  const offensePlayerName = driveState.offensePlayerId
-  const defensePlayerName = driveState.defensePlayerId
+  const offensePlayerName = getPlayerName(driveState.offensePlayerId)
+  const defensePlayerName = getPlayerName(driveState.defensePlayerId)
 
   return (
     <div

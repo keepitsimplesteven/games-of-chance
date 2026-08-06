@@ -10,6 +10,7 @@ import { DriveView } from "./DriveView"
 import { SpectatorGrid } from "./SpectatorGrid"
 import { SpectatorDriveView } from "./SpectatorDriveView"
 import { getRoundName } from "./field-utils"
+import { usePlayerName } from "./hooks/usePlayerName"
 
 /**
  * PlaycallerContainer — top-level game view for the Playcaller tournament.
@@ -29,6 +30,7 @@ import { getRoundName } from "./field-utils"
 export function PlaycallerContainer() {
   const roomState = useGameStore((s) => s.roomState)
   const playerId = useGameStore((s) => s.playerId)
+  const getPlayerName = usePlayerName()
 
   // Spectator navigation state: which matchup is the spectator viewing?
   // null = show grid, string = show that matchup's drive view
@@ -98,10 +100,11 @@ export function PlaycallerContainer() {
           matchupDriveState.offensePlayerId === playerId ? "offense" : "defense"
 
         // Determine opponent name
-        const opponentName =
+        const opponentId =
           role === "offense"
             ? matchupDriveState.defensePlayerId
             : matchupDriveState.offensePlayerId
+        const opponentName = getPlayerName(opponentId)
 
         return (
           <DriveView

@@ -1,4 +1,5 @@
 import type { Matchup, RoundPhase } from "@games-of-chance/shared"
+import { usePlayerName } from "./hooks/usePlayerName"
 
 interface MatchPanelProps {
   matchup: Matchup
@@ -13,6 +14,7 @@ interface MatchPanelProps {
  * Validates: Requirements 8.1, 8.2
  */
 export function MatchPanel({ matchup, seeds, phase }: MatchPanelProps) {
+  const getPlayerName = usePlayerName()
   const seedA = seeds[matchup.playerA] ?? "?"
   const seedB = seeds[matchup.playerB] ?? "?"
   const isResolving = phase === "RESOLVING"
@@ -30,7 +32,7 @@ export function MatchPanel({ matchup, seeds, phase }: MatchPanelProps) {
               : "border border-gray-600 bg-gray-900/40"
         }`}
       >
-        <span className="text-lg font-bold text-white">{matchup.playerA}</span>
+        <span className="text-lg font-bold text-white">{getPlayerName(matchup.playerA)}</span>
         <span className="rounded bg-gray-700 px-2 py-0.5 text-sm text-gray-300">
           Seed {seedA}
         </span>
@@ -44,7 +46,7 @@ export function MatchPanel({ matchup, seeds, phase }: MatchPanelProps) {
           </span>
         ) : hasWinner ? (
           <span className="text-sm font-medium text-green-400">
-            🏆 {matchup.winner} wins!
+            🏆 {getPlayerName(matchup.winner)} wins!
           </span>
         ) : (
           <span className="text-xl font-bold text-gray-400">VS</span>
@@ -61,7 +63,7 @@ export function MatchPanel({ matchup, seeds, phase }: MatchPanelProps) {
               : "border border-gray-600 bg-gray-900/40"
         }`}
       >
-        <span className="text-lg font-bold text-white">{matchup.playerB}</span>
+        <span className="text-lg font-bold text-white">{getPlayerName(matchup.playerB)}</span>
         <span className="rounded bg-gray-700 px-2 py-0.5 text-sm text-gray-300">
           Seed {seedB}
         </span>
