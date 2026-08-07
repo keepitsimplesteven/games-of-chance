@@ -29,10 +29,21 @@ export function PlayResultLine({
 }: PlayResultLineProps) {
   const theme = useTheme()
 
-  const displayText = resultText ?? "Drive starting..."
+  const displayText = resultText ?? "Good luck!"
 
   return (
     <div className="flex items-center justify-center gap-2">
+      {/* History toggle pill */}
+      <button
+        type="button"
+        onClick={onToggleHistory}
+        className={`${theme.accentText} text-[9px] font-bold uppercase border rounded px-1.5 py-0.5 transition-colors`}
+        style={{ borderColor: `${theme.field.accent}66` }}
+        aria-label={historyOpen ? "Close drive history" : "Open drive history"}
+        aria-expanded={historyOpen}
+      >
+        {historyOpen ? "✕" : "History"}
+      </button>
       {/* Animated result text — transitions on each new result */}
       <AnimatePresence mode="wait">
         <motion.span
@@ -47,17 +58,6 @@ export function PlayResultLine({
         </motion.span>
       </AnimatePresence>
 
-      {/* History toggle pill */}
-      <button
-        type="button"
-        onClick={onToggleHistory}
-        className={`${theme.accentText} text-[9px] font-bold uppercase border rounded px-1.5 py-0.5 transition-colors`}
-        style={{ borderColor: `${theme.field.accent}66` }}
-        aria-label={historyOpen ? "Close drive history" : "Open drive history"}
-        aria-expanded={historyOpen}
-      >
-        {historyOpen ? "✕" : "History"}
-      </button>
     </div>
   )
 }
