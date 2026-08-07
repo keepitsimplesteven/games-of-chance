@@ -52,6 +52,10 @@ export function PlaycallerContainer() {
 
   const phase = roomState.round.phase
   const playcallerGameState = roomState.playcallerGameState as PlaycallerGameState | null | undefined
+  
+  if(phase === "RESULT") {
+    console.log("HIT RESULT PHASE")
+  }
 
   if (phase === "LOBBY" || phase === "END_GAME") return null
 
@@ -69,11 +73,18 @@ export function PlaycallerContainer() {
   const isActiveCompetitor = activeCompetitors.includes(playerId ?? "")
   const hasDriveStates = !!driveStates
 
-  // Phase 1: no animation — mark round animation as done immediately when
-  // entering RESULT or RESOLVING phase so the host can advance.
+  /** Configurable delay (ms) before signaling round animation is done.
+   *  Gives the final play's announcer timeline time to complete. */
+  const ROUND_END_DELAY_MS = 5000
+
+  // Delay marking the round animation as done so the last play's timeline
+  // has time to show the outcome before the host can advance.
   useEffect(() => {
     if (phase === "RESULT" || phase === "RESOLVING") {
-      useGameStore.setState({ roundAnimationDone: true })
+      const timer = setTimeout(() => {
+        useGameStore.setState({ roundAnimationDone: true })
+      }, ROUND_END_DELAY_MS)
+      return () => clearTimeout(timer)
     }
   }, [phase])
 
@@ -185,14 +196,14 @@ export function PlaycallerContainer() {
           }
 
           // Show DriveCompletionOverlay, then switch to spectator after 5s
-          if (otherActiveDrives.length > 0 && !showSpectator) {
-            return (
-              <DriveCompletionOverlayWithTimer
-                driveState={matchupDriveState}
-                onTransitionToSpectator={() => setShowSpectator(true)}
-              />
-            )
-          }
+          // if (otherActiveDrives.length > 0 && !showSpectator) {
+          //   return (
+          //     <DriveCompletionOverlayWithTimer
+          //       driveState={matchupDriveState}
+          //       onTransitionToSpectator={() => setShowSpectator(true)}
+          //     />
+          //   )
+          // }
 
           // All drives complete — just show completion overlay (server will advance soon)
         }
@@ -281,7 +292,7 @@ export function PlaycallerContainer() {
   // ═══════════════════════════════════════════════════════════════════════════
   // Phase 1 fallback: No drive states — bracket visualization behavior
   // ═══════════════════════════════════════════════════════════════════════════
-
+console.log("phase", phase)
   // Between rounds (RESULT phase): show full bracket visualization
   if (phase === "RESULT") {
     // Show the just-resolved round's matchups (currentRoundIndex was already incremented)

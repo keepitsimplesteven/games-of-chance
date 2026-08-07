@@ -64,17 +64,17 @@ export function PlayCardGrid({ cards, matchupId, playInProgress = false }: PlayC
         }}
         className="overflow-hidden min-h-0"
       >
-        {cards.map((card) => (
-          <PlayCard
-            key={card.playId}
-            playId={card.playId}
-            displayName={card.displayName}
-            formation={card.formation}
-            artData={card.artData}
-            state={getCardState(card.playId)}
-            onSelect={handleSelect}
-          />
-        ))}
+        {cards.map((card) =>
+            <PlayCard
+              key={card.playId}
+              playId={card.playId}
+              displayName={card.displayName}
+              formation={card.formation}
+              artData={card.artData}
+              state={getCardState(card.playId)}
+              onSelect={handleSelect}
+            />
+        )}
       </div>
 
       {/* Waiting/progress indicator */}

@@ -80,6 +80,9 @@ export function DriveView({
   let displayDown: number
   let displayYardsToGo: number
 
+  // Play history entries for the HistoryDrawer
+  const historyEntries = driveState.playHistory
+
   if (!isWaitingForReveal) {
     // Fully caught up — show current live state
     displayYardLine = driveState.yardLine
@@ -111,9 +114,6 @@ export function DriveView({
     const lastEntry = driveState.playHistory[driveState.playHistory.length - 1]
     return formatPlayResult(lastEntry.result)
   }, [driveState.playHistory])
-
-  // Play history entries for the HistoryDrawer
-  const historyEntries = driveState.playHistory
 
   // Ball animation config — always idle; ball moves via yard line prop changes
   const ballAnimConfig: BallAnimationConfig = { type: "idle", duration: 0, fromY: 0, toY: 0 }
@@ -150,6 +150,11 @@ export function DriveView({
   const hasOtherGames = otherDrives.length > 0
   const [otherGamesOpen, setOtherGamesOpen] = useState(true)
   const showSidePanel = otherGamesOpen && hasOtherGames
+
+console.log("historyEntries", historyEntries)
+console.log("playHistory", driveState.playHistory)
+      historyEntries.filter(play => play !== driveState.playHistory[displayedPlayCount]);
+
 
   return (
     <div
@@ -231,10 +236,10 @@ export function DriveView({
             onToggleHistory={() => setHistoryOpen((prev) => !prev)}
             historyOpen={historyOpen}
           />
-          {!driveState.isComplete && <PlayClock />}
+          {!driveState.isComplete && !isWaitingForReveal && <PlayClock />}
         </div>
         <HistoryDrawer
-          entries={historyEntries}
+          entries={isWaitingForReveal ? historyEntries.slice(0, -1) : historyEntries}
           isOpen={historyOpen}
           onClose={() => setHistoryOpen(false)}
         />

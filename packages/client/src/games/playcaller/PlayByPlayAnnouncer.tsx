@@ -7,11 +7,11 @@ export const PLAY_TIMELINE = {
   /** Delay before showing preSnap line after play key changes */
   preSnapDelay: 200,
   /** Duration preSnap is visible before activePlay appears */
-  preSnapHold: 3000,
+  preSnapHold: 1500,
   /** Duration activePlay is visible before outcome appears */
-  activePlayHold: 2000,
+  activePlayHold: 2500,
   /** Extra time after outcome is shown (linger before next play) */
-  outcomeHold: 1000,
+  outcomeHold: 2500,
 } as const
 
 export type PlayPhase = "idle" | "preSnap" | "activePlay" | "outcome" | "done"

@@ -154,7 +154,7 @@ export function advancePlaycallerBracket(ctx: PlaycallerRoomContext): void {
   // Transition to RESULT
   const resolvedRoundIndex = updatedBracket.currentRoundIndex - 1
   const resolvedRound = updatedBracket.rounds[resolvedRoundIndex]
-
+  
   ctx.state.round.phase = "RESULT"
   ctx.state.round.result = {
     bracketRound: resolvedRoundIndex,
