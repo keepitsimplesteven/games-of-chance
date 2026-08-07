@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useRef, useCallback } from "react"
 import { useTheme } from "../../theme"
 import { useCircumstance } from "./hooks/useCircumstance"
 import { usePlayCards } from "./hooks/usePlayCards"
@@ -9,15 +9,15 @@ import { PlayResultLine } from "./PlayResultLine"
 import { HistoryDrawer } from "./HistoryDrawer"
 import { PlayCardGrid } from "./PlayCardGrid"
 import { PlayClock } from "./PlayClock"
-import { DriveCompletionOverlay } from "./DriveCompletionOverlay"
-import { formatPlayResult, yardLineToY } from "./field-utils"
-import { getDramaLevel, getAnimationDuration, getBallAnimationType } from "./animations/timing"
+import { PlayByPlayAnnouncer } from "./PlayByPlayAnnouncer"
+import { formatPlayResult } from "./field-utils"
+import { getPlayName, classifyCircumstance } from "./play-names"
+import { selectCommentary } from "./play-by-play"
+import type { CommentaryLines } from "./play-by-play/selectCommentary"
 import type { DriveState } from "./field-utils.types"
 import type { BallAnimationConfig } from "./animations/types"
+import { DriveCompletionOverlay } from "./DriveCompletionOverlay"
 
-/** Field SVG constants (must match FieldPanel) */
-const FIELD_HEIGHT = 240
-const FIELD_TOP = 35 // endZoneHeight + top padding
 const MAX_YARDS = 35
 
 export interface DriveViewProps {
@@ -62,33 +62,83 @@ export function DriveView({
   // Get play cards for the current role + circumstance
   const cards = usePlayCards(circumstance, role)
 
-  // Format latest play result
+  // ── Play timeline gating ──
+  // Instead of gating a boolean, we track which play index the UI has "revealed".
+  // The field always shows the state AFTER displayedPlayCount plays have completed.
+  // When a new play arrives (playCount > displayedPlayCount), the field stays frozen
+  // until the announcer fires handleOutcomeReveal, which bumps displayedPlayCount.
+  const playCount = driveState.playHistory.length
+  const [displayedPlayCount, setDisplayedPlayCount] = useState(playCount)
+
+  // Derive the yard line the field should show:
+  // - If displayedPlayCount === playCount, show live state (fully caught up)
+  // - If displayedPlayCount < playCount, show the state after the last revealed play
+  const isWaitingForReveal = displayedPlayCount < playCount
+
+  // Compute display values based on which plays have been revealed
+  let displayYardLine: number
+  let displayDown: number
+  let displayYardsToGo: number
+
+  if (!isWaitingForReveal) {
+    // Fully caught up — show current live state
+    displayYardLine = driveState.yardLine
+    displayDown = driveState.down
+    displayYardsToGo = driveState.yardsToGo
+  } else {
+    // Waiting — show state BEFORE the unrevealed play ran
+    // That's the starting state of the unrevealed play (stored in the history entry)
+    const unrevealedEntry = driveState.playHistory[displayedPlayCount]
+    if (unrevealedEntry) {
+      displayYardLine = unrevealedEntry.yardLine
+      displayDown = unrevealedEntry.down
+      displayYardsToGo = unrevealedEntry.yardsToGo
+    } else {
+      displayYardLine = driveState.yardLine
+      displayDown = driveState.down
+      displayYardsToGo = driveState.yardsToGo
+    }
+  }
+
+  const handleOutcomeReveal = useCallback(() => {
+    setDisplayedPlayCount((prev) => prev + 1)
+  }, [])
+
+
+  // Format latest play result (gated — only show after reveal)
   const latestResultText = useMemo(() => {
     if (driveState.playHistory.length === 0) return null
     const lastEntry = driveState.playHistory[driveState.playHistory.length - 1]
     return formatPlayResult(lastEntry.result)
   }, [driveState.playHistory])
 
-  // Format all play history entries for the HistoryDrawer
-  const historyEntries = useMemo(() => {
-    return driveState.playHistory.map((entry) => formatPlayResult(entry.result))
-  }, [driveState.playHistory])
+  // Play history entries for the HistoryDrawer
+  const historyEntries = driveState.playHistory
 
-  // Derive ball animation config from the latest play result
-  const ballAnimConfig: BallAnimationConfig = useMemo(() => {
-    if (driveState.playHistory.length === 0) {
-      return { type: "idle", duration: 0, fromY: 0, toY: 0 }
+  // Ball animation config — always idle; ball moves via yard line prop changes
+  const ballAnimConfig: BallAnimationConfig = { type: "idle", duration: 0, fromY: 0, toY: 0 }
+
+  // ── Commentary: generate exactly once per new play (stable ref) ──
+  const commentaryRef = useRef<{ playCount: number; lines: CommentaryLines | null }>({
+    playCount: 0,
+    lines: null,
+  })
+
+  if (playCount > 0 && commentaryRef.current.playCount !== playCount) {
+    const lastEntry = driveState.playHistory[playCount - 1]
+    const circ = classifyCircumstance(lastEntry.down, lastEntry.yardsToGo)
+    const playName = getPlayName(lastEntry.offensivePlay, circ, "offense").displayName
+    commentaryRef.current = {
+      playCount,
+      lines: selectCommentary(
+        playName,
+        lastEntry.result.outcome,
+        lastEntry.result.yardsGained,
+        lastEntry.yardsToGo
+      ),
     }
-    const lastEntry = driveState.playHistory[driveState.playHistory.length - 1]
-    const { result } = lastEntry
-    const playAxis = result.offensivePlay.startsWith("pass") ? "pass" : "run"
-    const dramaLevel = getDramaLevel(result.outcome)
-    const duration = getAnimationDuration(dramaLevel)
-    const type = getBallAnimationType(result.outcome, playAxis as "run" | "pass")
-    const fromY = yardLineToY(lastEntry.yardLine, MAX_YARDS, FIELD_HEIGHT, FIELD_TOP)
-    const toY = yardLineToY(lastEntry.resultingYardLine, MAX_YARDS, FIELD_HEIGHT, FIELD_TOP)
-    return { type, duration, fromY, toY }
-  }, [driveState.playHistory])
+  }
+  const commentary = commentaryRef.current.lines
 
   // Role label for header
   const roleLabel = role === "offense" ? "OFF" : "DEF"
@@ -136,10 +186,10 @@ export function DriveView({
         {/* Field */}
         <div className="h-full flex-1 min-w-0 overflow-hidden">
           <FieldPanel
-            yardLine={driveState.yardLine}
+            yardLine={displayYardLine}
             maxYards={MAX_YARDS}
-            down={driveState.down}
-            yardsToGo={driveState.yardsToGo}
+            down={displayDown}
+            yardsToGo={displayYardsToGo}
             ballAnimConfig={ballAnimConfig}
           />
         </div>
@@ -166,11 +216,18 @@ export function DriveView({
         )}
       </div>
 
+      {/* ═══ Play-by-Play Announcer ═══ */}
+      <PlayByPlayAnnouncer
+        commentary={commentary}
+        playKey={driveState.playHistory.length}
+        onOutcomeReveal={handleOutcomeReveal}
+      />
+
       {/* ═══ Play Result + PlayClock ═══ */}
       <div className="relative shrink-0 py-3">
         <div className="flex items-center justify-between">
           <PlayResultLine
-            resultText={latestResultText}
+            resultText={isWaitingForReveal ? null : latestResultText}
             onToggleHistory={() => setHistoryOpen((prev) => !prev)}
             historyOpen={historyOpen}
           />
@@ -185,13 +242,13 @@ export function DriveView({
 
       {/* ═══ Play Cards or Completion Overlay ═══ */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        {driveState.isComplete ? (
+        {driveState.isComplete && !isWaitingForReveal ? (
           <DriveCompletionOverlay
             driveState={driveState}
-            onAnimationDone={() => {}}
+            onAnimationDone={() => { }}
           />
         ) : (
-          <PlayCardGrid cards={cards} matchupId={matchupId} />
+          <PlayCardGrid cards={cards} matchupId={matchupId} playInProgress={isWaitingForReveal} />
         )}
       </div>
     </div>

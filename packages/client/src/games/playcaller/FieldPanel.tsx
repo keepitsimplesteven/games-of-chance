@@ -43,7 +43,11 @@ export function FieldPanel({
   const theme = useTheme()
   const { field } = theme
 
-  const ballY = yardLineToY(yardLine, maxYards, FIELD_HEIGHT, FIELD_TOP)
+  // Ball Y position: use config.fromY as the reference position.
+  // During idle gate: ball sits at fromY (pre-play position).
+  // During animation: initialY = fromY, variant animates to toY.
+  // Fallback to yardLine-derived position when fromY is 0 (initial load).
+  const ballY = ballAnimConfig.fromY || yardLineToY(yardLine, maxYards, FIELD_HEIGHT, FIELD_TOP)
 
   return (
     <div
@@ -132,6 +136,26 @@ export function FieldPanel({
                 </g>
               )
             })}
+
+          {/* First down marker — solid yellow line (red at goal line for goal-to-go) */}
+          {(() => {
+            const firstDownYardLine = yardLine - yardsToGo
+            const isGoalToGo = firstDownYardLine <= 0
+            const markerYardLine = isGoalToGo ? 0 : firstDownYardLine
+            const markerY = yardLineToY(markerYardLine, maxYards, FIELD_HEIGHT, FIELD_TOP)
+            const markerColor = isGoalToGo ? "#cc3333" : field.accent
+            return (
+              <line
+                x1={FIELD_X}
+                y1={markerY}
+                x2={FIELD_X + FIELD_W}
+                y2={markerY}
+                stroke={markerColor}
+                strokeWidth={2}
+                opacity={0.9}
+              />
+            )
+          })()}
 
           {/* Ball marker — positioned at field center, Y from yardLineToY */}
           <BallMarker config={ballAnimConfig} x={FIELD_X + FIELD_W / 2} initialY={ballY} />

@@ -1,14 +1,18 @@
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useTheme } from "../../theme"
 import { usePlayerName } from "./hooks/usePlayerName"
 import { FieldPanel } from "./FieldPanel"
 import { PlayResultLine } from "./PlayResultLine"
 import { PlayClock } from "./PlayClock"
+import { PlayByPlayAnnouncer } from "./PlayByPlayAnnouncer"
 import { HistoryDrawer } from "./HistoryDrawer"
-import { DriveCompletionOverlay } from "./DriveCompletionOverlay"
 import { formatPlayResult } from "./field-utils"
+import { getPlayName, classifyCircumstance } from "./play-names"
+import { selectCommentary } from "./play-by-play"
+import type { CommentaryLines } from "./play-by-play/selectCommentary"
 import type { DriveState } from "./field-utils.types"
 import type { BallAnimationConfig } from "./animations/types"
+import { DriveCompletionOverlay } from "./DriveCompletionOverlay"
 
 export interface SpectatorDriveViewProps {
   driveState: DriveState
@@ -24,8 +28,8 @@ export interface SpectatorDriveViewProps {
  * - Compact top bar with back button + "Spectating" label
  * - Header row with round name + player matchup (same style as DriveView)
  * - Large field panel (~55-60dvh)
+ * - Play-by-play announcer
  * - Play result line with PlayClock
- * - DriveCompletionOverlay when drive finishes
  *
  * Validates: Requirements 9.2, 9.3, 9.4
  */
@@ -45,8 +49,31 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
   const lastEntry = playHistory.length > 0 ? playHistory[playHistory.length - 1] : null
   const resultText = lastEntry ? formatPlayResult(lastEntry.result) : null
 
-  // Build history entries list (chronological)
-  const historyEntries = playHistory.map((entry) => formatPlayResult(entry.result))
+  // Build history entries list (chronological) — pass raw entries to HistoryDrawer
+  const historyEntries = playHistory
+
+  // ── Commentary: generate exactly once per new play (stable ref) ──
+  const playCount = playHistory.length
+  const commentaryRef = useRef<{ playCount: number; lines: CommentaryLines | null }>({
+    playCount: 0,
+    lines: null,
+  })
+
+  if (playCount > 0 && commentaryRef.current.playCount !== playCount) {
+    const entry = playHistory[playCount - 1]
+    const circ = classifyCircumstance(entry.down, entry.yardsToGo)
+    const playName = getPlayName(entry.offensivePlay, circ, "offense").displayName
+    commentaryRef.current = {
+      playCount,
+      lines: selectCommentary(
+        playName,
+        entry.result.outcome,
+        entry.result.yardsGained,
+        entry.yardsToGo
+      ),
+    }
+  }
+  const commentary = commentaryRef.current.lines
 
   // Ball animation config — spectator view uses idle so ball stays at initialY
   const ballAnimConfig: BallAnimationConfig = {
@@ -97,6 +124,12 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
         />
       </div>
 
+      {/* ═══ Play-by-Play Announcer ═══ */}
+      <PlayByPlayAnnouncer
+        commentary={commentary}
+        playKey={playCount}
+      />
+
       {/* ═══ Play Result Line + PlayClock + History ═══ */}
       <div className="relative px-1 py-1">
         <div className="flex items-center justify-between">
@@ -113,13 +146,12 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
           onClose={() => setHistoryOpen(false)}
         />
       </div>
-
       {/* ═══ Drive Completion Overlay — shown when drive is finished ═══ */}
       {driveState.isComplete && (
         <div className="px-2 py-2">
           <DriveCompletionOverlay
             driveState={driveState}
-            onAnimationDone={() => {}}
+            onAnimationDone={() => { }}
           />
         </div>
       )}
