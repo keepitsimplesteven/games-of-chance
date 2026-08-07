@@ -9,7 +9,7 @@ export interface PlayCardProps {
   displayName: string
   formation: string
   artData: PlayArtData
-  state: "idle" | "selected" | "unselected" | "disabled"
+  state: "idle" | "selected" | "unselected" | "disabled" | "highlighted"
   onSelect: (playId: string) => void
 }
 
@@ -25,7 +25,7 @@ export interface PlayCardProps {
 export function PlayCard({ playId, displayName, formation, artData, state, onSelect }: PlayCardProps) {
   const theme = useTheme()
 
-  const isDisabled = state === "disabled"
+  const isDisabled = state === "disabled" || state === "highlighted"
   const isPass = playId.startsWith("pass")
 
   // Pass plays = blue, run plays = green (matches comp)

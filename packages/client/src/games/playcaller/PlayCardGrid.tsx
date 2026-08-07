@@ -41,8 +41,10 @@ export function PlayCardGrid({ cards, matchupId, playInProgress = false }: PlayC
     submitPick({ type: "play_selection", matchupId, play: playId })
   }
 
-  function getCardState(playId: string): "idle" | "selected" | "unselected" | "disabled" {
-    if (playInProgress) return "disabled"
+  function getCardState(playId: string): "idle" | "selected" | "unselected" | "disabled" | "highlighted" {
+    if (playInProgress) {
+      return playId === selectedPlayId ? "highlighted" : "disabled"
+    }
     if (!pickSubmitted) return "idle"
     if (playId === selectedPlayId) return "selected"
     return "disabled"
@@ -64,17 +66,20 @@ export function PlayCardGrid({ cards, matchupId, playInProgress = false }: PlayC
         }}
         className="overflow-hidden min-h-0"
       >
-        {cards.map((card) =>
+        {cards.map((card) => {
+          const cardState = getCardState(card.playId)
+          return (
             <PlayCard
               key={card.playId}
               playId={card.playId}
               displayName={card.displayName}
               formation={card.formation}
               artData={card.artData}
-              state={getCardState(card.playId)}
+              state={cardState}
               onSelect={handleSelect}
             />
-        )}
+          )
+        })}
       </div>
 
       {/* Waiting/progress indicator */}

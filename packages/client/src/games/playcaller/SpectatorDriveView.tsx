@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useCallback } from "react"
 import { useTheme } from "../../theme"
 import { usePlayerName } from "./hooks/usePlayerName"
 import { FieldPanel } from "./FieldPanel"
@@ -31,6 +31,9 @@ export interface SpectatorDriveViewProps {
  * - Play-by-play announcer
  * - Play result line with PlayClock
  *
+ * UI updates are gated behind the play-by-play announcer timeline so spectators
+ * don't see outcomes before players do.
+ *
  * Validates: Requirements 9.2, 9.3, 9.4
  */
 export function SpectatorDriveView({ driveState, onBack, roundName = "" }: SpectatorDriveViewProps) {
@@ -38,22 +41,63 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
   const [historyOpen, setHistoryOpen] = useState(false)
   const getPlayerName = usePlayerName()
 
-  const { yardLine, down, yardsToGo, playHistory, offensePlayerId, defensePlayerId } =
-    driveState
+  const { playHistory, offensePlayerId, defensePlayerId } = driveState
 
   // Derive player names
   const offensePlayerName = getPlayerName(offensePlayerId)
   const defensePlayerName = getPlayerName(defensePlayerId)
 
-  // Derive latest play result text
-  const lastEntry = playHistory.length > 0 ? playHistory[playHistory.length - 1] : null
-  const resultText = lastEntry ? formatPlayResult(lastEntry.result) : null
+  // ── Play timeline gating (mirrors DriveView) ──
+  // Track which play index the UI has "revealed". When a new play arrives
+  // (playCount > displayedPlayCount), the field/result stays frozen until
+  // the announcer fires onOutcomeReveal.
+  const playCount = playHistory.length
+  const [displayedPlayCount, setDisplayedPlayCount] = useState(playCount)
 
-  // Build history entries list (chronological) — pass raw entries to HistoryDrawer
-  const historyEntries = playHistory
+  const isWaitingForReveal = displayedPlayCount < playCount
+
+  const handleOutcomeReveal = useCallback(() => {
+    setDisplayedPlayCount((prev) => prev + 1)
+  }, [])
+
+  // Compute display values based on which plays have been revealed
+  let displayYardLine: number
+  let displayDown: number
+  let displayYardsToGo: number
+
+  if (!isWaitingForReveal) {
+    // Fully caught up — show current live state
+    displayYardLine = driveState.yardLine
+    displayDown = driveState.down
+    displayYardsToGo = driveState.yardsToGo
+  } else {
+    // Waiting — show state BEFORE the unrevealed play ran
+    const unrevealedEntry = playHistory[displayedPlayCount]
+    if (unrevealedEntry) {
+      displayYardLine = unrevealedEntry.yardLine
+      displayDown = unrevealedEntry.down
+      displayYardsToGo = unrevealedEntry.yardsToGo
+    } else {
+      displayYardLine = driveState.yardLine
+      displayDown = driveState.down
+      displayYardsToGo = driveState.yardsToGo
+    }
+  }
+
+  // Gate result text — only show after reveal
+  const lastRevealedEntry = !isWaitingForReveal && playHistory.length > 0
+    ? playHistory[playHistory.length - 1]
+    : displayedPlayCount > 0
+      ? playHistory[displayedPlayCount - 1]
+      : null
+  const resultText = lastRevealedEntry ? formatPlayResult(lastRevealedEntry.result) : null
+
+  // Gate history entries — exclude unrevealed plays
+  const historyEntries = isWaitingForReveal
+    ? playHistory.slice(0, displayedPlayCount)
+    : playHistory
 
   // ── Commentary: generate exactly once per new play (stable ref) ──
-  const playCount = playHistory.length
   const commentaryRef = useRef<{ playCount: number; lines: CommentaryLines | null }>({
     playCount: 0,
     lines: null,
@@ -116,10 +160,10 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
       {/* ═══ Field — takes most vertical space ═══ */}
       <div className="flex-1 flex items-center justify-center min-h-0" style={{ maxHeight: "60dvh" }}>
         <FieldPanel
-          yardLine={yardLine}
+          yardLine={displayYardLine}
           maxYards={maxYards}
-          down={down}
-          yardsToGo={yardsToGo}
+          down={displayDown}
+          yardsToGo={displayYardsToGo}
           ballAnimConfig={ballAnimConfig}
         />
       </div>
@@ -128,17 +172,18 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
       <PlayByPlayAnnouncer
         commentary={commentary}
         playKey={playCount}
+        onOutcomeReveal={handleOutcomeReveal}
       />
 
       {/* ═══ Play Result Line + PlayClock + History ═══ */}
       <div className="relative px-1 py-1">
         <div className="flex items-center justify-between">
           <PlayResultLine
-            resultText={resultText}
+            resultText={isWaitingForReveal ? null : resultText}
             onToggleHistory={() => setHistoryOpen((open) => !open)}
             historyOpen={historyOpen}
           />
-          {!driveState.isComplete && <PlayClock />}
+          {!driveState.isComplete && !isWaitingForReveal && <PlayClock />}
         </div>
         <HistoryDrawer
           entries={historyEntries}
@@ -146,8 +191,9 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
           onClose={() => setHistoryOpen(false)}
         />
       </div>
-      {/* ═══ Drive Completion Overlay — shown when drive is finished ═══ */}
-      {driveState.isComplete && (
+
+      {/* ═══ Drive Completion Overlay — shown when drive is finished and revealed ═══ */}
+      {driveState.isComplete && !isWaitingForReveal && (
         <div className="px-2 py-2">
           <DriveCompletionOverlay
             driveState={driveState}

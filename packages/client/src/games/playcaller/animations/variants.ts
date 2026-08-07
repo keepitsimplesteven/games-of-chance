@@ -43,6 +43,13 @@ export const playCardVariants: Variants = {
   selected: { scale: 0.95, opacity: 1, borderColor: "var(--accent)" },
   unselected: { scale: 1, opacity: 0.5 },
   disabled: { scale: 1, opacity: 0.6, pointerEvents: "none" },
+  highlighted: {
+    scale: 1,
+    opacity: 1,
+    borderColor: "#d4a017",
+    boxShadow: "0 0 12px rgba(212, 160, 23, 0.6)",
+    pointerEvents: "none",
+  },
 }
 
 export const historyDrawerVariants: Variants = {

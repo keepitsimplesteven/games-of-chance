@@ -59,9 +59,6 @@ export function DriveView({
   // Derive circumstance from current down/distance
   const circumstance = useCircumstance(driveState)
 
-  // Get play cards for the current role + circumstance
-  const cards = usePlayCards(circumstance, role)
-
   // ── Play timeline gating ──
   // Instead of gating a boolean, we track which play index the UI has "revealed".
   // The field always shows the state AFTER displayedPlayCount plays have completed.
@@ -74,6 +71,21 @@ export function DriveView({
   // - If displayedPlayCount === playCount, show live state (fully caught up)
   // - If displayedPlayCount < playCount, show the state after the last revealed play
   const isWaitingForReveal = displayedPlayCount < playCount
+
+  // While waiting for reveal, freeze the circumstance to what it was when the player
+  // made their selection (the unrevealed play's starting state). This prevents
+  // the play card names/art from updating and spoiling the outcome.
+  const displayCircumstance = useMemo(() => {
+    if (!isWaitingForReveal) return circumstance
+    const unrevealedEntry = driveState.playHistory[displayedPlayCount]
+    if (unrevealedEntry) {
+      return classifyCircumstance(unrevealedEntry.down, unrevealedEntry.yardsToGo)
+    }
+    return circumstance
+  }, [isWaitingForReveal, circumstance, driveState.playHistory, displayedPlayCount])
+
+  // Get play cards for the current role + frozen circumstance
+  const cards = usePlayCards(displayCircumstance, role)
 
   // Compute display values based on which plays have been revealed
   let displayYardLine: number
