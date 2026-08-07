@@ -1,8 +1,8 @@
 // packages/client/src/games/playcaller/play-by-play/messages.ts
 //
 // Play-by-play announcer commentary keyed by play display name.
-// Start with Fly Route as proof of concept — other plays will return undefined
-// and the UI gracefully shows nothing.
+// The "Default" entry is used as a fallback when a specific play has no
+// registered messages — ensures every play gets commentary.
 
 import type { PlayByPlayMessages } from "./types"
 
@@ -11,9 +11,64 @@ import type { PlayByPlayMessages } from "./types"
  * Key = displayName from offense/defense-names (e.g. "Fly Route", "HB Dive").
  * Value = message pools for each phase of the play.
  *
+ * The "Default" key is the fallback used for any play without its own entry.
  * To add commentary for a new play, add an entry here with the exact displayName.
  */
 export const playByPlayRegistry: Record<string, PlayByPlayMessages> = {
+  "Default": {
+    preSnap: [
+      "The official sets the ball...",
+      "Offense breaks the huddle, coming to the line...",
+      "Both sides dig in at the line of scrimmage...",
+      "The play clock is winding down...",
+      "Offense gets set, checking the defense...",
+    ],
+    activePlay: [
+      "QB gets the snap off in time...",
+      "The ball is snapped, play is live...",
+      "Here we go, the play develops...",
+      "Snap is clean, execution underway...",
+      "The offense makes their move...",
+    ],
+    outcome: {
+      big_gain: [
+        "A big pickup! {yards} yards on the play!",
+        "That's a chunk play — {yards} yards gained!",
+        "Great execution! {yards} yards, moving the chains!",
+        "They'll take that all day! {yards} yard gain!",
+      ],
+      small_gain: [
+        "A gain of {yards}. Keeps things moving.",
+        "Picks up {yards} on the play.",
+        "Short gain of {yards} yards.",
+        "Not much there — {yards} yards.",
+      ],
+      touchdown: [
+        "TOUCHDOWN! They punch it in!",
+        "Into the end zone! TOUCHDOWN!",
+        "That's six! TOUCHDOWN!",
+        "Score! They find the end zone!",
+      ],
+      incomplete: [
+        "Pass falls incomplete.",
+        "No catch. Ball hits the ground.",
+        "Incomplete — defense holds firm.",
+        "The pass is batted away!",
+      ],
+      negative: [
+        "Loss on the play! Pushed back {yards} yards.",
+        "Stuffed behind the line! A {yards} yard loss.",
+        "The defense wins that rep. Negative play.",
+      ],
+      turnover: [
+        "TURNOVER! The defense comes up with it!",
+        "It's a takeaway! Drive is over!",
+        "The ball is loose and the defense has it!",
+        "What a play by the defense — turnover!",
+      ],
+    },
+  },
+
   "Fly Route": {
     preSnap: [
       "Offense lines up, star WR in the slot...",

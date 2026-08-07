@@ -13,7 +13,8 @@ export interface CommentaryLines {
 
 /**
  * Selects a set of 3 commentary lines for a given play result.
- * Returns null if no commentary exists for the play (graceful fallback).
+ * Falls back to the "Default" registry entry if no play-specific messages exist.
+ * Returns null only if even the Default entry is somehow missing (should never happen).
  *
  * @param displayName - The play's display name (e.g. "Fly Route")
  * @param playOutcome - The outcome enum from the play result
@@ -26,7 +27,7 @@ export function selectCommentary(
   yardsGained: number,
   yardsToGo: number
 ): CommentaryLines | null {
-  const messages = playByPlayRegistry[displayName]
+  const messages = playByPlayRegistry[displayName] ?? playByPlayRegistry["Default"]
   if (!messages) return null
 
   const category: OutcomeCategory = categorizeOutcome(playOutcome, yardsGained, yardsToGo)
