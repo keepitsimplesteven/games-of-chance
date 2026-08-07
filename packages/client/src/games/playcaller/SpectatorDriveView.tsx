@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { useTheme } from "../../theme"
 import { usePlayerName } from "./hooks/usePlayerName"
 import { FieldPanel } from "./FieldPanel"
@@ -6,12 +6,12 @@ import { PlayResultLine } from "./PlayResultLine"
 import { PlayClock } from "./PlayClock"
 import { PlayByPlayAnnouncer } from "./PlayByPlayAnnouncer"
 import { HistoryDrawer } from "./HistoryDrawer"
-import { formatPlayResult } from "./field-utils"
+import { formatPlayResult, yardLineToY } from "./field-utils"
 import { getPlayName, classifyCircumstance } from "./play-names"
 import { selectCommentary } from "./play-by-play"
 import type { CommentaryLines } from "./play-by-play/selectCommentary"
 import type { DriveState } from "./field-utils.types"
-import type { BallAnimationConfig } from "./animations/types"
+import type { BallAnimationConfig, BallAnimationType } from "./animations/types"
 import { DriveCompletionOverlay } from "./DriveCompletionOverlay"
 
 export interface SpectatorDriveViewProps {
@@ -119,13 +119,59 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
   }
   const commentary = commentaryRef.current.lines
 
-  // Ball animation config — spectator view uses idle so ball stays at initialY
-  const ballAnimConfig: BallAnimationConfig = {
+  // ── Ball animation config ──
+  // When a play is revealed (displayedPlayCount increments), fire the appropriate
+  // animation type based on the offensive play.
+  const FIELD_HEIGHT = 240
+  const FIELD_TOP = 35 // END_ZONE_HEIGHT(30) + 5px padding
+
+  const [ballAnimConfig, setBallAnimConfig] = useState<BallAnimationConfig>({
     type: "idle",
     duration: 0,
     fromY: 0,
     toY: 0,
-  }
+  })
+
+  const prevDisplayedRef = useRef(displayedPlayCount)
+
+  useEffect(() => {
+    if (displayedPlayCount > prevDisplayedRef.current && displayedPlayCount <= playHistory.length) {
+      const revealedEntry = playHistory[displayedPlayCount - 1]
+      if (revealedEntry) {
+        // Determine animation type from the offensive play
+        let animType: BallAnimationType = "run"
+        if (revealedEntry.offensivePlay.startsWith("pass")) {
+          animType = "pass"
+        }
+        // Turnovers override
+        if (
+          revealedEntry.result.outcome === "interception" ||
+          revealedEntry.result.outcome === "fumble"
+        ) {
+          animType = "turnover"
+        }
+        // Touchdown: ball ended up at or past the goal line
+        if (revealedEntry.resultingYardLine <= 0) {
+          animType = "touchdown"
+        }
+
+        const fromY = yardLineToY(revealedEntry.yardLine, maxYards, FIELD_HEIGHT, FIELD_TOP)
+        const toY = yardLineToY(revealedEntry.resultingYardLine, maxYards, FIELD_HEIGHT, FIELD_TOP)
+        const duration = animType === "pass" ? 1.0 : 0.7
+
+        setBallAnimConfig({ type: animType, duration, fromY, toY })
+
+        // Revert to idle after animation completes
+        const timer = setTimeout(() => {
+          setBallAnimConfig({ type: "idle", duration: 0, fromY: 0, toY: 0 })
+        }, duration * 1000 + 100)
+
+        prevDisplayedRef.current = displayedPlayCount
+        return () => clearTimeout(timer)
+      }
+    }
+    prevDisplayedRef.current = displayedPlayCount
+  }, [displayedPlayCount, playHistory])
 
   const maxYards = 35
 

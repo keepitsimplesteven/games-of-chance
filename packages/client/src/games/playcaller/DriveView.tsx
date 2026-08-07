@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from "react"
+import { useState, useMemo, useRef, useCallback, useEffect } from "react"
 import { useTheme } from "../../theme"
 import { useCircumstance } from "./hooks/useCircumstance"
 import { usePlayCards } from "./hooks/usePlayCards"
@@ -10,12 +10,12 @@ import { HistoryDrawer } from "./HistoryDrawer"
 import { PlayCardGrid } from "./PlayCardGrid"
 import { PlayClock } from "./PlayClock"
 import { PlayByPlayAnnouncer } from "./PlayByPlayAnnouncer"
-import { formatPlayResult } from "./field-utils"
+import { formatPlayResult, yardLineToY } from "./field-utils"
 import { getPlayName, classifyCircumstance } from "./play-names"
 import { selectCommentary } from "./play-by-play"
 import type { CommentaryLines } from "./play-by-play/selectCommentary"
 import type { DriveState } from "./field-utils.types"
-import type { BallAnimationConfig } from "./animations/types"
+import type { BallAnimationConfig, BallAnimationType } from "./animations/types"
 import { DriveCompletionOverlay } from "./DriveCompletionOverlay"
 
 const MAX_YARDS = 35
@@ -127,8 +127,59 @@ export function DriveView({
     return formatPlayResult(lastEntry.result)
   }, [driveState.playHistory])
 
-  // Ball animation config — always idle; ball moves via yard line prop changes
-  const ballAnimConfig: BallAnimationConfig = { type: "idle", duration: 0, fromY: 0, toY: 0 }
+  // ── Ball animation config ──
+  // When a play is revealed (displayedPlayCount increments), fire the appropriate
+  // animation type. After the animation duration elapses, revert to idle.
+  const FIELD_HEIGHT = 240
+  const FIELD_TOP = 35 // END_ZONE_HEIGHT(30) + 5px padding
+
+  const [ballAnimConfig, setBallAnimConfig] = useState<BallAnimationConfig>({
+    type: "idle",
+    duration: 0,
+    fromY: 0,
+    toY: 0,
+  })
+
+  const prevDisplayedRef = useRef(displayedPlayCount)
+
+  useEffect(() => {
+    if (displayedPlayCount > prevDisplayedRef.current && displayedPlayCount <= driveState.playHistory.length) {
+      const revealedEntry = driveState.playHistory[displayedPlayCount - 1]
+      if (revealedEntry) {
+        // Determine animation type from the offensive play
+        let animType: BallAnimationType = "run"
+        if (revealedEntry.offensivePlay.startsWith("pass")) {
+          animType = "pass"
+        }
+        // Turnovers override
+        if (
+          revealedEntry.result.outcome === "interception" ||
+          revealedEntry.result.outcome === "fumble"
+        ) {
+          animType = "turnover"
+        }
+        // Touchdown: ball ended up at or past the goal line
+        if (revealedEntry.resultingYardLine <= 0) {
+          animType = "touchdown"
+        }
+
+        const fromY = yardLineToY(revealedEntry.yardLine, MAX_YARDS, FIELD_HEIGHT, FIELD_TOP)
+        const toY = yardLineToY(revealedEntry.resultingYardLine, MAX_YARDS, FIELD_HEIGHT, FIELD_TOP)
+        const duration = animType === "pass" ? 1.0 : 0.7
+
+        setBallAnimConfig({ type: animType, duration, fromY, toY })
+
+        // Revert to idle after animation completes
+        const timer = setTimeout(() => {
+          setBallAnimConfig({ type: "idle", duration: 0, fromY: 0, toY: 0 })
+        }, duration * 1000 + 100)
+
+        prevDisplayedRef.current = displayedPlayCount
+        return () => clearTimeout(timer)
+      }
+    }
+    prevDisplayedRef.current = displayedPlayCount
+  }, [displayedPlayCount, driveState.playHistory])
 
   // ── Commentary: generate exactly once per new play (stable ref) ──
   const commentaryRef = useRef<{ playCount: number; lines: CommentaryLines | null }>({
