@@ -1,3 +1,5 @@
+import { useTheme } from "../../theme"
+
 interface RoundHeaderProps {
   roundIndex: number
   totalRounds: number
@@ -10,6 +12,8 @@ interface RoundHeaderProps {
  * Validates: Requirements 8.3, 9.1
  */
 export function RoundHeader({ roundIndex, totalRounds }: RoundHeaderProps) {
+  const theme = useTheme()
+
   const getRoundName = () => {
     if (roundIndex === totalRounds - 1) return "Final"
     if (roundIndex === totalRounds - 2) return "Semi-Finals"
@@ -18,7 +22,7 @@ export function RoundHeader({ roundIndex, totalRounds }: RoundHeaderProps) {
   }
 
   return (
-    <div className="text-center text-xl font-bold text-white py-2">
+    <div className={`text-center text-xl font-bold uppercase tracking-wider py-2 ${theme.headingText}`}>
       {getRoundName()}
     </div>
   )

@@ -1,4 +1,5 @@
 import { useGameStore } from "../../store/useGameStore"
+import { useTheme } from "../../theme"
 
 /**
  * RoundControls — host-only controls for round/game flow.
@@ -19,6 +20,7 @@ export default function RoundControls() {
   const totalRounds = useGameStore((s) => s.roomState?.gameSettings?.roundCount ?? 0)
   const startRound = useGameStore((s) => s.startRound)
   const endGame = useGameStore((s) => s.endGame)
+  const theme = useTheme()
 
   // Only host sees these controls
   if (role !== "host") return null
@@ -36,7 +38,7 @@ export default function RoundControls() {
         <button
           type="button"
           onClick={startRound}
-          className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-indigo-700 active:scale-[0.98]"
+          className={`w-full px-4 py-3 text-base font-bold uppercase tracking-wider active:scale-[0.98] ${theme.btnPrimary}`}
         >
           Start Round
         </button>
@@ -55,7 +57,7 @@ export default function RoundControls() {
           type="button"
           onClick={startRound}
           disabled={!roundAnimationDone}
-          className="w-full rounded-lg bg-indigo-600 px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-indigo-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+          className={`w-full px-4 py-3 text-base font-bold uppercase tracking-wider active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${theme.btnPrimary}`}
         >
           {isLastRound ? "View Final Results" : "Next Round"}
         </button>
@@ -64,7 +66,7 @@ export default function RoundControls() {
             type="button"
             onClick={endGame}
             disabled={!roundAnimationDone}
-            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-base font-semibold text-gray-700 shadow-sm transition hover:bg-gray-100 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`w-full px-4 py-3 text-base font-bold uppercase tracking-wider active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${theme.btnGhost}`}
           >
             End Game
           </button>

@@ -30,9 +30,17 @@ import {
   setBigWheelState,
   resetBigWheelState,
 } from "./games/big-wheel/BigWheelPlugin"
-import { generateBracket } from "./games/playcaller/BracketEngine"
-import { setPlaycallerState, resetPlaycallerState, getPlaycallerState, getSpectators, getActiveCompetitors } from "./games/playcaller/PlaycallerPlugin"
+import { generateBracket, isComplete } from "./games/playcaller/BracketEngine"
+import { setPlaycallerState, resetPlaycallerState, getPlaycallerState, getSpectators, getActiveCompetitors, getDriveStates, initializeDrives, resetDriveStates } from "./games/playcaller/PlaycallerPlugin"
 import { PLAYCALLER } from "./games/playcaller/constants"
+import {
+  handlePlaySelection as handlePlaySelectionFn,
+  beginPlaycallerDown as beginPlaycallerDownFn,
+  schedulePlaycallerBotPicks as schedulePlaycallerBotPicksFn,
+  resolvePlaycallerTimeout as resolvePlaycallerTimeoutFn,
+  advancePlaycallerBracket as advancePlaycallerBracketFn,
+  type PlaycallerRoomContext,
+} from "./games/playcaller/roomHandlers"
 import { determineSpinOrder } from "./games/big-wheel/spinOrder"
 import {
   handleDisconnection as handleBigWheelDisconnection,
@@ -245,6 +253,9 @@ export default class GameRoom implements Party.Server {
       case "VOTE_GAME":
         this.handleVoteGame(sender, msg.payload)
         break
+      case "PLAY_SELECTION":
+        this.handlePlaySelection(sender, msg.payload)
+        break
       default:
         this.sendError(
           sender,
@@ -446,6 +457,26 @@ export default class GameRoom implements Party.Server {
       return
     }
 
+    // Playcaller: advance to next bracket round when SKIP_GAMEPLAY is false
+    if (
+      this.state.config.gameType === "playcaller" &&
+      this.state.round.phase === "RESULT" &&
+      this.state.gameSettings.tuning?.SKIP_GAMEPLAY === false
+    ) {
+      const bracket = getPlaycallerState()!
+      if (!isComplete(bracket)) {
+        const currentRound = bracket.rounds[bracket.currentRoundIndex]
+        initializeDrives(currentRound.matchups)
+        this.state.round.roundNumber++
+        this.beginPlaycallerDown()
+        return
+      } else {
+        // Bracket is fully complete — end the game
+        this.autoEndGame()
+        return
+      }
+    }
+
     // If the last round just completed, transition to END_GAME instead of starting a new round
     // (Big Wheel manages its own game end — skip this check for big-wheel)
     const maxRounds = this.getMaxRounds()
@@ -528,6 +559,19 @@ export default class GameRoom implements Party.Server {
           return
         }
       }
+    }
+
+    // ── Playcaller drive mode: route play selections to drive handler ─────
+    if (
+      this.state.config.gameType === "playcaller" &&
+      getDriveStates() !== null &&
+      payload.pick &&
+      typeof payload.pick === "object" &&
+      (payload.pick as any).type === "play_selection"
+    ) {
+      const { matchupId, play } = payload.pick as { type: string; matchupId: string; play: string }
+      this.handlePlaySelection(sender, { matchupId, play })
+      return
     }
 
     // Guard: silently ignore if player already has a pick recorded (pick immutability)
@@ -1055,6 +1099,45 @@ export default class GameRoom implements Party.Server {
     this.broadcastState()
   }
 
+  private handlePlaySelection(
+    sender: Party.Connection,
+    payload: { matchupId: string; play: string }
+  ) {
+    handlePlaySelectionFn(this.getPlaycallerContext(), sender, payload)
+  }
+
+  private advancePlaycallerBracket() {
+    advancePlaycallerBracketFn(this.getPlaycallerContext())
+  }
+
+  private beginPlaycallerDown() {
+    beginPlaycallerDownFn(this.getPlaycallerContext())
+  }
+
+  private schedulePlaycallerBotPicks() {
+    schedulePlaycallerBotPicksFn(this.getPlaycallerContext())
+  }
+
+  private resolvePlaycallerTimeout() {
+    resolvePlaycallerTimeoutFn(this.getPlaycallerContext())
+  }
+
+  /** Build the context object needed by playcaller room handlers */
+  private getPlaycallerContext(): PlaycallerRoomContext {
+    return {
+      state: this.state,
+      broadcastState: () => this.broadcastState(),
+      cancelDeadlineTimer: () => this.cancelDeadlineTimer(),
+      cancelBotPickTimers: () => this.cancelBotPickTimers(),
+      scheduleResolve: (delayMs: number) => this.scheduleResolve(delayMs),
+      sendError: (conn, code, message) => this.sendError(conn, code, message),
+      getPlayerIdByConnectionId: (connId: string) => this.getPlayerIdByConnectionId(connId),
+      botManager: this.botManager,
+      autoEndGame: () => this.autoEndGame(),
+      botPickTimerIds: this.botPickTimerIds,
+    }
+  }
+
   private handleGameTypeChange(
     sender: Party.Connection,
     payload: { gameType: string }
@@ -1271,6 +1354,20 @@ export default class GameRoom implements Party.Server {
 
       // Set round count to bracket's totalRounds
       this.state.gameSettings.roundCount = bracket.totalRounds
+    }
+
+    // ── Playcaller: start down loop if SKIP_GAMEPLAY is false ──────────
+    if (this.state.config.gameType === "playcaller" && this.state.gameSettings.tuning?.SKIP_GAMEPLAY === false) {
+      const bracket = getPlaycallerState()!
+      if (isComplete(bracket)) {
+        // Bracket is done — end the game
+        this.autoEndGame()
+        return
+      }
+      const currentRound = bracket.rounds[bracket.currentRoundIndex]
+      initializeDrives(currentRound.matchups)
+      this.beginPlaycallerDown()
+      return
     }
 
     // ── Big Wheel: check if current player is disconnected and skip ───────
@@ -1929,7 +2026,13 @@ export default class GameRoom implements Party.Server {
    */
   private scheduleResolve(delayMs: number) {
     this.cancelDeadlineTimer()
-    this.deadlineTimerId = setTimeout(() => this.resolveRound(), delayMs)
+    this.deadlineTimerId = setTimeout(() => {
+      if (this.state.config.gameType === "playcaller" && getDriveStates() !== null) {
+        this.resolvePlaycallerTimeout()
+      } else {
+        this.resolveRound()
+      }
+    }, delayMs)
   }
 
   // ── Utilities ──────────────────────────────────────────────────────────
@@ -2128,10 +2231,26 @@ export default class GameRoom implements Party.Server {
     if (this.state.config.gameType === "playcaller") {
       const bracket = getPlaycallerState()
       if (bracket) {
+        // Strip circular finalState from drive completions before serialization
+        const rawDrives = getDriveStates()
+        let serializableDrives: Record<string, unknown> | null = null
+        if (rawDrives) {
+          serializableDrives = {}
+          for (const [id, drive] of Object.entries(rawDrives)) {
+            if (drive.completion) {
+              const { finalState, ...rest } = drive.completion
+              serializableDrives[id] = { ...drive, completion: rest }
+            } else {
+              serializableDrives[id] = drive
+            }
+          }
+        }
+
         playcallerGameState = {
           bracket,
           spectators: getSpectators(),
           activeCompetitors: getActiveCompetitors(),
+          driveStates: serializableDrives as any,
         }
       }
     }

@@ -54,11 +54,11 @@ export default function GameTileGrid() {
   const voteGame = useGameStore((s) => s.voteGame)
   const progressionMode = useGameStore((s) => s.roomState?.room.progressionMode)
   const tournamentProgress = useGameStore((s) => s.roomState?.tournamentProgress)
+  const state = useGameStore((s) => s.roomState)
   const theme = useTheme()
 
   const isHost = role === "host"
   const isTournament = progressionMode === "tournament"
-
   /** Determine tile status in tournament mode */
   const getTileStatus = (gameId: string): TournamentTileStatus | null => {
     if (!isTournament || !tournamentProgress) return null
@@ -66,6 +66,7 @@ export default function GameTileGrid() {
   }
 
   const handleTileClick = (gameId: string) => {
+
     if (isHost) {
       // Host selects the game directly
       setGameType(gameId)

@@ -236,6 +236,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
         battleHPState: null,
         currentRoundNumber: state.round.roundNumber,
       })
+    } else if (
+      // Playcaller per-down reset: new pick deadline means a new down started
+      state.round.phase === "PICKING" &&
+      state.round.pickDeadlineMs !== null &&
+      get().roomState?.round.pickDeadlineMs !== null &&
+      state.round.pickDeadlineMs !== get().roomState?.round.pickDeadlineMs
+    ) {
+      set({
+        roomState: state,
+        role: serverRole,
+        pickSubmitted: false,
+        currentPick: null,
+        ...clearBattle,
+      })
     } else {
       set({
         roomState: state,

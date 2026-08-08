@@ -116,6 +116,11 @@ export class BotManager {
           picks[botId] = { type: "spin" }
           break
         }
+        case "playcaller": {
+          // Bot picks are handled per-down by schedulePlaycallerBotPicks in room.ts
+          // This case is a no-op for the standard scheduleBotPicks path
+          break
+        }
         default: {
           // Fallback: no pick for unknown game types
           break
