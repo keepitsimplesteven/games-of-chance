@@ -1588,6 +1588,9 @@ export default class GameRoom implements Party.Server {
       this.state.gameScores
     )
 
+    // Sync session scores per-round in Chips mode
+    this.syncChipsSessionScores()
+
     // ── Big Wheel: handle spin advancement after resolution ───────────────
     if (this.state.config.gameType === "big-wheel") {
       const bwState = getBigWheelState()
@@ -1707,6 +1710,9 @@ export default class GameRoom implements Party.Server {
       Object.values(this.state.players),
       this.state.gameScores
     )
+
+    // Sync session scores per-round in Chips mode
+    this.syncChipsSessionScores()
 
     // For battle-bots rounds 2 and 3, replay tick logs asynchronously before transitioning
     if (this.state.config.gameType === "battle-bots" && this.state.round.roundNumber >= 2) {
@@ -2132,6 +2138,20 @@ export default class GameRoom implements Party.Server {
       clearTimeout(timerId)
     }
     this.botPickTimerIds = []
+  }
+
+  /**
+   * In Chips mode, sync sessionScores from gameScores after each round so that
+   * the session leaderboard (PlayerList) reflects live running totals during play.
+   * No-op for Grand Prix mode (session scores are only set at game end).
+   */
+  private syncChipsSessionScores(): void {
+    if (this.state.config.scoringMode !== "chips") return
+
+    for (const playerId of Object.keys(this.state.players)) {
+      this.state.sessionScores[playerId] = this.state.gameScores[playerId] ?? 0
+    }
+    this.state.sessionLeaderboard = this.computeSessionLeaderboard()
   }
 
   /**
