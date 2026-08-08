@@ -321,28 +321,28 @@ const manPressStandard: PlayArtData = {
     { position: { x: 44, y: 63 }, shape: "square" },
     { position: { x: 56, y: 63 }, shape: "square" },
     { position: { x: 68, y: 63 }, shape: "square" },
-    // Press corners at LOS (highlighted — jamming)
-    { position: { x: 12, y: 62 }, shape: "circle", highlighted: true },
-    { position: { x: 88, y: 62 }, shape: "circle", highlighted: true },
-    // LBs in man assignments (2)
-    { position: { x: 38, y: 54 }, shape: "circle" },
-    { position: { x: 62, y: 54 }, shape: "circle" },
+    // Blitzing corners from edges (highlighted)
+    { position: { x: 12, y: 56 }, shape: "circle", highlighted: true },
+    { position: { x: 88, y: 56 }, shape: "circle", highlighted: true },
+    // Blitzing LBs (2 — highlighted)
+    { position: { x: 38, y: 54 }, shape: "circle", highlighted: true },
+    { position: { x: 62, y: 54 }, shape: "circle", highlighted: true },
     // Free safety deep
     { position: { x: 50, y: 35 }, shape: "circle" },
-    // Slot corners (2)
-    { position: { x: 25, y: 56 }, shape: "circle" },
-    { position: { x: 75, y: 56 }, shape: "circle" },
+    // Slot blitzers (2 — highlighted)
+    { position: { x: 25, y: 56 }, shape: "circle", highlighted: true },
+    { position: { x: 75, y: 56 }, shape: "circle", highlighted: true },
   ],
   routes: [
-    // Press corners mirror receivers
-    { from: { x: 12, y: 62 }, to: { x: 12, y: 50 }, style: "arrow" },
-    { from: { x: 88, y: 62 }, to: { x: 88, y: 50 }, style: "arrow" },
-    // Slot corners trail
-    { from: { x: 25, y: 56 }, to: { x: 22, y: 46 }, style: "arrow" },
-    { from: { x: 75, y: 56 }, to: { x: 78, y: 46 }, style: "arrow" },
-    // LBs shadow man assignments
-    { from: { x: 38, y: 54 }, to: { x: 35, y: 46 }, style: "curved", control: { x: 32, y: 50 } },
-    { from: { x: 62, y: 54 }, to: { x: 65, y: 46 }, style: "curved", control: { x: 68, y: 50 } },
+    // Corners blitz toward LOS
+    { from: { x: 12, y: 56 }, to: { x: 18, y: 66 }, style: "arrow" },
+    { from: { x: 88, y: 56 }, to: { x: 82, y: 66 }, style: "arrow" },
+    // Slot blitzers attack toward LOS
+    { from: { x: 25, y: 56 }, to: { x: 28, y: 66 }, style: "arrow" },
+    { from: { x: 75, y: 56 }, to: { x: 72, y: 66 }, style: "arrow" },
+    // LBs fire toward LOS
+    { from: { x: 38, y: 54 }, to: { x: 40, y: 66 }, style: "arrow" },
+    { from: { x: 62, y: 54 }, to: { x: 60, y: 66 }, style: "arrow" },
   ],
   zones: [],
 }

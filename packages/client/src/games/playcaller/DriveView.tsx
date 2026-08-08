@@ -4,7 +4,7 @@ import { useCircumstance } from "./hooks/useCircumstance"
 import { usePlayCards } from "./hooks/usePlayCards"
 import { usePlayerName } from "./hooks/usePlayerName"
 import { FieldPanel } from "./FieldPanel"
-import { MiniScoreboard } from "./MiniScoreboard"
+import { GatedMiniScoreboard } from "./GatedMiniScoreboard"
 import { PlayResultLine } from "./PlayResultLine"
 import { HistoryDrawer } from "./HistoryDrawer"
 import { PlayCardGrid } from "./PlayCardGrid"
@@ -266,18 +266,9 @@ console.log("playHistory", driveState.playHistory)
         {showSidePanel && (
           <div className="overflow-auto flex flex-col mt-6 gap-1.5 w-[140px] shrink-0">
             {otherDrives.map(({ matchupId: mId, driveState: ds }) => (
-              <MiniScoreboard
+              <GatedMiniScoreboard
                 key={mId}
-                down={ds.down}
-                yardsToGo={ds.yardsToGo}
-                yardLine={ds.yardLine}
-                offensePlayerName={getPlayerName(ds.offensePlayerId)}
-                defensePlayerName={getPlayerName(ds.defensePlayerId)}
-                isComplete={ds.isComplete}
-                endingType={ds.completion?.endingType}
-                winnerId={ds.completion?.winner}
-                offensePlayerId={ds.offensePlayerId}
-                defensePlayerId={ds.defensePlayerId}
+                driveState={ds}
               />
             ))}
           </div>

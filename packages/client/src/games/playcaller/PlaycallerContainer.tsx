@@ -53,10 +53,6 @@ export function PlaycallerContainer() {
   const phase = roomState.round.phase
   const playcallerGameState = roomState.playcallerGameState as PlaycallerGameState | null | undefined
   
-  if(phase === "RESULT") {
-    console.log("HIT RESULT PHASE")
-  }
-
   if (phase === "LOBBY" || phase === "END_GAME") return null
 
   // If no playcaller game state is available yet, show loading
@@ -75,7 +71,7 @@ export function PlaycallerContainer() {
 
   /** Configurable delay (ms) before signaling round animation is done.
    *  Gives the final play's announcer timeline time to complete. */
-  const ROUND_END_DELAY_MS = 5000
+  const ROUND_END_DELAY_MS = 500
 
   // Delay marking the round animation as done so the last play's timeline
   // has time to show the outcome before the host can advance.
@@ -292,13 +288,11 @@ export function PlaycallerContainer() {
   // ═══════════════════════════════════════════════════════════════════════════
   // Phase 1 fallback: No drive states — bracket visualization behavior
   // ═══════════════════════════════════════════════════════════════════════════
-console.log("phase", phase)
+
   // Between rounds (RESULT phase): show full bracket visualization
   if (phase === "RESULT") {
     // Show the just-resolved round's matchups (currentRoundIndex was already incremented)
     const resolvedRoundIndex = bracket.currentRoundIndex - 1
-    const resolvedRound = bracket.rounds[resolvedRoundIndex]
-    const resolvedMatchups = resolvedRound?.matchups ?? []
 
     return (
       <div className="flex flex-col items-center gap-4 py-4">
@@ -306,7 +300,7 @@ console.log("phase", phase)
           roundIndex={resolvedRoundIndex}
           totalRounds={bracket.totalRounds}
         />
-        <div className="text-sm text-amber-300 font-medium">
+        <div className="text-sm text-[#f5c542] font-medium uppercase tracking-wider">
           Round Complete
         </div>
         <BracketVisualization bracket={bracket} />

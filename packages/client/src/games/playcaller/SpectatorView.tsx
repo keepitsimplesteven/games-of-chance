@@ -58,7 +58,7 @@ function MatchupCard({ matchup, seeds, phase, getPlayerName }: MatchupCardProps)
   const isResolved = winner !== null
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800 p-4 flex flex-col gap-2">
+    <div className="rounded-lg border border-gray-700 bg-gray-800 p-4 flex flex-col gap-2">asdfasdfasdf
       <PlayerRow
         playerId={playerA}
         displayName={getPlayerName(playerA)}

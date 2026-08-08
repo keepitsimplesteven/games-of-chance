@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react"
 import type { Bracket, BracketRound, Matchup } from "@games-of-chance/shared"
 import { useGameStore } from "../../store/useGameStore"
 
@@ -33,6 +34,8 @@ function getRoundLabel(roundIndex: number, totalRounds: number): string {
 
 export function BracketVisualization({ bracket }: BracketVisualizationProps) {
   const players = useGameStore((s) => s.roomState?.players ?? [])
+  const phase = useGameStore((s) => s.roomState?.round.phase)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   /** Resolve a player ID to display name with seed */
   function getPlayerDisplay(playerId: string): string {
@@ -48,8 +51,25 @@ export function BracketVisualization({ bracket }: BracketVisualizationProps) {
     return playerId in bracket.eliminated
   }
 
+  // Auto-scroll to the just-completed round on mobile during RESULT phase
+  useEffect(() => {
+    if (phase !== "RESULT" || !scrollRef.current) return
+    // The resolved round is currentRoundIndex - 1 (server already incremented)
+    const targetIndex = bracket.currentRoundIndex - 1
+    if (targetIndex < 0) return
+
+    const container = scrollRef.current
+    const columns = container.querySelectorAll<HTMLElement>("[data-round-index]")
+    const targetCol = columns[targetIndex]
+    if (!targetCol) return
+
+    // Smooth scroll so the resolved round is visible
+    const scrollLeft = targetCol.offsetLeft - container.offsetLeft - 8
+    container.scrollTo({ left: scrollLeft, behavior: "smooth" })
+  }, [phase, bracket.currentRoundIndex])
+
   return (
-    <div className="w-full overflow-x-auto">
+    <div ref={scrollRef} className="w-full overflow-x-auto">
       <div className="flex min-w-max gap-4 px-2 py-4">
         {bracket.rounds.map((round) => (
           <RoundColumn
@@ -81,9 +101,9 @@ function RoundColumn({
   isEliminated,
 }: RoundColumnProps) {
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div className="flex flex-col items-center gap-3" data-round-index={round.roundIndex}>
       {/* Round label */}
-      <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+      <div className="text-xs font-semibold uppercase tracking-wide text-[#f5c542]">
         {getRoundLabel(round.roundIndex, totalRounds)}
       </div>
 
@@ -133,7 +153,7 @@ function MatchupCard({
   const { playerA, playerB, winner } = matchup
 
   return (
-    <div className="w-44 rounded-lg border border-gray-700 bg-gray-800 shadow-sm">
+    <div className="w-44 border-2 border-[#2a7a3a] bg-[#1b5e2a] shadow-sm">
       {/* Player A */}
       <PlayerSlot
         playerId={playerA}
@@ -141,11 +161,10 @@ function MatchupCard({
         isWinner={resolved && winner === playerA}
         isLoser={resolved && !!winner && winner !== playerA && !!playerA}
         isEliminated={playerA ? isEliminated(playerA) : false}
-        position="top"
       />
 
       {/* Divider */}
-      <div className="border-t border-gray-700" />
+      <div className="border-t border-[#2a7a3a]" />
 
       {/* Player B */}
       <PlayerSlot
@@ -154,7 +173,6 @@ function MatchupCard({
         isWinner={resolved && winner === playerB}
         isLoser={resolved && !!winner && winner !== playerB && !!playerB}
         isEliminated={playerB ? isEliminated(playerB) : false}
-        position="bottom"
       />
     </div>
   )
@@ -168,7 +186,6 @@ interface PlayerSlotProps {
   isWinner: boolean
   isLoser: boolean
   isEliminated: boolean
-  position: "top" | "bottom"
 }
 
 function PlayerSlot({
@@ -177,26 +194,23 @@ function PlayerSlot({
   isWinner,
   isLoser,
   isEliminated,
-  position,
 }: PlayerSlotProps) {
   const isTBD = !playerId
 
-  // Build class names based on state
+  // Build class names based on state — using retro-casino palette
   const baseClasses = "px-3 py-2 text-sm truncate"
-  const roundingClasses =
-    position === "top" ? "rounded-t-lg" : "rounded-b-lg"
 
-  let stateClasses = "text-gray-300"
+  let stateClasses = "text-[#f0f0f0]" // bodyText white
   if (isTBD) {
-    stateClasses = "text-gray-600 italic"
+    stateClasses = "text-[#3a9a4a] italic" // mutedText green
   } else if (isWinner) {
-    stateClasses = "text-green-400 font-bold bg-green-900/20 border-l-2 border-green-500"
+    stateClasses = "text-[#f5c542] font-bold bg-[#2a7a3a]/30 border-l-4 border-[#f5c542]"
   } else if (isLoser || isEliminated) {
-    stateClasses = "text-gray-500 line-through opacity-50"
+    stateClasses = "text-[#3a9a4a]/50 line-through opacity-50"
   }
 
   return (
-    <div className={`${baseClasses} ${roundingClasses} ${stateClasses}`}>
+    <div className={`${baseClasses} ${stateClasses}`}>
       {display}
     </div>
   )
@@ -210,10 +224,10 @@ interface ByeCardProps {
 
 function ByeCard({ playerDisplay }: ByeCardProps) {
   return (
-    <div className="w-44 rounded-lg border border-dashed border-amber-600/50 bg-gray-800/50 px-3 py-2">
+    <div className="w-44 border-2 border-dashed border-[#f5c542]/50 bg-[#1b5e2a]/50 px-3 py-2">
       <div className="flex items-center justify-between">
-        <span className="text-sm text-amber-300 truncate">{playerDisplay}</span>
-        <span className="ml-2 text-xs font-medium uppercase text-amber-500">
+        <span className="text-sm text-[#f5c542] truncate">{playerDisplay}</span>
+        <span className="ml-2 text-xs font-medium uppercase text-[#f5c542]/70">
           BYE
         </span>
       </div>
