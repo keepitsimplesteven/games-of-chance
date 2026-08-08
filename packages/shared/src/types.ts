@@ -1,6 +1,8 @@
 // packages/shared/src/types.ts
 // All shared TypeScript types for the Games of Chance platform
 
+import type { CoinTossGameState } from "./games/coin-toss/types"
+
 // ── Core Types ─────────────────────────────────────────────────────────────
 
 /** Extensible game type identifier (e.g. "coin-toss", "dice-roll") */
@@ -199,6 +201,8 @@ export interface RoomState {
   gameSettings: GameSettings
   /** Whether settings are currently locked (active game in progress) */
   settingsLocked: boolean
+  /** Coin Toss game state — present only during a coin-toss game */
+  coinTossGameState?: CoinTossGameState | null
   /** Big Wheel game state — present only during a big-wheel game */
   bigWheelGameState?: BigWheelGameState | null
   /** Playcaller game state — present only during a playcaller game */

@@ -6,6 +6,8 @@ import type {
   CoinTossResult,
   CoinSide,
   GameSettings,
+  TossHistoryEntry,
+  CoinTossGameState,
 } from "@games-of-chance/shared"
 import type { GamePlugin } from "../GamePlugin"
 import { registry } from "../GameRegistry"
@@ -22,6 +24,9 @@ let streakState: StreakState = {
 /** Last round's applied multipliers (for leaderboard display) */
 let lastAppliedMultipliers: Record<string, number> = {}
 
+/** Ordered toss history — one entry per resolved round */
+let tossHistory: TossHistoryEntry[] = []
+
 /**
  * Resets the module-level streak state. Called when a new game starts.
  */
@@ -31,6 +36,7 @@ export function resetCoinTossStreakState(): void {
     wrongStreaks: {},
   }
   lastAppliedMultipliers = {}
+  tossHistory = []
 }
 
 /**
@@ -38,6 +44,14 @@ export function resetCoinTossStreakState(): void {
  */
 export function getStreakState(): StreakState {
   return streakState
+}
+
+/**
+ * Returns the current coin-toss game state for client broadcast.
+ */
+export function getCoinTossGameState(): CoinTossGameState | null {
+  if (tossHistory.length === 0) return null
+  return { tossHistory }
 }
 
 // ── Plugin Implementation ──────────────────────────────────────────────────
@@ -90,6 +104,17 @@ export const coinTossPlugin: GamePlugin<CoinTossPick, CoinTossResult> = {
     // Update module-level streak state
     streakState = scoringResult.nextStreakState
     lastAppliedMultipliers = scoringResult.appliedMultipliers
+
+    // Record this toss in history
+    const picksRecord: Record<string, CoinSide> = {}
+    for (const [id, pick] of Object.entries(connectedPicks)) {
+      picksRecord[id] = pick.side
+    }
+    tossHistory.push({
+      outcome: result.outcome,
+      picks: picksRecord,
+      deltas: scoringResult.deltas,
+    })
 
     return { deltas: scoringResult.deltas }
   },
