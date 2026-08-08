@@ -635,20 +635,28 @@ export default class GameRoom implements Party.Server {
     this.cancelTickReplay()
 
     // Apply session scoring based on scoringMode
-    const strategy = getStrategy(
-      this.state.config.scoringMode,
-      this.state.config.placementPoints
-    )
-    const sessionUpdate = strategy.applyGameResult(
-      Object.values(this.state.players),
-      this.state.gameLeaderboard,
-      this.state.gameScores
-    )
+    if (this.state.config.scoringMode === "chips") {
+      // In Chips mode, gameScores already include the session carry-in,
+      // so they ARE the new session totals — set directly.
+      for (const playerId of Object.keys(this.state.players)) {
+        this.state.sessionScores[playerId] = this.state.gameScores[playerId] ?? 0
+      }
+    } else {
+      const strategy = getStrategy(
+        this.state.config.scoringMode,
+        this.state.config.placementPoints
+      )
+      const sessionUpdate = strategy.applyGameResult(
+        Object.values(this.state.players),
+        this.state.gameLeaderboard,
+        this.state.gameScores
+      )
 
-    // Accumulate session scores (additive only — monotonically increasing)
-    for (const [playerId, points] of Object.entries(sessionUpdate.sessionScores)) {
-      this.state.sessionScores[playerId] =
-        (this.state.sessionScores[playerId] ?? 0) + points
+      // Accumulate session scores (additive only — monotonically increasing)
+      for (const [playerId, points] of Object.entries(sessionUpdate.sessionScores)) {
+        this.state.sessionScores[playerId] =
+          (this.state.sessionScores[playerId] ?? 0) + points
+      }
     }
 
     // Increment games played for all current players
@@ -661,9 +669,14 @@ export default class GameRoom implements Party.Server {
     this.state.sessionLeaderboard = this.computeSessionLeaderboard()
 
     // Reset game scores and game leaderboard for next game
+    // In Chips mode, seed gameScores with session totals so the next plugin
+    // starts with each player's running chip count already in place.
     this.state.gameScores = {}
     for (const playerId of Object.keys(this.state.players)) {
-      this.state.gameScores[playerId] = 0
+      this.state.gameScores[playerId] =
+        this.state.config.scoringMode === "chips"
+          ? (this.state.sessionScores[playerId] ?? 0)
+          : 0
     }
     this.state.gameLeaderboard = []
 
@@ -1006,9 +1019,14 @@ export default class GameRoom implements Party.Server {
     }
 
     // Reset game scores
+    // In Chips mode, seed gameScores with session totals so the next plugin
+    // starts with each player's running chip count already in place.
     this.state.gameScores = {}
     for (const playerId of Object.keys(this.state.players)) {
-      this.state.gameScores[playerId] = 0
+      this.state.gameScores[playerId] =
+        this.state.config.scoringMode === "chips"
+          ? (this.state.sessionScores[playerId] ?? 0)
+          : 0
     }
     this.state.gameLeaderboard = []
 
@@ -1570,6 +1588,9 @@ export default class GameRoom implements Party.Server {
       this.state.gameScores
     )
 
+    // Sync session scores per-round in Chips mode
+    this.syncChipsSessionScores()
+
     // ── Big Wheel: handle spin advancement after resolution ───────────────
     if (this.state.config.gameType === "big-wheel") {
       const bwState = getBigWheelState()
@@ -1689,6 +1710,9 @@ export default class GameRoom implements Party.Server {
       Object.values(this.state.players),
       this.state.gameScores
     )
+
+    // Sync session scores per-round in Chips mode
+    this.syncChipsSessionScores()
 
     // For battle-bots rounds 2 and 3, replay tick logs asynchronously before transitioning
     if (this.state.config.gameType === "battle-bots" && this.state.round.roundNumber >= 2) {
@@ -1913,19 +1937,27 @@ export default class GameRoom implements Party.Server {
     this.cancelTickReplay()
 
     // Apply session scoring before transitioning to END_GAME
-    const strategy = getStrategy(
-      this.state.config.scoringMode,
-      this.state.config.placementPoints
-    )
-    const sessionUpdate = strategy.applyGameResult(
-      Object.values(this.state.players),
-      this.state.gameLeaderboard,
-      this.state.gameScores
-    )
+    if (this.state.config.scoringMode === "chips") {
+      // In Chips mode, gameScores already include the session carry-in,
+      // so they ARE the new session totals — set directly.
+      for (const playerId of Object.keys(this.state.players)) {
+        this.state.sessionScores[playerId] = this.state.gameScores[playerId] ?? 0
+      }
+    } else {
+      const strategy = getStrategy(
+        this.state.config.scoringMode,
+        this.state.config.placementPoints
+      )
+      const sessionUpdate = strategy.applyGameResult(
+        Object.values(this.state.players),
+        this.state.gameLeaderboard,
+        this.state.gameScores
+      )
 
-    for (const [playerId, points] of Object.entries(sessionUpdate.sessionScores)) {
-      this.state.sessionScores[playerId] =
-        (this.state.sessionScores[playerId] ?? 0) + points
+      for (const [playerId, points] of Object.entries(sessionUpdate.sessionScores)) {
+        this.state.sessionScores[playerId] =
+          (this.state.sessionScores[playerId] ?? 0) + points
+      }
     }
 
     for (const playerId of Object.keys(this.state.players)) {
@@ -1957,19 +1989,25 @@ export default class GameRoom implements Party.Server {
     )
 
     // Apply session scoring before transitioning to END_GAME
-    const strategy = getStrategy(
-      this.state.config.scoringMode,
-      this.state.config.placementPoints
-    )
-    const sessionUpdate = strategy.applyGameResult(
-      Object.values(this.state.players),
-      this.state.gameLeaderboard,
-      this.state.gameScores
-    )
+    if (this.state.config.scoringMode === "chips") {
+      for (const playerId of Object.keys(this.state.players)) {
+        this.state.sessionScores[playerId] = this.state.gameScores[playerId] ?? 0
+      }
+    } else {
+      const strategy = getStrategy(
+        this.state.config.scoringMode,
+        this.state.config.placementPoints
+      )
+      const sessionUpdate = strategy.applyGameResult(
+        Object.values(this.state.players),
+        this.state.gameLeaderboard,
+        this.state.gameScores
+      )
 
-    for (const [playerId, points] of Object.entries(sessionUpdate.sessionScores)) {
-      this.state.sessionScores[playerId] =
-        (this.state.sessionScores[playerId] ?? 0) + points
+      for (const [playerId, points] of Object.entries(sessionUpdate.sessionScores)) {
+        this.state.sessionScores[playerId] =
+          (this.state.sessionScores[playerId] ?? 0) + points
+      }
     }
 
     for (const playerId of Object.keys(this.state.players)) {
@@ -2100,6 +2138,20 @@ export default class GameRoom implements Party.Server {
       clearTimeout(timerId)
     }
     this.botPickTimerIds = []
+  }
+
+  /**
+   * In Chips mode, sync sessionScores from gameScores after each round so that
+   * the session leaderboard (PlayerList) reflects live running totals during play.
+   * No-op for Grand Prix mode (session scores are only set at game end).
+   */
+  private syncChipsSessionScores(): void {
+    if (this.state.config.scoringMode !== "chips") return
+
+    for (const playerId of Object.keys(this.state.players)) {
+      this.state.sessionScores[playerId] = this.state.gameScores[playerId] ?? 0
+    }
+    this.state.sessionLeaderboard = this.computeSessionLeaderboard()
   }
 
   /**

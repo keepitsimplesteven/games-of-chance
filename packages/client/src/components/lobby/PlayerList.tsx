@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { useGameStore } from "../../store/useGameStore"
 import { useTheme } from "../../theme"
+import { useDeferredRevealValue } from "../../hooks/useDeferredRevealValue"
 
 /** Check if a player ID belongs to a bot */
 function isBot(playerId: string): boolean {
@@ -27,9 +28,12 @@ export default function PlayerList() {
 
   const { players, sessionLeaderboard } = roomState
 
-  // Build a lookup for session data
+  // Gate session leaderboard behind animation reveal to prevent spoiling outcomes
+  const deferredLeaderboard = useDeferredRevealValue(sessionLeaderboard)
+
+  // Build a lookup for session data (using deferred values during animation)
   const sessionDataMap = new Map(
-    sessionLeaderboard.map((entry) => [entry.playerId, entry])
+    deferredLeaderboard.map((entry) => [entry.playerId, entry])
   )
 
   // Sort: by session score descending, then humans before bots
