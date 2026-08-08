@@ -24,7 +24,7 @@ import { COIN_TOSS } from "./games/coin-toss/constants"
 import { BATTLE_BOTS } from "./games/battle-bots/constants"
 import { BIG_WHEEL } from "./games/big-wheel/constants"
 import { getRobotTemplates, resetGameState as resetBattleBotsState } from "./games/battle-bots/BattleBotsPlugin"
-import { resetCoinTossStreakState } from "./games/coin-toss/CoinTossPlugin"
+import { resetCoinTossStreakState, getCoinTossGameState } from "./games/coin-toss/CoinTossPlugin"
 import {
   getBigWheelState,
   setBigWheelState,
@@ -2316,6 +2316,7 @@ export default class GameRoom implements Party.Server {
       adjustmentLog: this.state.adjustmentLog ?? [],
       gameSettings: this.state.gameSettings,
       settingsLocked: this.state.settingsLocked,
+      coinTossGameState: this.state.config.gameType === "coin-toss" ? getCoinTossGameState() : undefined,
       bigWheelGameState,
       playcallerGameState,
       gameVotes: this.state.gameVotes,
