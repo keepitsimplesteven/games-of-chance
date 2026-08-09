@@ -35,7 +35,7 @@ async function joinWithMode(
       progressionMode: opts.progressionMode,
     },
   })
-  await gameRoom.onMessage(joinMsg, conn as any)
+  await gameRoom.onMessage(conn as any, joinMsg)
   return conn
 }
 
@@ -101,7 +101,7 @@ describe("Endless mode", () => {
         type: "SET_GAME_TYPE",
         payload: { gameType },
       })
-      await gameRoom.onMessage(msg, hostConn as any)
+      await gameRoom.onMessage(hostConn as any, msg)
 
       const state = getStateFromBroadcast(mockRoom)
       expect(state.room.gameType).toBe(gameType)
@@ -133,7 +133,7 @@ describe("Endless mode", () => {
         type: "SET_GAME_TYPE",
         payload: { gameType },
       })
-      await gameRoom.onMessage(msg, hostConn as any)
+      await gameRoom.onMessage(hostConn as any, msg)
 
       const state = getStateFromBroadcast(mockRoom)
       // Every registered game must be selectable in endless mode
@@ -156,7 +156,7 @@ describe("Endless mode", () => {
       type: "SET_GAME_TYPE",
       payload: { gameType: "playcaller" },
     })
-    await gameRoom.onMessage(msg, hostConn as any)
+    await gameRoom.onMessage(hostConn as any, msg)
 
     const state = getStateFromBroadcast(mockRoom)
     expect(state.room.gameType).toBe("playcaller")
@@ -182,11 +182,11 @@ describe("Endless mode", () => {
       type: "SET_GAME_TYPE",
       payload: { gameType: "playcaller" },
     })
-    await gameRoom.onMessage(setGameMsg, hostConn as any)
+    await gameRoom.onMessage(hostConn as any, setGameMsg)
 
     // Start the game (4 players → 2 bracket rounds)
     const startMsg = JSON.stringify({ type: "START_ROUND" })
-    await gameRoom.onMessage(startMsg, hostConn as any)
+    await gameRoom.onMessage(hostConn as any, startMsg)
 
     let state = getStateFromBroadcast(mockRoom)
     expect(state.round.phase).toBe("PICKING")
@@ -197,7 +197,7 @@ describe("Endless mode", () => {
     expect(state.round.phase).toBe("RESULT")
 
     // Host advances to round 2
-    await gameRoom.onMessage(startMsg, hostConn as any)
+    await gameRoom.onMessage(hostConn as any, startMsg)
     state = getStateFromBroadcast(mockRoom)
     expect(state.round.phase).toBe("PICKING")
 
@@ -207,7 +207,7 @@ describe("Endless mode", () => {
     expect(state.round.phase).toBe("RESULT")
 
     // Host advances after the final round → should go to END_GAME, NOT END_TOURNAMENT
-    await gameRoom.onMessage(startMsg, hostConn as any)
+    await gameRoom.onMessage(hostConn as any, startMsg)
 
     state = getStateFromBroadcast(mockRoom)
     expect(state.round.phase).toBe("END_GAME")
@@ -232,14 +232,14 @@ describe("Endless mode", () => {
 
     // Play a coin-toss game to completion
     const startMsg = JSON.stringify({ type: "START_ROUND" })
-    await gameRoom.onMessage(startMsg, hostConn as any)
+    await gameRoom.onMessage(hostConn as any, startMsg)
 
     // Advance past pick window to trigger resolution
     vi.advanceTimersByTime(15100)
 
     // End the game
     const endMsg = JSON.stringify({ type: "END_GAME" })
-    await gameRoom.onMessage(endMsg, hostConn as any)
+    await gameRoom.onMessage(hostConn as any, endMsg)
 
     let state = getStateFromBroadcast(mockRoom)
     expect(state.round.phase).toBe("LOBBY")
@@ -252,7 +252,7 @@ describe("Endless mode", () => {
       type: "SET_GAME_TYPE",
       payload: { gameType: "coin-toss" },
     })
-    await gameRoom.onMessage(setGameMsg, hostConn as any)
+    await gameRoom.onMessage(hostConn as any, setGameMsg)
 
     state = getStateFromBroadcast(mockRoom)
     expect(state.room.gameType).toBe("coin-toss")
@@ -275,10 +275,10 @@ describe("Endless mode", () => {
     // Play coin-toss multiple times to simulate "games played" in endless
     for (let i = 0; i < 3; i++) {
       const startMsg = JSON.stringify({ type: "START_ROUND" })
-      await gameRoom.onMessage(startMsg, hostConn as any)
+      await gameRoom.onMessage(hostConn as any, startMsg)
       vi.advanceTimersByTime(15100)
       const endMsg = JSON.stringify({ type: "END_GAME" })
-      await gameRoom.onMessage(endMsg, hostConn as any)
+      await gameRoom.onMessage(hostConn as any, endMsg)
     }
 
     // Verify we're back in LOBBY
@@ -290,7 +290,7 @@ describe("Endless mode", () => {
       type: "SET_GAME_TYPE",
       payload: { gameType: "playcaller" },
     })
-    await gameRoom.onMessage(setPlaycallerMsg, hostConn as any)
+    await gameRoom.onMessage(hostConn as any, setPlaycallerMsg)
 
     state = getStateFromBroadcast(mockRoom)
     expect(state.room.gameType).toBe("playcaller")

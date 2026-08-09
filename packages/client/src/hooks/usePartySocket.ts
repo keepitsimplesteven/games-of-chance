@@ -30,6 +30,7 @@ export function usePartySocket(
 
     const socket = new PartySocket({
       host: PARTYKIT_HOST,
+      party: "game-room",
       room: roomId,
       // Exponential backoff: initial 500ms, doubling each attempt, capped at 30s
       minReconnectionDelay: 500,

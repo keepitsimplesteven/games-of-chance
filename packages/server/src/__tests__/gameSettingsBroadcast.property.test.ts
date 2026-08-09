@@ -114,7 +114,7 @@ describe("Feature: game-settings, Property 10: Settings broadcast on every chang
           type: "UPDATE_SETTINGS",
           payload: { changes },
         })
-        await gameRoom.onMessage(msg, hostConn as any)
+        await gameRoom.onMessage(hostConn as any, msg)
 
         // Verify a new broadcast was emitted
         expect(mockRoom._broadcasts.length).toBeGreaterThan(broadcastCountBefore)
@@ -173,7 +173,7 @@ describe("Feature: game-settings, Property 10: Settings broadcast on every chang
             type: "UPDATE_SETTINGS",
             payload: { changes: { roundCount, pickWindowMs } },
           })
-          await gameRoom.onMessage(msg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, msg)
 
           // Exactly 1 new broadcast should have been emitted
           expect(mockRoom._broadcasts.length).toBe(broadcastCountBefore + 1)
@@ -199,7 +199,7 @@ describe("Feature: game-settings, Property 10: Settings broadcast on every chang
           type: "UPDATE_SETTINGS",
           payload: { changes },
         })
-        await gameRoom.onMessage(msg, hostConn as any)
+        await gameRoom.onMessage(hostConn as any, msg)
 
         // A new player joins after the settings change
         const newPlayerConn = await joinPlayer(gameRoom, {

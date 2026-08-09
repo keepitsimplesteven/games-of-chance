@@ -6,7 +6,7 @@
  * surface it needs from the room instance.
  */
 
-import type * as Party from "partykit/server"
+import type { Connection } from "partyserver"
 import type { ServerMessage, Player, GameLeaderboardEntry, GameSettings, RoundState } from "@games-of-chance/shared"
 import type { OffensivePlayId, DefensivePlayId } from "./drive"
 import { selectRandomPlay } from "./drive"
@@ -47,7 +47,7 @@ export interface PlaycallerRoomContext {
   cancelDeadlineTimer(): void
   cancelBotPickTimers(): void
   scheduleResolve(delayMs: number): void
-  sendError(conn: Party.Connection, code: string, message: string): void
+  sendError(conn: Connection, code: string, message: string): void
   getPlayerIdByConnectionId(connId: string): string | null
   botManager: { getBotIds(): string[] }
   autoEndGame(): void
@@ -61,7 +61,7 @@ export interface PlaycallerRoomContext {
  */
 export function handlePlaySelection(
   ctx: PlaycallerRoomContext,
-  sender: Party.Connection,
+  sender: Connection,
   payload: { matchupId: string; play: string }
 ): void {
   // Validate sender is a player

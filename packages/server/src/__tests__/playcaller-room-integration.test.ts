@@ -62,7 +62,7 @@ describe("Playcaller room integration", () => {
       type: "JOIN",
       payload: { name: "Host", role: "host", clientId: "host-1", progressionMode: "endless" },
     })
-    await gameRoom.onMessage(joinMsg, conn as any)
+    await gameRoom.onMessage(conn as any, joinMsg)
     const hostConn = conn
 
     // Switch game type to playcaller
@@ -70,7 +70,7 @@ describe("Playcaller room integration", () => {
       type: "SET_GAME_TYPE",
       payload: { gameType: "playcaller" },
     })
-    await gameRoom.onMessage(setGameTypeMsg, hostConn as any)
+    await gameRoom.onMessage(hostConn as any, setGameTypeMsg)
 
     // Join additional players
     const playerConns = []
@@ -100,7 +100,7 @@ describe("Playcaller room integration", () => {
 
       // Start the first round (triggers bracket initialization)
       const startMsg = JSON.stringify({ type: "START_ROUND" })
-      await gameRoom.onMessage(startMsg, hostConn as any)
+      await gameRoom.onMessage(hostConn as any, startMsg)
 
       state = getStateFromBroadcast(mockRoom)
       expect(state.round.phase).toBe("PICKING")
@@ -113,7 +113,7 @@ describe("Playcaller room integration", () => {
       expect(state.playcallerGameState.bracket.rounds[0].resolved).toBe(true)
 
       // Host advances to the next bracket round
-      await gameRoom.onMessage(startMsg, hostConn as any)
+      await gameRoom.onMessage(hostConn as any, startMsg)
 
       state = getStateFromBroadcast(mockRoom)
       expect(state.round.phase).toBe("PICKING")
@@ -125,7 +125,7 @@ describe("Playcaller room integration", () => {
       expect(state.playcallerGameState.bracket.rounds[1].resolved).toBe(true)
 
       // After the final round, host advances → should transition to END_GAME
-      await gameRoom.onMessage(startMsg, hostConn as any)
+      await gameRoom.onMessage(hostConn as any, startMsg)
 
       state = getStateFromBroadcast(mockRoom)
       expect(state.round.phase).toBe("END_GAME")
@@ -138,7 +138,7 @@ describe("Playcaller room integration", () => {
 
       // Start the game
       const startMsg = JSON.stringify({ type: "START_ROUND" })
-      await gameRoom.onMessage(startMsg, hostConn as any)
+      await gameRoom.onMessage(hostConn as any, startMsg)
 
       let state = getStateFromBroadcast(mockRoom)
       expect(state.round.phase).toBe("PICKING")
@@ -153,7 +153,7 @@ describe("Playcaller room integration", () => {
       expect(state.round.phase).toBe("RESULT")
 
       // Host sends START_ROUND to advance
-      await gameRoom.onMessage(startMsg, hostConn as any)
+      await gameRoom.onMessage(hostConn as any, startMsg)
 
       state = getStateFromBroadcast(mockRoom)
       expect(state.round.phase).toBe("PICKING")
@@ -186,7 +186,7 @@ describe("Playcaller room integration", () => {
 
       // Attempt to start the game with only 1 player (the host)
       const startMsg = JSON.stringify({ type: "START_ROUND" })
-      await gameRoom.onMessage(startMsg, hostConn as any)
+      await gameRoom.onMessage(hostConn as any, startMsg)
 
       // Verify ERROR was sent with INVALID_PLAYER_COUNT
       const lastSent = getLastSent(hostConn)

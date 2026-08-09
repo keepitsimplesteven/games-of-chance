@@ -61,7 +61,7 @@ describe("Feature: host-control-panel, Property 5: Kick during PICKING triggers 
 
           // Host starts a round (transitions to PICKING)
           const startMsg = JSON.stringify({ type: "START_ROUND" })
-          await gameRoom.onMessage(startMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, startMsg)
 
           // Verify we're in PICKING phase
           let state = getStateFromBroadcast(mockRoom)
@@ -72,7 +72,7 @@ describe("Feature: host-control-panel, Property 5: Kick during PICKING triggers 
             type: "SUBMIT_PICK",
             payload: { pick: { side: sides[0] } },
           })
-          await gameRoom.onMessage(hostPickMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, hostPickMsg)
 
           // All pickers submit their picks
           for (let i = 0; i < pickerConns.length; i++) {
@@ -80,7 +80,7 @@ describe("Feature: host-control-panel, Property 5: Kick during PICKING triggers 
               type: "SUBMIT_PICK",
               payload: { pick: { side: sides[i + 1] ?? "HEADS" } },
             })
-            await gameRoom.onMessage(msg, pickerConns[i] as any)
+            await gameRoom.onMessage(pickerConns[i] as any, msg)
           }
 
           // KickTarget has NOT submitted a pick
@@ -94,7 +94,7 @@ describe("Feature: host-control-panel, Property 5: Kick during PICKING triggers 
             type: "KICK_PLAYER",
             payload: { playerId: "kick-target" },
           })
-          await gameRoom.onMessage(kickMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, kickMsg)
 
           // After kicking the non-picker, all remaining connected players have picked
           // The round should trigger early resolution via scheduleResolve(0)
@@ -164,7 +164,7 @@ describe("Feature: host-control-panel, Property 5: Kick during PICKING triggers 
 
           // Start round
           const startMsg = JSON.stringify({ type: "START_ROUND" })
-          await gameRoom.onMessage(startMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, startMsg)
 
           // Verify PICKING
           let state = getStateFromBroadcast(mockRoom)
@@ -175,7 +175,7 @@ describe("Feature: host-control-panel, Property 5: Kick during PICKING triggers 
             type: "SUBMIT_PICK",
             payload: { pick: { side: "HEADS" } },
           })
-          await gameRoom.onMessage(pickMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, pickMsg)
 
           // Pickers submit picks
           for (const pickerConn of pickerConns) {
@@ -183,7 +183,7 @@ describe("Feature: host-control-panel, Property 5: Kick during PICKING triggers 
               type: "SUBMIT_PICK",
               payload: { pick: { side: "TAILS" } },
             })
-            await gameRoom.onMessage(msg, pickerConn as any)
+            await gameRoom.onMessage(pickerConn as any, msg)
           }
 
           // Kick the target (who hasn't picked)
@@ -191,7 +191,7 @@ describe("Feature: host-control-panel, Property 5: Kick during PICKING triggers 
             type: "KICK_PLAYER",
             payload: { playerId: "kick-target" },
           })
-          await gameRoom.onMessage(kickMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, kickMsg)
 
           // Since there are still non-pickers remaining, we should stay in PICKING
           state = getStateFromBroadcast(mockRoom)

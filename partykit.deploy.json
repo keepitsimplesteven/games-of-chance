@@ -3,5 +3,8 @@
   "main": "packages/server/src/room.ts",
   "serve": "./packages/client/dist",
   "compatibilityDate": "2024-12-01",
-  "domain": "lads.stevenalbers.com"
+  "domain": "lads.stevenalbers.com",
+  "vars": {
+    "NODE_ENV": "production"
+  }
 }

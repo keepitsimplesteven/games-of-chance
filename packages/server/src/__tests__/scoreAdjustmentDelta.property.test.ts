@@ -81,7 +81,7 @@ describe("Feature: host-control-panel, Property 8: Score adjustment applies delt
               scoreType,
             },
           })
-          await gameRoom.onMessage(adjustMsg, connections[0] as any)
+          await gameRoom.onMessage(connections[0] as any, adjustMsg)
 
           // Get state after adjustment
           const stateAfter = getStateFromBroadcast(mockRoom)

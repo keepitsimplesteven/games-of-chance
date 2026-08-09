@@ -43,7 +43,7 @@ describe("Integration: Full round lifecycle with streaks", () => {
       type: "UPDATE_SETTINGS",
       payload: { changes: { roundCount: 3 } },
     })
-    await gameRoom.onMessage(settingsMsg, hostConn as any)
+    await gameRoom.onMessage(hostConn as any, settingsMsg)
 
     // Get basePoints from settings
     const settingsState = getStateFromBroadcast(mockRoom)
@@ -63,7 +63,7 @@ describe("Integration: Full round lifecycle with streaks", () => {
     for (let round = 1; round <= 3; round++) {
       // Start the round
       const startMsg = JSON.stringify({ type: "START_ROUND" })
-      await gameRoom.onMessage(startMsg, hostConn as any)
+      await gameRoom.onMessage(hostConn as any, startMsg)
 
       // Verify we're in PICKING
       let state = getStateFromBroadcast(mockRoom)
@@ -74,7 +74,7 @@ describe("Integration: Full round lifecycle with streaks", () => {
         type: "SUBMIT_PICK",
         payload: { pick: { side: "HEADS" } },
       })
-      await gameRoom.onMessage(pickMsg, hostConn as any)
+      await gameRoom.onMessage(hostConn as any, pickMsg)
 
       // Advance timers to resolve (bot picks + resolution)
       vi.advanceTimersByTime(1)
@@ -89,7 +89,7 @@ describe("Integration: Full round lifecycle with streaks", () => {
 
         // Host sends START_ROUND to trigger END_GAME
         const nextMsg = JSON.stringify({ type: "START_ROUND" })
-        await gameRoom.onMessage(nextMsg, hostConn as any)
+        await gameRoom.onMessage(hostConn as any, nextMsg)
         state = getStateFromBroadcast(mockRoom)
         expect(state.round.phase).toBe("END_GAME")
       }
@@ -132,21 +132,21 @@ describe("Integration: Full round lifecycle with streaks", () => {
       type: "UPDATE_SETTINGS",
       payload: { changes: { roundCount: 1 } },
     })
-    await gameRoom.onMessage(settingsMsg, hostConn as any)
+    await gameRoom.onMessage(hostConn as any, settingsMsg)
 
     // Mock random to ensure a consistent outcome
     vi.spyOn(Math, "random").mockImplementation(() => 0.1) // HEADS outcome
 
     // Start the round
     const startMsg = JSON.stringify({ type: "START_ROUND" })
-    await gameRoom.onMessage(startMsg, hostConn as any)
+    await gameRoom.onMessage(hostConn as any, startMsg)
 
     // Host picks HEADS (correct)
     const pickMsg = JSON.stringify({
       type: "SUBMIT_PICK",
       payload: { pick: { side: "HEADS" } },
     })
-    await gameRoom.onMessage(pickMsg, hostConn as any)
+    await gameRoom.onMessage(hostConn as any, pickMsg)
 
     // Resolve
     vi.advanceTimersByTime(1)
@@ -157,7 +157,7 @@ describe("Integration: Full round lifecycle with streaks", () => {
 
     // Host sends START_ROUND to trigger END_GAME transition
     const nextMsg = JSON.stringify({ type: "START_ROUND" })
-    await gameRoom.onMessage(nextMsg, hostConn as any)
+    await gameRoom.onMessage(hostConn as any, nextMsg)
 
     // Verify we're in END_GAME with non-zero scores
     state = getStateFromBroadcast(mockRoom)
@@ -173,7 +173,7 @@ describe("Integration: Full round lifecycle with streaks", () => {
 
     // Host sends RETURN_TO_LOBBY
     const returnMsg = JSON.stringify({ type: "RETURN_TO_LOBBY" })
-    await gameRoom.onMessage(returnMsg, hostConn as any)
+    await gameRoom.onMessage(hostConn as any, returnMsg)
 
     // Verify state after return to lobby
     state = getStateFromBroadcast(mockRoom)
@@ -210,21 +210,21 @@ describe("Integration: Full round lifecycle with streaks", () => {
       type: "UPDATE_SETTINGS",
       payload: { changes: { roundCount: 3 } },
     })
-    await gameRoom.onMessage(settingsMsg, hostConn as any)
+    await gameRoom.onMessage(hostConn as any, settingsMsg)
 
     // Mock random: HEADS outcome
     vi.spyOn(Math, "random").mockImplementation(() => 0.1)
 
     // Start round 1
     const startMsg = JSON.stringify({ type: "START_ROUND" })
-    await gameRoom.onMessage(startMsg, hostConn as any)
+    await gameRoom.onMessage(hostConn as any, startMsg)
 
     // Host picks HEADS (correct)
     const pickMsg = JSON.stringify({
       type: "SUBMIT_PICK",
       payload: { pick: { side: "HEADS" } },
     })
-    await gameRoom.onMessage(pickMsg, hostConn as any)
+    await gameRoom.onMessage(hostConn as any, pickMsg)
 
     // Resolve
     vi.advanceTimersByTime(1)

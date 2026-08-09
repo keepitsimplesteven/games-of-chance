@@ -71,7 +71,7 @@ describe("GameRoom", () => {
 
       // Bob (player) tries to start a round
       const startMsg = JSON.stringify({ type: "START_ROUND" })
-      await gameRoom.onMessage(startMsg, bobConn as any)
+      await gameRoom.onMessage(bobConn as any, startMsg)
 
       const lastSent = getLastSent(bobConn)
       expect(lastSent.type).toBe("ERROR")
@@ -92,10 +92,10 @@ describe("GameRoom", () => {
 
       // Start a round (transitions to PICKING)
       const startMsg = JSON.stringify({ type: "START_ROUND" })
-      await gameRoom.onMessage(startMsg, aliceConn as any)
+      await gameRoom.onMessage(aliceConn as any, startMsg)
 
       // Try to start another round while in PICKING
-      await gameRoom.onMessage(startMsg, aliceConn as any)
+      await gameRoom.onMessage(aliceConn as any, startMsg)
 
       const lastSent = getLastSent(aliceConn)
       expect(lastSent.type).toBe("ERROR")
@@ -111,7 +111,7 @@ describe("GameRoom", () => {
 
       // Submit pick while in LOBBY
       const pickMsg = JSON.stringify({ type: "SUBMIT_PICK", payload: { pick: { side: "HEADS" } } })
-      await gameRoom.onMessage(pickMsg, aliceConn as any)
+      await gameRoom.onMessage(aliceConn as any, pickMsg)
 
       const lastSent = getLastSent(aliceConn)
       expect(lastSent.type).toBe("ERROR")
@@ -126,11 +126,11 @@ describe("GameRoom", () => {
 
       // Start round
       const startMsg = JSON.stringify({ type: "START_ROUND" })
-      await gameRoom.onMessage(startMsg, aliceConn as any)
+      await gameRoom.onMessage(aliceConn as any, startMsg)
 
       // Submit an invalid pick
       const pickMsg = JSON.stringify({ type: "SUBMIT_PICK", payload: { pick: { side: "BANANA" } } })
-      await gameRoom.onMessage(pickMsg, aliceConn as any)
+      await gameRoom.onMessage(aliceConn as any, pickMsg)
 
       const lastSent = getLastSent(aliceConn)
       expect(lastSent.type).toBe("ERROR")
@@ -147,18 +147,18 @@ describe("GameRoom", () => {
 
       // Start round
       const startMsg = JSON.stringify({ type: "START_ROUND" })
-      await gameRoom.onMessage(startMsg, aliceConn as any)
+      await gameRoom.onMessage(aliceConn as any, startMsg)
 
       // First pick
       const pick1 = JSON.stringify({ type: "SUBMIT_PICK", payload: { pick: { side: "HEADS" } } })
-      await gameRoom.onMessage(pick1, aliceConn as any)
+      await gameRoom.onMessage(aliceConn as any, pick1)
 
       // Clear sent messages to track second pick
       const sentBefore = aliceConn._sent.length
 
       // Second pick — should be silently ignored (no error, no ack)
       const pick2 = JSON.stringify({ type: "SUBMIT_PICK", payload: { pick: { side: "TAILS" } } })
-      await gameRoom.onMessage(pick2, aliceConn as any)
+      await gameRoom.onMessage(aliceConn as any, pick2)
 
       // No new messages sent to Alice
       expect(aliceConn._sent.length).toBe(sentBefore)
@@ -174,13 +174,13 @@ describe("GameRoom", () => {
 
       // Start round
       const startMsg = JSON.stringify({ type: "START_ROUND" })
-      await gameRoom.onMessage(startMsg, aliceConn as any)
+      await gameRoom.onMessage(aliceConn as any, startMsg)
 
       // Both players pick
       const pickHeads = JSON.stringify({ type: "SUBMIT_PICK", payload: { pick: { side: "HEADS" } } })
       const pickTails = JSON.stringify({ type: "SUBMIT_PICK", payload: { pick: { side: "TAILS" } } })
-      await gameRoom.onMessage(pickHeads, aliceConn as any)
-      await gameRoom.onMessage(pickTails, bobConn as any)
+      await gameRoom.onMessage(aliceConn as any, pickHeads)
+      await gameRoom.onMessage(bobConn as any, pickTails)
 
       // Run all pending timers (bot picks + resolve)
       vi.runAllTimers()
@@ -209,12 +209,12 @@ describe("GameRoom", () => {
 
       // Start round
       const startMsg = JSON.stringify({ type: "START_ROUND" })
-      await gameRoom.onMessage(startMsg, aliceConn as any)
+      await gameRoom.onMessage(aliceConn as any, startMsg)
 
       // Both humans pick
       const pickHeads = JSON.stringify({ type: "SUBMIT_PICK", payload: { pick: { side: "HEADS" } } })
-      await gameRoom.onMessage(pickHeads, aliceConn as any)
-      await gameRoom.onMessage(pickHeads, bobConn as any)
+      await gameRoom.onMessage(aliceConn as any, pickHeads)
+      await gameRoom.onMessage(bobConn as any, pickHeads)
 
       // Run all pending timers (bot picks + resolve)
       vi.runAllTimers()
@@ -234,7 +234,7 @@ describe("GameRoom", () => {
 
       // Bob tries to end game
       const endMsg = JSON.stringify({ type: "END_GAME" })
-      await gameRoom.onMessage(endMsg, bobConn as any)
+      await gameRoom.onMessage(bobConn as any, endMsg)
 
       const lastSent = getLastSent(bobConn)
       expect(lastSent.type).toBe("ERROR")
@@ -251,11 +251,11 @@ describe("GameRoom", () => {
 
       // Play a round to accumulate scores
       const startMsg = JSON.stringify({ type: "START_ROUND" })
-      await gameRoom.onMessage(startMsg, aliceConn as any)
+      await gameRoom.onMessage(aliceConn as any, startMsg)
 
       const pickHeads = JSON.stringify({ type: "SUBMIT_PICK", payload: { pick: { side: "HEADS" } } })
-      await gameRoom.onMessage(pickHeads, aliceConn as any)
-      await gameRoom.onMessage(pickHeads, bobConn as any)
+      await gameRoom.onMessage(aliceConn as any, pickHeads)
+      await gameRoom.onMessage(bobConn as any, pickHeads)
 
       // Run all pending timers (bot picks + resolve)
       vi.runAllTimers()
@@ -266,7 +266,7 @@ describe("GameRoom", () => {
 
       // End game
       const endMsg = JSON.stringify({ type: "END_GAME" })
-      await gameRoom.onMessage(endMsg, aliceConn as any)
+      await gameRoom.onMessage(aliceConn as any, endMsg)
 
       state = getStateFromBroadcast(mockRoom)
       expect(state.round.phase).toBe("LOBBY")
