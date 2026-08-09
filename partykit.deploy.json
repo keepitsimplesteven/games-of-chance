@@ -2,5 +2,6 @@
   "name": "games-of-chance",
   "main": "packages/server/src/room.ts",
   "serve": "./packages/client/dist",
-  "compatibilityDate": "2024-12-01"
+  "compatibilityDate": "2024-12-01",
+  "domain": "lads.stevenalbers.com"
 }
