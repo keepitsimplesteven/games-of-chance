@@ -1,7 +1,11 @@
+import { useTheme } from "../../../theme"
+import { CompositeRobot, type RobotVisualConfig } from "../assets/RobotParts"
+
 export interface RobotCardProps {
   id: string
   name: string
   visualId: string
+  visual?: RobotVisualConfig
   hp: number
   accuracy: number
   damageMin: number
@@ -13,16 +17,16 @@ export interface RobotCardProps {
 /**
  * RobotCard — Displays a single robot option during the Prep Phase.
  *
- * Shows the robot's name, placeholder visual, and stats (HP, Accuracy, Damage range).
- * In V1 all robots have identical stats but the UI displays them for future extensibility.
- * Selected state shows a highlight border and checkmark indicator.
+ * Shows a composed robot SVG, the robot's name, and its weapon type label.
+ * Selected state shows a gold highlight border.
+ * Uses retro-casino theme tokens.
  *
  * Validates: Requirements 3.1
  */
 export function RobotCard({
   id,
   name,
-  visualId,
+  visual,
   hp,
   accuracy,
   damageMin,
@@ -30,27 +34,27 @@ export function RobotCard({
   isSelected,
   onSelect,
 }: RobotCardProps) {
-  const colorMap: Record<string, string> = {
-    "robot-1": "from-red-400 to-red-600",
-    "robot-2": "from-blue-400 to-blue-600",
-    "robot-3": "from-green-400 to-green-600",
-  }
-  const gradient = colorMap[visualId] ?? "from-gray-400 to-gray-600"
+  const theme = useTheme()
+
+  // Weapon display label
+  const weaponLabel = visual?.weaponType
+    ? visual.weaponType.charAt(0).toUpperCase() + visual.weaponType.slice(1)
+    : "Standard"
 
   return (
     <button
       type="button"
       onClick={() => onSelect(id)}
       aria-pressed={isSelected}
-      className={`relative flex flex-col items-center gap-3 rounded-xl border-2 p-4 shadow-md transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+      className={`relative flex flex-col items-center gap-3 rounded-md p-4 transition focus:outline-none focus:ring-2 focus:ring-[#f5c542] ${
         isSelected
-          ? "border-blue-500 ring-2 ring-blue-500 bg-blue-50 focus:ring-blue-400"
-          : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-lg focus:ring-gray-400"
+          ? "border-4 border-[#f5c542] bg-[#0f3d18] shadow-[0_0_12px_rgba(245,197,66,0.4)]"
+          : `${theme.listItem} hover:border-[#3a9a4a]`
       }`}
     >
       {/* Selected checkmark */}
       {isSelected && (
-        <div className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-white">
+        <div className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-[#f5c542] text-[#111111]">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-4 w-4"
@@ -67,36 +71,43 @@ export function RobotCard({
         </div>
       )}
 
-      {/* Placeholder robot sprite */}
-      <div
-        className={`flex h-16 w-16 items-center justify-center rounded-lg bg-gradient-to-br ${gradient} shadow-inner`}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="h-10 w-10 text-white/90"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          aria-hidden="true"
-        >
-          <path d="M12 2a1 1 0 011 1v1h2a3 3 0 013 3v2h1a1 1 0 110 2h-1v2a3 3 0 01-3 3h-1v3a1 1 0 01-1 1h-2a1 1 0 01-1-1v-3H9a3 3 0 01-3-3V9H5a1 1 0 110-2h1V7a3 3 0 013-3h2V3a1 1 0 011-1zm-2 6a1 1 0 100 2 1 1 0 000-2zm4 0a1 1 0 100 2 1 1 0 000-2z" />
-        </svg>
+      {/* Robot composite sprite */}
+      <div className="flex h-20 w-20 items-center justify-center">
+        {visual ? (
+          <CompositeRobot config={visual} size={80} />
+        ) : (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-12 w-12 text-[#3a9a4a]"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path d="M12 2a1 1 0 011 1v1h2a3 3 0 013 3v2h1a1 1 0 110 2h-1v2a3 3 0 01-3 3h-1v3a1 1 0 01-1 1h-2a1 1 0 01-1-1v-3H9a3 3 0 01-3-3V9H5a1 1 0 110-2h1V7a3 3 0 013-3h2V3a1 1 0 011-1zm-2 6a1 1 0 100 2 1 1 0 000-2zm4 0a1 1 0 100 2 1 1 0 000-2z" />
+          </svg>
+        )}
       </div>
 
       {/* Robot name */}
-      <h3 className="text-base font-bold text-gray-900">{name}</h3>
+      <h3 className={`text-base font-bold ${theme.bodyText}`}>{name}</h3>
+
+      {/* Weapon type badge */}
+      <span className={`text-xs px-2 py-0.5 rounded border-2 border-[#2a7a3a] ${theme.mutedText} font-semibold uppercase tracking-wide`}>
+        {weaponLabel}
+      </span>
 
       {/* Stats */}
-      <div className="grid w-full grid-cols-2 gap-x-3 gap-y-1 text-xs text-gray-600">
+      <div className={`grid w-full grid-cols-2 gap-x-3 gap-y-1 text-xs ${theme.bodyText}`}>
         <div className="flex items-center gap-1">
-          <span className="font-semibold text-red-600">HP</span>
+          <span className={`font-semibold ${theme.statusDanger}`}>HP</span>
           <span>{hp}</span>
         </div>
         <div className="flex items-center gap-1">
-          <span className="font-semibold text-blue-600">ACC</span>
+          <span className="font-semibold text-[#2255aa]">ACC</span>
           <span>{accuracy}%</span>
         </div>
         <div className="col-span-2 flex items-center gap-1">
-          <span className="font-semibold text-amber-600">DMG</span>
+          <span className={`font-semibold ${theme.accentText}`}>DMG</span>
           <span>
             {damageMin}–{damageMax}
           </span>

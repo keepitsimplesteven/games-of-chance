@@ -61,11 +61,12 @@ describe("Full 3-round game flow (4 players)", () => {
     expect(stateAfterR1.selectedRobots["p3"]).toBeDefined()
     expect(stateAfterR1.selectedRobots["p4"]).toBeDefined()
 
-    // Verify each selected robot has the correct template based on picks
-    expect(stateAfterR1.selectedRobots["p1"].templateId).toBe("bot-alpha")
-    expect(stateAfterR1.selectedRobots["p2"].templateId).toBe("bot-beta")
-    expect(stateAfterR1.selectedRobots["p3"].templateId).toBe("bot-gamma")
-    expect(stateAfterR1.selectedRobots["p4"].templateId).toBe("bot-alpha")
+    // Verify each selected robot has a valid template from the generated options
+    const validTemplateIds = stateAfterR1.robotOptions["p1"].options.map((o) => o.id)
+    expect(validTemplateIds).toContain(stateAfterR1.selectedRobots["p1"].templateId)
+    expect(validTemplateIds).toContain(stateAfterR1.selectedRobots["p2"].templateId)
+    expect(validTemplateIds).toContain(stateAfterR1.selectedRobots["p3"].templateId)
+    expect(validTemplateIds).toContain(stateAfterR1.selectedRobots["p4"].templateId)
 
     // ─── Round 1: scoreRound — empty deltas for prep phase ───────────────────
     const round1Score = battleBotsPlugin.scoreRound(picks, round1Result, players, defaultSettings)

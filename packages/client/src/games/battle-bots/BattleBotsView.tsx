@@ -1,5 +1,6 @@
 import { useEffect } from "react"
 import { useGameStore } from "../../store/useGameStore"
+import { useTheme } from "../../theme"
 import { RobotSelector } from "./PrepPhase/RobotSelector"
 import type { RobotOption } from "./PrepPhase/RobotSelector"
 import { BattleArena } from "./BattlePhase/BattleArena"
@@ -20,9 +21,11 @@ import { FinalRankings } from "./Results/FinalRankings"
  * - Round 3 + RESOLVING → FFAArena + FFASidebar
  * - Round 3 + RESULT → FinalRankings
  *
+ * Uses retro-casino theme tokens.
  * Validates: Requirements 12.1
  */
 export function BattleBotsView() {
+  const theme = useTheme()
   const roomState = useGameStore((s) => s.roomState)
   const battleHPState = useGameStore((s) => s.battleHPState)
   const playerId = useGameStore((s) => s.playerId)
@@ -61,11 +64,11 @@ export function BattleBotsView() {
 
   if (roundNumber === 1 && phase === "RESULT") {
     return (
-      <div className="flex flex-col items-center gap-4 px-4 py-8">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+      <div className={`flex flex-col items-center gap-4 px-4 py-8 ${theme.font}`}>
+        <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-[#2a7a3a] bg-[#0f3d18]">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="h-10 w-10 text-green-600"
+            className="h-10 w-10 text-[#3a9a4a]"
             viewBox="0 0 20 20"
             fill="currentColor"
             aria-hidden="true"
@@ -77,10 +80,10 @@ export function BattleBotsView() {
             />
           </svg>
         </div>
-        <h2 className="text-xl font-bold text-gray-900">
+        <h2 className={`text-xl font-bold ${theme.headingText}`}>
           All Selections Confirmed
         </h2>
-        <p className="text-sm text-gray-500">
+        <p className={`text-sm ${theme.mutedText}`}>
           Robots locked in. Waiting for host to start battles…
         </p>
       </div>
@@ -104,8 +107,8 @@ export function BattleBotsView() {
     }>
 
     return (
-      <div className="flex flex-col gap-4 px-4 py-8">
-        <h2 className="text-center text-xl font-bold text-gray-900">
+      <div className={`flex flex-col gap-4 px-4 py-8 ${theme.font}`}>
+        <h2 className={`text-center text-xl font-bold ${theme.titleText}`}>
           Battle Results
         </h2>
         <div className="flex flex-col gap-2">
@@ -116,16 +119,16 @@ export function BattleBotsView() {
             return (
               <div
                 key={i}
-                className="flex items-center justify-center gap-2 rounded-lg bg-gray-100 px-4 py-3"
+                className={`flex items-center justify-center gap-2 rounded-md px-4 py-3 ${theme.listItem}`}
               >
-                <span className="text-sm font-medium text-gray-700">
+                <span className={`text-sm font-medium ${theme.accentText}`}>
                   🏆 {winnerName} wins
                 </span>
               </div>
             )
           })}
         </div>
-        <p className="text-center text-sm text-gray-500">
+        <p className={`text-center text-sm ${theme.mutedText}`}>
           Waiting for host to start the Free-For-All…
         </p>
       </div>
@@ -163,7 +166,7 @@ export function BattleBotsView() {
   // ── Fallback: RESOLVING on Round 1 or other unexpected states ──────────
 
   return (
-    <div className="py-8 text-center text-gray-500">
+    <div className={`py-8 text-center ${theme.mutedText} ${theme.font}`}>
       Preparing battle…
     </div>
   )
@@ -173,7 +176,7 @@ export function BattleBotsView() {
   function renderBattlePhase() {
     if (!battleHPState || !playerId) {
       return (
-        <div className="py-8 text-center text-gray-500">
+        <div className={`py-8 text-center ${theme.mutedText} ${theme.font}`}>
           Battles starting…
         </div>
       )
@@ -250,7 +253,7 @@ export function BattleBotsView() {
   function renderFFAPhase() {
     if (!battleHPState || !playerId) {
       return (
-        <div className="py-8 text-center text-gray-500">
+        <div className={`py-8 text-center ${theme.mutedText} ${theme.font}`}>
           Free-for-all starting…
         </div>
       )

@@ -1,3 +1,4 @@
+import { useTheme } from "../../../theme"
 import { HPBar } from "./HPBar"
 
 export interface BattleRobot {
@@ -20,23 +21,25 @@ export interface BattleArenaProps {
  * Displays robots in a left-vs-right layout with name labels, placeholder sprites,
  * and animated HP bars. Shows "WINNER!" over the surviving robot and "KO" with
  * greyed-out styling for the eliminated robot.
+ * Uses retro-casino theme tokens.
  *
  * Validates: Requirements 10.3
  */
 export function BattleArena({ player1, player2, isPlayerBattle }: BattleArenaProps) {
+  const theme = useTheme()
   const p1Won = player2.eliminated && !player1.eliminated
   const p2Won = player1.eliminated && !player2.eliminated
 
   return (
     <div
-      className={`rounded-xl border p-6 ${
+      className={`rounded-md p-6 ${
         isPlayerBattle
-          ? "border-blue-500/40 bg-gray-900"
-          : "border-gray-700 bg-gray-900/60"
+          ? "border-4 border-[#f5c542] bg-[#1b5e2a] shadow-[inset_0_0_20px_rgba(0,0,0,0.4)]"
+          : `${theme.card}`
       }`}
     >
       {isPlayerBattle && (
-        <h2 className="mb-4 text-center text-sm font-semibold uppercase tracking-wide text-blue-400">
+        <h2 className={`mb-4 text-center text-sm font-semibold uppercase tracking-wide ${theme.accentText}`}>
           Your Battle
         </h2>
       )}
@@ -47,7 +50,7 @@ export function BattleArena({ player1, player2, isPlayerBattle }: BattleArenaPro
 
         {/* VS divider */}
         <div className="flex flex-col items-center gap-1">
-          <span className="text-2xl font-black text-gray-500">VS</span>
+          <span className={`text-2xl font-black ${theme.mutedText}`}>VS</span>
         </div>
 
         {/* Player 2 (right side) */}
@@ -64,6 +67,7 @@ interface RobotFighterProps {
 }
 
 function RobotFighter({ robot, side, isWinner }: RobotFighterProps) {
+  const theme = useTheme()
   const isEliminated = robot.eliminated
 
   return (
@@ -71,26 +75,26 @@ function RobotFighter({ robot, side, isWinner }: RobotFighterProps) {
       {/* Status label */}
       <div className="h-6">
         {isWinner && (
-          <span className="animate-pulse text-sm font-bold text-yellow-400">
+          <span className={`animate-pulse text-sm font-bold ${theme.accentText}`}>
             🏆 WINNER!
           </span>
         )}
         {isEliminated && (
-          <span className="text-sm font-bold text-red-500">KO</span>
+          <span className={`text-sm font-bold ${theme.statusDanger}`}>KO</span>
         )}
       </div>
 
       {/* Robot sprite placeholder */}
       <div
-        className={`relative flex h-20 w-20 items-center justify-center rounded-lg shadow-md transition-all ${
+        className={`relative flex h-20 w-20 items-center justify-center rounded-md border-2 transition-all ${
           isEliminated
-            ? "bg-gray-700 opacity-50 grayscale"
-            : "bg-gradient-to-br from-indigo-500 to-purple-600"
+            ? "border-[#2a7a3a]/40 bg-[#0f3d18] opacity-50 grayscale"
+            : "border-[#2a7a3a] bg-[#0f3d18]"
         }`}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          className={`h-12 w-12 ${isEliminated ? "text-gray-500" : "text-white/90"}`}
+          className={`h-12 w-12 ${isEliminated ? "text-[#2a7a3a]/40" : "text-[#3a9a4a]"}`}
           viewBox="0 0 24 24"
           fill="currentColor"
           aria-hidden="true"
@@ -101,8 +105,8 @@ function RobotFighter({ robot, side, isWinner }: RobotFighterProps) {
 
         {/* KO overlay */}
         {isEliminated && (
-          <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/40">
-            <span className="text-2xl font-black text-red-500">✕</span>
+          <div className="absolute inset-0 flex items-center justify-center rounded-md bg-black/40">
+            <span className={`text-2xl font-black ${theme.statusDanger}`}>✕</span>
           </div>
         )}
       </div>
@@ -110,7 +114,7 @@ function RobotFighter({ robot, side, isWinner }: RobotFighterProps) {
       {/* Robot name */}
       <span
         className={`text-sm font-semibold ${
-          isEliminated ? "text-gray-500 line-through" : "text-gray-200"
+          isEliminated ? "text-[#3a9a4a]/40 line-through" : theme.bodyText
         }`}
       >
         {robot.name}
