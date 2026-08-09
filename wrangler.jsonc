@@ -1,0 +1,22 @@
+{
+  "name": "games-of-chance",
+  "main": "packages/server/src/room.ts",
+  "compatibility_date": "2024-12-01",
+  "assets": {
+    "directory": "./packages/client/dist"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "GameRoom",
+        "class_name": "GameRoom"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["GameRoom"]
+    }
+  ]
+}

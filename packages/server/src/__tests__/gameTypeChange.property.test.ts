@@ -135,14 +135,14 @@ describe("Feature: game-settings, Property 9: Game type change resets tuning, re
             type: "SET_GAME_TYPE",
             payload: { gameType: from },
           })
-          await gameRoom.onMessage(setFromMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, setFromMsg)
 
           // Configure settings with arbitrary valid roundCount and pickWindowMs
           const updateMsg = JSON.stringify({
             type: "UPDATE_SETTINGS",
             payload: { changes: { roundCount, pickWindowMs } },
           })
-          await gameRoom.onMessage(updateMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, updateMsg)
 
           // Verify the roundCount and pickWindowMs are set as we expect
           const stateBefore = getStateFromBroadcast(mockRoom)
@@ -154,7 +154,7 @@ describe("Feature: game-settings, Property 9: Game type change resets tuning, re
             type: "SET_GAME_TYPE",
             payload: { gameType: to },
           })
-          await gameRoom.onMessage(setToMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, setToMsg)
 
           // Verify the state after game type change
           const stateAfter = getStateFromBroadcast(mockRoom)
@@ -200,20 +200,20 @@ describe("Feature: game-settings, Property 9: Game type change resets tuning, re
             type: "SET_GAME_TYPE",
             payload: { gameType },
           })
-          await gameRoom.onMessage(setMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, setMsg)
 
           // Configure settings with arbitrary roundCount and pickWindowMs
           const updateMsg = JSON.stringify({
             type: "UPDATE_SETTINGS",
             payload: { changes: { roundCount, pickWindowMs } },
           })
-          await gameRoom.onMessage(updateMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, updateMsg)
 
           // Capture state before "switching" to the same type
           const stateBefore = getStateFromBroadcast(mockRoom)
 
           // "Switch" to the same game type (should be no-op)
-          await gameRoom.onMessage(setMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, setMsg)
 
           // State should remain identical (no-op)
           const stateAfter = getStateFromBroadcast(mockRoom)

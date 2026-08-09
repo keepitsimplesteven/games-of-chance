@@ -52,7 +52,7 @@ describe("Feature: coin-toss-gameplay-enhancements, Property 3: Last Round Trigg
               changes: { roundCount: totalRounds },
             },
           })
-          await gameRoom.onMessage(updateMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, updateMsg)
 
           // Verify settings applied
           const settingsState = getStateFromBroadcast(mockRoom)
@@ -62,7 +62,7 @@ describe("Feature: coin-toss-gameplay-enhancements, Property 3: Last Round Trigg
           for (let round = 1; round <= totalRounds; round++) {
             // Start the round
             const startMsg = JSON.stringify({ type: "START_ROUND" })
-            await gameRoom.onMessage(startMsg, hostConn as any)
+            await gameRoom.onMessage(hostConn as any, startMsg)
 
             // Verify we're in PICKING phase
             let state = getStateFromBroadcast(mockRoom)
@@ -74,8 +74,8 @@ describe("Feature: coin-toss-gameplay-enhancements, Property 3: Last Round Trigg
               type: "SUBMIT_PICK",
               payload: { pick: { side: "HEADS" } },
             })
-            await gameRoom.onMessage(pickMsg, hostConn as any)
-            await gameRoom.onMessage(pickMsg, playerConn as any)
+            await gameRoom.onMessage(hostConn as any, pickMsg)
+            await gameRoom.onMessage(playerConn as any, pickMsg)
 
             // Run timers to trigger resolution (bot picks + resolve)
             vi.runAllTimers()
@@ -92,7 +92,7 @@ describe("Feature: coin-toss-gameplay-enhancements, Property 3: Last Round Trigg
 
               // Host sends START_ROUND which triggers END_GAME on the last round
               const nextMsg = JSON.stringify({ type: "START_ROUND" })
-              await gameRoom.onMessage(nextMsg, hostConn as any)
+              await gameRoom.onMessage(hostConn as any, nextMsg)
 
               state = getStateFromBroadcast(mockRoom)
               expect(state.round.phase).toBe("END_GAME")

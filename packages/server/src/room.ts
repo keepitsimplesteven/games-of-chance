@@ -1,4 +1,4 @@
-import type * as Party from "partykit/server"
+import { Server, type Connection, routePartykitRequest } from "partyserver"
 import type {
   ClientMessage,
   ServerMessage,
@@ -154,8 +154,7 @@ function buildDefaultGameSettings(gameType: string): GameSettings {
 
 // ── Room Server ────────────────────────────────────────────────────────────
 
-export default class GameRoom implements Party.Server {
-  readonly room: Party.Room
+export class GameRoom extends Server {
   private state!: LiveRoomState
   private deadlineTimerId: ReturnType<typeof setTimeout> | null = null
   private simulationAdapter: FastPlayAdapter | null = null
@@ -165,14 +164,10 @@ export default class GameRoom implements Party.Server {
   private botManager: BotManager = new BotManager()
   private botPickTimerIds: ReturnType<typeof setTimeout>[] = []
 
-  constructor(room: Party.Room) {
-    this.room = room
-  }
-
   async onStart() {
     // Initialize state on cold start
     this.state = {
-      config: createDefaultConfig(this.room.id),
+      config: createDefaultConfig(this.name),
       players: {},
       round: createDefaultRoundState(),
       gameScores: {},
@@ -189,7 +184,7 @@ export default class GameRoom implements Party.Server {
     }
   }
 
-  async onConnect(connection: Party.Connection) {
+  async onConnect(connection: Connection) {
     // Send full STATE_SYNC to the newly connected client
     const msg: ServerMessage = {
       type: "STATE_SYNC",
@@ -198,7 +193,7 @@ export default class GameRoom implements Party.Server {
     connection.send(JSON.stringify(msg))
   }
 
-  async onMessage(message: string, sender: Party.Connection) {
+  async onMessage(sender: Connection, message: string | ArrayBuffer) {
     let msg: ClientMessage
     try {
       msg = JSON.parse(message as string) as ClientMessage
@@ -266,7 +261,7 @@ export default class GameRoom implements Party.Server {
     }
   }
 
-  async onClose(connection: Party.Connection) {
+  async onClose(connection: Connection, code?: number, reason?: string, wasClean?: boolean) {
     // Find player by connection id
     const player = Object.values(this.state.players).find(
       (p) => p.connectionId === connection.id
@@ -336,7 +331,7 @@ export default class GameRoom implements Party.Server {
   // ── Message handlers ───────────────────────────────────────────────────
 
   private handleJoin(
-    connection: Party.Connection,
+    connection: Connection,
     payload: { name: string; role: "host" | "player"; clientId: string; scoringMode?: "grand-prix" | "chips"; roomSize?: number; progressionMode?: ProgressionMode }
   ) {
     const playerCount = Object.keys(this.state.players).length
@@ -419,7 +414,7 @@ export default class GameRoom implements Party.Server {
     this.reconcileBots()
   }
 
-  private handleStartRound(sender: Party.Connection) {
+  private handleStartRound(sender: Connection) {
     // Authorization: host can always start a round. For Big Wheel, the active spinner can too.
     const hostId = this.getHostId()
     const senderId = this.getPlayerIdByConnectionId(sender.id)
@@ -516,7 +511,7 @@ export default class GameRoom implements Party.Server {
   }
 
   private handleSubmitPick(
-    sender: Party.Connection,
+    sender: Connection,
     payload: { pick: unknown }
   ) {
     // Guard: reject if not in PICKING phase
@@ -607,7 +602,7 @@ export default class GameRoom implements Party.Server {
     }
   }
 
-  private handleEndGame(sender: Party.Connection) {
+  private handleEndGame(sender: Connection) {
     // Authorization: only host can end the game
     const hostId = this.getHostId()
     const senderId = this.getPlayerIdByConnectionId(sender.id)
@@ -720,7 +715,7 @@ export default class GameRoom implements Party.Server {
     this.broadcastState()
   }
 
-  private handleSkipAnimation(sender: Party.Connection) {
+  private handleSkipAnimation(sender: Connection) {
     // Only host can skip
     const hostId = this.getHostId()
     const senderId = this.getPlayerIdByConnectionId(sender.id)
@@ -736,17 +731,17 @@ export default class GameRoom implements Party.Server {
       this.finishResolving(this.pendingResolveResult)
       // Also broadcast SKIP_ANIMATION so clients skip client-side animations
       const skipMsg: ServerMessage = { type: "SKIP_ANIMATION" }
-      this.room.broadcast(JSON.stringify(skipMsg))
+      this.broadcast(JSON.stringify(skipMsg))
       return
     }
 
     // Broadcast SKIP_ANIMATION to all clients
     const msg: ServerMessage = { type: "SKIP_ANIMATION" }
-    this.room.broadcast(JSON.stringify(msg))
+    this.broadcast(JSON.stringify(msg))
   }
 
   private handleStartSimulation(
-    sender: Party.Connection,
+    sender: Connection,
     payload: { playerCount?: number; roundCount?: number; seed?: number }
   ) {
     // Authorization: only host can start a simulation
@@ -772,7 +767,7 @@ export default class GameRoom implements Party.Server {
     }
 
     // Create and run the FastPlayAdapter
-    const adapter = new FastPlayAdapter(this.room)
+    const adapter = new FastPlayAdapter({ id: this.name, broadcast: (msg: string) => this.broadcast(msg) })
     this.simulationAdapter = adapter
 
     const gameType = this.state.config.gameType
@@ -789,7 +784,7 @@ export default class GameRoom implements Party.Server {
     })
   }
 
-  private handleStopSimulation(sender: Party.Connection) {
+  private handleStopSimulation(sender: Connection) {
     // Authorization: only host can stop a simulation
     const hostId = this.getHostId()
     const senderId = this.getPlayerIdByConnectionId(sender.id)
@@ -805,7 +800,7 @@ export default class GameRoom implements Party.Server {
   }
 
   private handleKickPlayer(
-    sender: Party.Connection,
+    sender: Connection,
     payload: { playerId: string }
   ) {
     // Authorization: only host can kick players
@@ -832,7 +827,7 @@ export default class GameRoom implements Party.Server {
 
     // Close their WebSocket connection if connected
     if (target.connectionId) {
-      const conn = [...this.room.getConnections()].find(
+      const conn = [...this.getConnections()].find(
         (c) => c.id === target.connectionId
       )
       conn?.close(4001, "Kicked by host")
@@ -858,7 +853,7 @@ export default class GameRoom implements Party.Server {
   }
 
   private handleReassignHost(
-    sender: Party.Connection,
+    sender: Connection,
     payload: { targetPlayerId: string }
   ) {
     // Authorization: only host can reassign the host role
@@ -891,7 +886,7 @@ export default class GameRoom implements Party.Server {
   }
 
   private handleAdjustScore(
-    sender: Party.Connection,
+    sender: Connection,
     payload: { targetPlayerId: string; delta: number; scoreType: "game" | "session"; reason?: string }
   ) {
     // Authorization: only host can adjust scores
@@ -951,7 +946,7 @@ export default class GameRoom implements Party.Server {
   }
 
   private handleUpdateRoomSize(
-    sender: Party.Connection,
+    sender: Connection,
     payload: { roomSize: number }
   ) {
     // Authorization: only host can change room size
@@ -998,7 +993,7 @@ export default class GameRoom implements Party.Server {
     this.broadcastState()
   }
 
-  private handleReturnToLobby(sender: Party.Connection) {
+  private handleReturnToLobby(sender: Connection) {
     // Authorization: only host can return to lobby
     const hostId = this.getHostId()
     const senderId = this.getPlayerIdByConnectionId(sender.id)
@@ -1071,7 +1066,7 @@ export default class GameRoom implements Party.Server {
   }
 
   private handleVoteGame(
-    sender: Party.Connection,
+    sender: Connection,
     payload: { gameType: string }
   ) {
     // Any connected player can vote — no role restriction
@@ -1118,7 +1113,7 @@ export default class GameRoom implements Party.Server {
   }
 
   private handlePlaySelection(
-    sender: Party.Connection,
+    sender: Connection,
     payload: { matchupId: string; play: string }
   ) {
     handlePlaySelectionFn(this.getPlaycallerContext(), sender, payload)
@@ -1157,7 +1152,7 @@ export default class GameRoom implements Party.Server {
   }
 
   private handleGameTypeChange(
-    sender: Party.Connection,
+    sender: Connection,
     payload: { gameType: string }
   ) {
     // Authorization: only host can change game type
@@ -1224,7 +1219,7 @@ export default class GameRoom implements Party.Server {
   }
 
   private handleUpdateSettings(
-    sender: Party.Connection,
+    sender: Connection,
     payload: { changes: Partial<GameSettings> }
   ) {
     // Auth: only host
@@ -1872,7 +1867,7 @@ export default class GameRoom implements Party.Server {
       }
 
       // Broadcast the tick message to all clients
-      this.room.broadcast(JSON.stringify(tickSnapshots[tickIndex]))
+      this.broadcast(JSON.stringify(tickSnapshots[tickIndex]))
       tickIndex++
 
       // Schedule next tick emission
@@ -1880,7 +1875,7 @@ export default class GameRoom implements Party.Server {
     }
 
     // Start emitting — first tick immediately
-    this.room.broadcast(JSON.stringify(tickSnapshots[tickIndex]))
+    this.broadcast(JSON.stringify(tickSnapshots[tickIndex]))
     tickIndex++
     this.tickReplayTimerId = setTimeout(emitNextTick, tickRateMs)
   }
@@ -2092,12 +2087,12 @@ export default class GameRoom implements Party.Server {
   }
 
   /** Get the WebSocket connection for the current host */
-  private getHostConnection(): Party.Connection | null {
+  private getHostConnection(): Connection | null {
     const host = Object.values(this.state.players).find(
       (p) => p.role === "host" && p.connected
     )
     if (!host?.connectionId) return null
-    return [...this.room.getConnections()].find(
+    return [...this.getConnections()].find(
       (c) => c.id === host.connectionId
     ) ?? null
   }
@@ -2189,12 +2184,12 @@ export default class GameRoom implements Party.Server {
       type: "STATE_SYNC",
       payload: this.getPublicState(),
     }
-    this.room.broadcast(JSON.stringify(msg))
+    this.broadcast(JSON.stringify(msg))
   }
 
   /** Send an ERROR message to a specific connection */
   private sendError(
-    connection: Party.Connection,
+    connection: Connection,
     code: string,
     message: string
   ) {
@@ -2325,3 +2320,12 @@ export default class GameRoom implements Party.Server {
     }
   }
 }
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    return (
+      (await routePartykitRequest(request, env)) ||
+      new Response("Not Found", { status: 404 })
+    );
+  },
+} satisfies ExportedHandler<Env>;

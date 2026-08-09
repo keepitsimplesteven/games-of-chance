@@ -53,20 +53,20 @@ describe("Feature: coin-toss-gameplay-enhancements, Property 5: Return to Lobby 
             type: "UPDATE_SETTINGS",
             payload: { changes: { roundCount } },
           })
-          await gameRoom.onMessage(settingsMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, settingsMsg)
 
           // Play through all rounds to reach END_GAME
           for (let r = 0; r < roundCount; r++) {
             // Start round
             const startMsg = JSON.stringify({ type: "START_ROUND" })
-            await gameRoom.onMessage(startMsg, hostConn as any)
+            await gameRoom.onMessage(hostConn as any, startMsg)
 
             // Host submits pick (bots already picked instantly in scheduleBotPicks)
             const pickMsg = JSON.stringify({
               type: "SUBMIT_PICK",
               payload: { pick: { side: hostPicks[r] } },
             })
-            await gameRoom.onMessage(pickMsg, hostConn as any)
+            await gameRoom.onMessage(hostConn as any, pickMsg)
 
             // Advance timers to fire scheduleResolve(0) → resolveRound → finishResolving
             vi.advanceTimersByTime(1)
@@ -79,7 +79,7 @@ describe("Feature: coin-toss-gameplay-enhancements, Property 5: Return to Lobby 
 
           // Host sends START_ROUND after the last round to trigger END_GAME
           const endMsg = JSON.stringify({ type: "START_ROUND" })
-          await gameRoom.onMessage(endMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, endMsg)
 
           // Verify we reached END_GAME
           const stateBeforeReturn = getStateFromBroadcast(mockRoom)
@@ -88,7 +88,7 @@ describe("Feature: coin-toss-gameplay-enhancements, Property 5: Return to Lobby 
           // At this point, some players likely have non-zero scores and streaks
           // from playing rounds. Now send RETURN_TO_LOBBY from host.
           const returnMsg = JSON.stringify({ type: "RETURN_TO_LOBBY" })
-          await gameRoom.onMessage(returnMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, returnMsg)
 
           // Get state after return to lobby
           const stateAfter = getStateFromBroadcast(mockRoom)

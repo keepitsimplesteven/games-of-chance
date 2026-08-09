@@ -142,7 +142,7 @@ describe("Feature: host-control-panel, Property 2: Host-control authorization", 
           }
 
           // Send the unauthorized message
-          await gameRoom.onMessage(message!, nonHostConn as any)
+          await gameRoom.onMessage(nonHostConn as any, message!)
 
           // VERIFY: sender receives NOT_HOST error
           const lastSent = getLastSent(nonHostConn)

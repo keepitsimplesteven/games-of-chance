@@ -66,7 +66,7 @@ describe("Feature: host-control-panel, Property 3: Kick removes player from stat
             type: "KICK_PLAYER",
             payload: { playerId: targetId },
           })
-          await gameRoom.onMessage(kickMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, kickMsg)
 
           // Verify the target is no longer in the players list
           const stateAfter = getStateFromBroadcast(mockRoom)

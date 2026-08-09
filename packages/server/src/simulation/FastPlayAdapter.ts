@@ -1,4 +1,3 @@
-import type * as Party from "partykit/server"
 import type {
   RoomState,
   RoomConfig,
@@ -14,6 +13,12 @@ import {
   pickGeneratorRegistry,
 } from "@games-of-chance/simulation"
 import { registry } from "../games/GameRegistry"
+
+/** Minimal room interface for simulation broadcasting */
+export interface SimRoom {
+  id: string
+  broadcast(msg: string): void
+}
 
 /**
  * Simulation state payload — extends RoomState with a simulation marker.
@@ -35,7 +40,7 @@ export class FastPlayAdapter {
   private timerId: ReturnType<typeof setTimeout> | null = null
 
   constructor(
-    private room: Party.Room,
+    private room: SimRoom,
     private roundIntervalMs: number = 500
   ) {}
 

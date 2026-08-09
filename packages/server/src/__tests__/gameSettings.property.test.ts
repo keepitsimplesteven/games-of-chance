@@ -221,7 +221,7 @@ describe("Feature: game-settings, Property 1: Settings update stores valid value
             type: "UPDATE_SETTINGS",
             payload: { changes: { roundCount, pickWindowMs } },
           })
-          await gameRoom.onMessage(msg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, msg)
 
           // Verify the state was updated
           const state = getStateFromBroadcast(mockRoom)
@@ -380,7 +380,7 @@ describe("Feature: game-settings, Property 5: Settings locked during active game
 
           // Start a round to enter PICKING phase (which locks settings)
           const startMsg = JSON.stringify({ type: "START_ROUND" })
-          await gameRoom.onMessage(startMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, startMsg)
 
           // Capture settings state BEFORE the update attempt
           const stateBefore = getStateFromBroadcast(mockRoom)
@@ -391,7 +391,7 @@ describe("Feature: game-settings, Property 5: Settings locked during active game
             type: "UPDATE_SETTINGS",
             payload: { changes },
           })
-          await gameRoom.onMessage(updateMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, updateMsg)
 
           // Verify rejection with SETTINGS_LOCKED error
           const lastSent = getLastSent(hostConn)
@@ -458,7 +458,7 @@ describe("Feature: game-settings, Property 7: Non-host settings rejection", () =
             type: "UPDATE_SETTINGS",
             payload: { changes },
           })
-          await gameRoom.onMessage(updateMsg, nonHostConn as any)
+          await gameRoom.onMessage(nonHostConn as any, updateMsg)
 
           // Verify rejection with NOT_HOST error
           const lastSent = getLastSent(nonHostConn)
@@ -523,14 +523,14 @@ describe("Feature: game-settings, Property 3: Configured pick window is used at 
             type: "UPDATE_SETTINGS",
             payload: { changes: { pickWindowMs } },
           })
-          await gameRoom.onMessage(updateMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, updateMsg)
 
           // Set a known time before starting the round
           vi.setSystemTime(currentTime)
 
           // Start the round
           const startMsg = JSON.stringify({ type: "START_ROUND" })
-          await gameRoom.onMessage(startMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, startMsg)
 
           // Verify the broadcast state has pickDeadlineMs === currentTime + pickWindowMs
           const state = getStateFromBroadcast(mockRoom)
@@ -594,7 +594,7 @@ describe("Feature: game-settings, Property 8: Settings persist across game sessi
               },
             },
           })
-          await gameRoom.onMessage(updateMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, updateMsg)
 
           // Capture the settings that were set
           const stateAfterUpdate = getStateFromBroadcast(mockRoom)
@@ -602,7 +602,7 @@ describe("Feature: game-settings, Property 8: Settings persist across game sessi
 
           // Start a round (enters PICKING phase, locks settings)
           const startMsg = JSON.stringify({ type: "START_ROUND" })
-          await gameRoom.onMessage(startMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, startMsg)
 
           // Advance time past pick window to trigger resolution → RESULT phase
           vi.advanceTimersByTime(pickWindowMs + 100)
@@ -614,20 +614,20 @@ describe("Feature: game-settings, Property 8: Settings persist across game sessi
           const stateAfterResolve = getStateFromBroadcast(mockRoom)
           if (stateAfterResolve.round.phase === "END_GAME") {
             const returnMsg = JSON.stringify({ type: "RETURN_TO_LOBBY" })
-            await gameRoom.onMessage(returnMsg, hostConn as any)
+            await gameRoom.onMessage(hostConn as any, returnMsg)
           } else if (stateAfterResolve.round.phase === "RESULT") {
             // Check if this is the last round — if so, START_ROUND triggers END_GAME
             const maxRounds = stateAfterResolve.gameSettings.roundCount
             if (maxRounds > 0 && stateAfterResolve.round.roundNumber >= maxRounds) {
               // Trigger END_GAME via START_ROUND
               const nextMsg = JSON.stringify({ type: "START_ROUND" })
-              await gameRoom.onMessage(nextMsg, hostConn as any)
+              await gameRoom.onMessage(hostConn as any, nextMsg)
               // Then return to lobby
               const returnMsg = JSON.stringify({ type: "RETURN_TO_LOBBY" })
-              await gameRoom.onMessage(returnMsg, hostConn as any)
+              await gameRoom.onMessage(hostConn as any, returnMsg)
             } else {
               const endMsg = JSON.stringify({ type: "END_GAME" })
-              await gameRoom.onMessage(endMsg, hostConn as any)
+              await gameRoom.onMessage(hostConn as any, endMsg)
             }
           }
 
@@ -644,7 +644,7 @@ describe("Feature: game-settings, Property 8: Settings persist across game sessi
           )
 
           // Start a new round — verify the same settings are applied
-          await gameRoom.onMessage(startMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, startMsg)
 
           const stateNewRound = getStateFromBroadcast(mockRoom)
           expect(stateNewRound.round.phase).toBe("PICKING")
@@ -706,7 +706,7 @@ describe("Feature: game-settings, Property 6: Settings unlocked after game end",
 
           // Start a game (settings become locked)
           const startMsg = JSON.stringify({ type: "START_ROUND" })
-          await gameRoom.onMessage(startMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, startMsg)
 
           // Verify settings are locked
           const stateDuringGame = getStateFromBroadcast(mockRoom)
@@ -717,7 +717,7 @@ describe("Feature: game-settings, Property 6: Settings unlocked after game end",
 
           // End the game (settings become unlocked)
           const endMsg = JSON.stringify({ type: "END_GAME" })
-          await gameRoom.onMessage(endMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, endMsg)
 
           // Verify settings are unlocked
           const stateAfterEnd = getStateFromBroadcast(mockRoom)
@@ -731,7 +731,7 @@ describe("Feature: game-settings, Property 6: Settings unlocked after game end",
               changes: { roundCount: newRoundCount, pickWindowMs: newPickWindowMs },
             },
           })
-          await gameRoom.onMessage(updateMsg, hostConn as any)
+          await gameRoom.onMessage(hostConn as any, updateMsg)
 
           // Verify settings were accepted (no error sent)
           const lastSent = getLastSent(hostConn)

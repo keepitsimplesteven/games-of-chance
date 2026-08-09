@@ -80,7 +80,7 @@ describe("Feature: host-control-panel, Property 9: Adjustment log grows monotoni
                 reason: params.reason,
               },
             })
-            await gameRoom.onMessage(adjustMsg, hostConn as any)
+            await gameRoom.onMessage(hostConn as any, adjustMsg)
 
             // Get state after
             const stateAfter = getStateFromBroadcast(mockRoom)

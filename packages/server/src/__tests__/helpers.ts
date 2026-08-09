@@ -1,10 +1,10 @@
-import type * as Party from "partykit/server"
-import GameRoom from "../room"
+import type { Connection } from "partyserver"
+import { GameRoom } from "../room"
 
 /**
- * Creates a mock Party.Connection that tracks sent messages.
+ * Creates a mock Connection that tracks sent messages.
  */
-export function createMockConnection(id: string): Party.Connection & { _sent: string[] } {
+export function createMockConnection(id: string): Connection & { _sent: string[] } {
   const sent: string[] = []
   return {
     id,
@@ -25,47 +25,39 @@ export function createMockConnection(id: string): Party.Connection & { _sent: st
 }
 
 /**
- * Creates a mock Party.Room that tracks broadcasts.
+ * Creates a mock room-like object that tracks broadcasts.
  */
-export function createMockRoom(id: string): Party.Room & { _broadcasts: string[] } {
+export function createMockRoom(id: string): { id: string; name: string; _broadcasts: string[]; broadcast: (data: string, without?: string[]) => void; getConnections: () => IterableIterator<Connection> } {
   const broadcasts: string[] = []
   return {
     id,
-    env: {} as any,
-    storage: {
-      get: async () => undefined,
-      put: async () => {},
-      delete: async () => false,
-      list: async () => new Map(),
-      deleteAll: async () => {},
-      getAlarm: async () => null,
-      setAlarm: async () => {},
-      deleteAlarm: async () => {},
-      transaction: async (fn: any) => fn(),
-    } as any,
-    context: { parties: {} } as any,
-    parties: {} as any,
     name: id,
-    internalID: id,
     broadcast(data: string, _without?: string[]) {
       broadcasts.push(data)
     },
     _broadcasts: broadcasts,
     getConnections() {
-      return [][Symbol.iterator]()
+      return [][Symbol.iterator]() as IterableIterator<Connection>
     },
-    getConnection(_id: string) {
-      return undefined
-    },
-  } as any
+  }
 }
 
 /**
- * Helper: creates a GameRoom with mock room, calls onStart, and returns the room + mock.
+ * Helper: creates a GameRoom with mock internals, calls onStart, and returns the room + mock.
+ * Note: GameRoom extends Server (Durable Object), so we construct it with mock state/env.
  */
 export async function createTestGameRoom(roomId = "test-room") {
   const mockRoom = createMockRoom(roomId)
-  const gameRoom = new GameRoom(mockRoom as any)
+  // GameRoom extends Server which requires DurableObjectState + Env in constructor.
+  // For unit tests, we create the instance with mocked internals.
+  const gameRoom = new GameRoom(
+    { id: { name: roomId, toString: () => roomId, equals: () => false }, storage: { get: async () => undefined, put: async () => {}, delete: async () => false, list: async () => new Map(), deleteAll: async () => {}, getAlarm: async () => null, setAlarm: async () => {}, deleteAlarm: async () => {} }, waitUntil: () => {}, blockConcurrencyWhile: async (fn: any) => fn() } as any,
+    {} as any
+  )
+  // Override name getter and broadcast/getConnections to use our mock
+  Object.defineProperty(gameRoom, 'name', { get: () => roomId })
+  ;(gameRoom as any).broadcast = (data: string, without?: string[]) => mockRoom.broadcast(data, without)
+  ;(gameRoom as any).getConnections = () => mockRoom.getConnections()
   await gameRoom.onStart()
   return { gameRoom, mockRoom }
 }
@@ -85,7 +77,7 @@ export async function joinPlayer(
     type: "JOIN",
     payload: { name: opts.name, role: opts.role ?? "player", clientId: opts.clientId },
   })
-  await gameRoom.onMessage(joinMsg, conn as any)
+  await gameRoom.onMessage(conn as any, joinMsg)
   return conn
 }
 

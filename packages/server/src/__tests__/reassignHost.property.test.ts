@@ -69,7 +69,7 @@ describe("Feature: host-control-panel, Property 6: Reassign host swaps roles", (
             type: "REASSIGN_HOST",
             payload: { targetPlayerId: targetPlayer.id },
           })
-          await gameRoom.onMessage(reassignMsg, connections[0] as any)
+          await gameRoom.onMessage(connections[0] as any, reassignMsg)
 
           // Get state after reassignment
           state = getStateFromBroadcast(mockRoom)
