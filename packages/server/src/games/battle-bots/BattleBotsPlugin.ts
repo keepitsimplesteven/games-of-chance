@@ -407,7 +407,7 @@ export const battleBotsPlugin: GamePlugin<BattleBotsPick, BattleBotsRoundResult>
         const deltas: Record<string, number> = {}
         for (const pairing of gameState.pairings) {
           if (pairing.winnerId) {
-            deltas[pairing.winnerId] = 1
+            deltas[pairing.winnerId] = 25
           }
           if (pairing.loserId) {
             deltas[pairing.loserId] = 0
@@ -424,7 +424,7 @@ export const battleBotsPlugin: GamePlugin<BattleBotsPick, BattleBotsRoundResult>
 
         for (const ranking of gameState.finalRankings) {
           if (!ranking.isBot) {
-            deltas[ranking.playerId] = totalParticipants - ranking.rank
+            deltas[ranking.playerId] = (totalParticipants - ranking.rank) * 10
           }
         }
         return { deltas: filterBotPersonasFromDeltas(deltas, botPersonaIds) }
