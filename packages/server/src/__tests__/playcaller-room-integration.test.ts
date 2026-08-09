@@ -30,6 +30,25 @@ describe("Playcaller room integration", () => {
   })
 
   /**
+   * Helper: advance fake timers until the broadcast phase matches the target.
+   * The playcaller has a multi-down loop with nested timeouts (bot picks,
+   * result delays, completion delays), so we flush pending timers iteratively
+   * rather than advancing by a hardcoded amount.
+   */
+  function advanceUntilPhase(mockRoom: { _broadcasts: string[] }, targetPhase: string, maxTicks = 200) {
+    for (let i = 0; i < maxTicks; i++) {
+      const state = getStateFromBroadcast(mockRoom)
+      if (state?.round?.phase === targetPhase) return state
+      vi.runOnlyPendingTimers()
+    }
+    const finalState = getStateFromBroadcast(mockRoom)
+    throw new Error(
+      `Never reached phase "${targetPhase}" after ${maxTicks} timer ticks. ` +
+      `Current phase: "${finalState?.round?.phase}"`
+    )
+  }
+
+  /**
    * Helper: sets up a playcaller game room with the host switching game type to "playcaller"
    * and joining the specified number of players.
    */
@@ -88,11 +107,8 @@ describe("Playcaller room integration", () => {
       expect(state.playcallerGameState).not.toBeNull()
       expect(state.playcallerGameState.bracket.totalRounds).toBe(2)
 
-      // Advance time past pick window (3000ms) to trigger resolution
-      vi.advanceTimersByTime(3100)
-
-      state = getStateFromBroadcast(mockRoom)
-      expect(state.round.phase).toBe("RESULT")
+      // Advance through the multi-down drive loop until bracket round resolves
+      state = advanceUntilPhase(mockRoom, "RESULT")
       // Bracket round 0 should be resolved
       expect(state.playcallerGameState.bracket.rounds[0].resolved).toBe(true)
 
@@ -103,11 +119,8 @@ describe("Playcaller room integration", () => {
       expect(state.round.phase).toBe("PICKING")
       expect(state.round.roundNumber).toBe(2)
 
-      // Advance time past pick window to resolve the final round
-      vi.advanceTimersByTime(3100)
-
-      state = getStateFromBroadcast(mockRoom)
-      expect(state.round.phase).toBe("RESULT")
+      // Advance through the final bracket round
+      state = advanceUntilPhase(mockRoom, "RESULT")
       // Final round should be resolved
       expect(state.playcallerGameState.bracket.rounds[1].resolved).toBe(true)
 
@@ -130,11 +143,8 @@ describe("Playcaller room integration", () => {
       let state = getStateFromBroadcast(mockRoom)
       expect(state.round.phase).toBe("PICKING")
 
-      // Advance past pick window to resolve
-      vi.advanceTimersByTime(3100)
-
-      state = getStateFromBroadcast(mockRoom)
-      expect(state.round.phase).toBe("RESULT")
+      // Advance through the multi-down drive loop until bracket round resolves
+      state = advanceUntilPhase(mockRoom, "RESULT")
 
       // Wait a long time — phase should NOT auto-advance
       vi.advanceTimersByTime(30000)

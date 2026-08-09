@@ -26,11 +26,11 @@ const stubArtData: PlayArtData = {
 }
 
 /** Generate a unique play ID string */
-const arbPlayId = fc.stringMatching(/^[a-z]+-[a-z]+$/)
+const arbPlayId = fc.constantFrom("run-safe" as const, "run-aggressive" as const, "pass-safe" as const, "pass-aggressive" as const)
 
 /** Generate an array of exactly 4 unique play card data objects */
 const arbFourCards: fc.Arbitrary<PlayCardData[]> = fc
-  .uniqueArray(arbPlayId, { minLength: 4, maxLength: 4 })
+  .constant(["run-safe", "run-aggressive", "pass-safe", "pass-aggressive"] as const)
   .map((ids) =>
     ids.map((id) => ({
       playId: id,

@@ -55,15 +55,15 @@ describe("resolveDown — roll outcomes", () => {
     it("produces yards in 100-120% of modified max", () => {
       const state = freshDrive()
       // run-aggressive vs pass-safe: mismatched axis
-      // successRateMod = +0.05 → modified success = 0.60
-      // critSuccessMod = +0.04 → modified crit success = 0.16
-      // yardageMaxMod = +2 → modified max = 12
-      // yardageMinMod = -1 → modified min = 2
+      // v3-decisive: run-aggressive base max = 11
+      // yardageMaxMod = +2 → modified max = 13
+      // successRateMod = +0.08 → modified success = 0.68
+      // critSuccessMod = +0.04 → modified crit success = 0.14
       //
       // Roll sequence:
-      // 1) success roll: 0.1 < 0.60 → success
-      // 2) crit success roll: 0.05 < 0.16 → critical success
-      // 3) bonus yardage roll: 0.8 → max + 0.8 * (max * 0.20) = 12 + 0.8*2.4 = 12 + 1.92 → round = 14
+      // 1) success roll: 0.1 < 0.68 → success
+      // 2) crit success roll: 0.05 < 0.14 → critical success
+      // 3) bonus yardage roll: 0.8 → max + 0.8 * (max * 0.20) = 13 + 0.8*2.6 = 13 + 2.08 → round = 15
       const rng = createFixedRng([0.1, 0.05, 0.8])
       const { result } = resolveDown(
         state,
@@ -75,10 +75,10 @@ describe("resolveDown — roll outcomes", () => {
       )
 
       expect(result.outcome).toBe("critical_success")
-      // Modified max = 10 + 2 = 12
-      // Expected: 100-120% of 12 → 12 to 14 (rounded)
-      expect(result.yardsGained).toBeGreaterThanOrEqual(12)
-      expect(result.yardsGained).toBeLessThanOrEqual(Math.round(12 * 1.2))
+      // Modified max = 11 + 2 = 13
+      // Expected: 100-120% of 13 → 13 to 16 (rounded)
+      expect(result.yardsGained).toBeGreaterThanOrEqual(13)
+      expect(result.yardsGained).toBeLessThanOrEqual(Math.round(13 * 1.2))
     })
   })
 

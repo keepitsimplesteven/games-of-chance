@@ -204,15 +204,16 @@ describe("Property 13: Drive summary computes correct totals from play history",
 
           const summary = computeDriveSummary(state)
 
-          expect(summary.totalPlays).toBe(playHistory.length)
+          expect(summary).not.toBeNull()
+          expect(summary!.totalPlays).toBe(playHistory.length)
 
           const expectedTotalYards = playHistory.reduce(
             (sum, entry) => sum + entry.result.yardsGained,
             0
           )
-          expect(summary.totalYards).toBe(expectedTotalYards)
-          expect(summary.endingType).toBe(endingType)
-          expect(summary.winner).toBe(winner)
+          expect(summary!.totalYards).toBe(expectedTotalYards)
+          expect(summary!.endingType).toBe(endingType)
+          expect(summary!.winner).toBe(winner)
         }
       ),
       { numRuns: 300 }

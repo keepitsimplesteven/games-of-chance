@@ -47,6 +47,7 @@ function buildMockRoomState(overrides?: Partial<RoomState>): RoomState {
       autoRoundIntervalMs: 5000,
       placementPoints: [250, 125, 75, 50],
       roomSize: 4,
+      progressionMode: "endless",
     },
     players: [
       { id: "p1", name: "Alice", role: "host", connected: true, connectionId: "conn-1" },

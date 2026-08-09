@@ -50,6 +50,24 @@ describe("Endless mode", () => {
     resetPlaycallerState()
   })
 
+  /**
+   * Helper: advance fake timers until the broadcast phase matches the target.
+   * The playcaller has a multi-down loop with nested timeouts (bot picks,
+   * result delays, completion delays), so we flush pending timers iteratively.
+   */
+  function advanceUntilPhase(mockRoom: { _broadcasts: string[] }, targetPhase: string, maxTicks = 200) {
+    for (let i = 0; i < maxTicks; i++) {
+      const state = getStateFromBroadcast(mockRoom)
+      if (state?.round?.phase === targetPhase) return state
+      vi.runOnlyPendingTimers()
+    }
+    const finalState = getStateFromBroadcast(mockRoom)
+    throw new Error(
+      `Never reached phase "${targetPhase}" after ${maxTicks} timer ticks. ` +
+      `Current phase: "${finalState?.round?.phase}"`
+    )
+  }
+
   it("does not create tournamentProgress in endless mode", async () => {
     const { gameRoom, mockRoom } = await createTestGameRoom()
 
@@ -173,8 +191,8 @@ describe("Endless mode", () => {
     let state = getStateFromBroadcast(mockRoom)
     expect(state.round.phase).toBe("PICKING")
 
-    // Resolve round 1
-    vi.advanceTimersByTime(3100)
+    // Resolve round 1 (multi-down drive loop with nested timeouts)
+    advanceUntilPhase(mockRoom, "RESULT")
     state = getStateFromBroadcast(mockRoom)
     expect(state.round.phase).toBe("RESULT")
 
@@ -184,7 +202,7 @@ describe("Endless mode", () => {
     expect(state.round.phase).toBe("PICKING")
 
     // Resolve round 2 (final)
-    vi.advanceTimersByTime(3100)
+    advanceUntilPhase(mockRoom, "RESULT")
     state = getStateFromBroadcast(mockRoom)
     expect(state.round.phase).toBe("RESULT")
 

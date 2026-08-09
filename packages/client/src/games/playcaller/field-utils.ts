@@ -78,16 +78,17 @@ export function formatPlayResult(result: PlayResult): string {
 
 /**
  * Computes summary stats for a completed drive.
- * Requires `state.completion` to be non-null (drive must be complete).
+ * Returns null if drive has no completion data.
  */
 export function computeDriveSummary(state: DriveState) {
+  if (!state.completion) return null
   return {
     totalPlays: state.playHistory.length,
     totalYards: state.playHistory.reduce(
       (sum, entry) => sum + entry.result.yardsGained,
       0
     ),
-    endingType: state.completion!.endingType,
-    winner: state.completion!.winner,
+    endingType: state.completion.endingType,
+    winner: state.completion.winner,
   }
 }

@@ -80,6 +80,18 @@ describe("Big Wheel Integration Tests", () => {
         expect(spin1Result.value).toBe(reelStrip[spin1Result.reelIndex])
         expect(spin1Result.spinTotal).toBeNull()
 
+        // Score spin 1
+        const score1Result = bigWheelPlugin.scoreRound(
+          { [playerId]: { type: "spin" } },
+          spin1Result,
+          players,
+          {}
+        )
+        expect(score1Result.deltas[playerId]).toBe(spin1Result.value)
+
+        // Accumulate spin 1 score
+        gameScores[playerId] = (gameScores[playerId] ?? 0) + (score1Result.deltas[playerId] ?? 0)
+
         // Record spin 1 result in spinResults for spin 2
         setBigWheelState({
           spinOrder: ["p1", "p2", "p3"],
@@ -109,7 +121,7 @@ describe("Big Wheel Integration Tests", () => {
           players,
           {}
         )
-        expect(scoreResult.deltas[playerId]).toBe(spin2Result.spinTotal)
+        expect(scoreResult.deltas[playerId]).toBe(spin2Result.value)
 
         // Accumulate game scores
         gameScores[playerId] = (gameScores[playerId] ?? 0) + (scoreResult.deltas[playerId] ?? 0)
