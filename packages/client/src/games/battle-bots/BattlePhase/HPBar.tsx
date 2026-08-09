@@ -6,20 +6,22 @@ interface HPBarProps {
 
 /**
  * Determines bar color based on HP percentage.
- * Green (#22c55e) when > 60%, yellow (#eab308) when 30-60%, red (#ef4444) when < 30%.
+ * Green when > 60%, gold/yellow when 30-60%, red when < 30%.
+ * Uses theme-aligned colors.
  */
 function getBarColor(percentage: number): string {
-  if (percentage > 60) return "#22c55e"
-  if (percentage >= 30) return "#eab308"
-  return "#ef4444"
+  if (percentage > 60) return "#3a9a4a"
+  if (percentage >= 30) return "#f5c542"
+  return "#cc3333"
 }
 
 /**
  * HPBar — Animated HP bar with smooth CSS transitions matching the 250ms tick rate.
  *
  * Displays a horizontal bar representing HP percentage with color that shifts
- * from green (full) through yellow (mid) to red (low). Width animates smoothly
+ * from green (full) through gold (mid) to red (low). Width animates smoothly
  * between tick updates using CSS transitions.
+ * Uses retro-casino theme-aligned colors.
  *
  * Validates: Requirements 10.2
  */
@@ -30,15 +32,15 @@ export function HPBar({ currentHp, maxHp, label }: HPBarProps) {
   return (
     <div className="w-full">
       {label && (
-        <div className="text-xs text-gray-300 mb-1 truncate">{label}</div>
+        <div className="text-xs text-[#3a9a4a] mb-1 truncate">{label}</div>
       )}
-      <div className="w-full bg-gray-700 rounded-full h-4 overflow-hidden">
+      <div className="w-full bg-[#0f3d18] rounded-full h-4 overflow-hidden border border-[#2a7a3a]">
         <div
           className="h-full rounded-full transition-all duration-[250ms] ease-out"
           style={{ width: `${percentage}%`, backgroundColor: color }}
         />
       </div>
-      <div className="text-xs text-gray-400 mt-0.5 text-right">
+      <div className="text-xs text-[#3a9a4a] mt-0.5 text-right font-mono tabular-nums">
         {currentHp} / {maxHp}
       </div>
     </div>

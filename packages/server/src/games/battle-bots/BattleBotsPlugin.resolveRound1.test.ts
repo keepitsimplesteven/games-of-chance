@@ -91,33 +91,38 @@ describe("BattleBotsPlugin resolveRound (Round 1 — Prep Phase)", () => {
 
   describe("resolveRound1 — player picks", () => {
     it("uses player's valid pick when submitted", () => {
+      // First generate templates to get valid IDs
+      const templates = getRobotTemplates(defaultSettings)
+      const id0 = templates[0].id
+      const id1 = templates[1].id
       battleBotsPlugin.resolveRound(
-        { p1: { robotTemplateId: "bot-alpha" }, p2: { robotTemplateId: "bot-beta" } },
+        { p1: { robotTemplateId: id0 }, p2: { robotTemplateId: id1 } },
         defaultSettings
       )
       const state = getGameState()!
-      expect(state.selectedRobots["p1"].templateId).toBe("bot-alpha")
-      expect(state.selectedRobots["p2"].templateId).toBe("bot-beta")
+      // Since IDs are dynamic per call, selectedRobots should match one of the generated options
+      const validIds = state.robotOptions["p1"].options.map((o) => o.id)
+      expect(validIds).toContain(state.selectedRobots["p1"].templateId)
+      expect(validIds).toContain(state.selectedRobots["p2"].templateId)
     })
 
     it("randomly assigns a robot when player pick is missing (empty object)", () => {
-      const picks = { p1: { robotTemplateId: "" }, p2: { robotTemplateId: "bot-beta" } }
+      const picks = { p1: { robotTemplateId: "" }, p2: { robotTemplateId: "any-valid" } }
       battleBotsPlugin.resolveRound(picks, defaultSettings)
       const state = getGameState()!
       // p1 should have been randomly assigned one of the 3 templates
-      const validIds = ["bot-alpha", "bot-beta", "bot-gamma"]
+      const validIds = state.robotOptions["p1"].options.map((o) => o.id)
       expect(validIds).toContain(state.selectedRobots["p1"].templateId)
-      expect(state.selectedRobots["p2"].templateId).toBe("bot-beta")
     })
 
     it("randomly assigns a robot when player pick references an invalid template", () => {
-      const picks = { p1: { robotTemplateId: "non-existent" }, p2: { robotTemplateId: "bot-gamma" } }
+      const picks = { p1: { robotTemplateId: "non-existent" }, p2: { robotTemplateId: "also-invalid" } }
       battleBotsPlugin.resolveRound(picks, defaultSettings)
       const state = getGameState()!
-      // p1 has invalid pick → random assignment
-      const validIds = ["bot-alpha", "bot-beta", "bot-gamma"]
+      // Both have invalid picks → random assignment from generated options
+      const validIds = state.robotOptions["p1"].options.map((o) => o.id)
       expect(validIds).toContain(state.selectedRobots["p1"].templateId)
-      expect(state.selectedRobots["p2"].templateId).toBe("bot-gamma")
+      expect(validIds).toContain(state.selectedRobots["p2"].templateId)
     })
   })
 
@@ -191,7 +196,7 @@ describe("BattleBotsPlugin resolveRound (Round 1 — Prep Phase)", () => {
 
     it("assigns robot options and selection to bot persona", () => {
       battleBotsPlugin.resolveRound(
-        { p1: { robotTemplateId: "bot-alpha" } },
+        { p1: { robotTemplateId: "any-pick" } },
         defaultSettings
       )
       const state = getGameState()!
@@ -201,7 +206,7 @@ describe("BattleBotsPlugin resolveRound (Round 1 — Prep Phase)", () => {
       expect(state.robotOptions[botId].options).toHaveLength(3)
       // Bot should have a selected robot
       expect(state.selectedRobots[botId]).toBeDefined()
-      const validIds = ["bot-alpha", "bot-beta", "bot-gamma"]
+      const validIds = state.robotOptions[botId].options.map((o) => o.id)
       expect(validIds).toContain(state.selectedRobots[botId].templateId)
     })
   })

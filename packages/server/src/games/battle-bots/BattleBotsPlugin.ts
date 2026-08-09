@@ -14,6 +14,7 @@ import type {
   RobotTemplate,
   RobotInstance,
   RobotOptions,
+  RobotVisual,
 } from "./types"
 import { BATTLE_BOTS, BATTLE_BOTS_SETTINGS_SCHEMA } from "./constants"
 import { ensureEvenParticipants, botPersonaSelectRobot } from "./BotPersona"
@@ -22,6 +23,7 @@ import { simulateBattle1v1, simulateFFA } from "./simulation/BattleEngine"
 import { computeFinalRankings } from "./simulation/RankingEngine"
 import type { ParticipantInfo } from "./simulation/RankingEngine"
 import { filterBotPersonasFromLeaderboard, filterBotPersonasFromDeltas } from "./scoring-utils"
+import { generateUniqueNames } from "./robotNames"
 
 /**
  * Result type for each round of the Battle Bots game.
@@ -59,7 +61,8 @@ export function getGameState(): BattleBotsGameState | null {
 
 /**
  * Generates the robot template collection from active game settings.
- * V1: returns 3 templates with identical stats but different names/visuals.
+ * Each robot gets one of 3 weapon types (drill, blaster, bazooka),
+ * a random head, random body, random name, and random color from the theme palette.
  */
 export function getRobotTemplates(settings: GameSettings): RobotTemplate[] {
   const hp = Number(settings.tuning.BOT_HP) || BATTLE_BOTS.BOT_HP
@@ -67,11 +70,44 @@ export function getRobotTemplates(settings: GameSettings): RobotTemplate[] {
   const damageMin = Number(settings.tuning.DAMAGE_MIN) || BATTLE_BOTS.DAMAGE_MIN
   const damageMax = Number(settings.tuning.DAMAGE_MAX) || BATTLE_BOTS.DAMAGE_MAX
 
-  return [
-    { id: "bot-alpha", name: "Iron Crusher", hp, accuracy, damageMin, damageMax, visualId: "robot-1" },
-    { id: "bot-beta", name: "Steel Viper", hp, accuracy, damageMin, damageMax, visualId: "robot-2" },
-    { id: "bot-gamma", name: "Chrome Fang", hp, accuracy, damageMin, damageMax, visualId: "robot-3" },
+  const headTypes: RobotVisual["headType"][] = ["square", "rounded", "triangular", "hexagonal"]
+  const bodyTypes: RobotVisual["bodyType"][] = ["square", "rounded", "triangular", "hexagonal"]
+  const weaponTypes: RobotVisual["weaponType"][] = ["drill", "blaster", "bazooka"]
+
+  // Theme palette colors (retro-casino inspired)
+  const colorPalette = [
+    "#cc3333", // red chip
+    "#2255aa", // blue chip
+    "#228b22", // green
+    "#f5c542", // gold
+    "#8b4513", // brown
+    "#6a0dad", // purple
+    "#cc6633", // orange
+    "#2ea8a8", // teal
   ]
+
+  const pickRandom = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]
+  const names = generateUniqueNames(3)
+
+  return weaponTypes.map((weapon, i) => {
+    const visual: RobotVisual = {
+      headType: pickRandom(headTypes),
+      bodyType: pickRandom(bodyTypes),
+      weaponType: weapon,
+      color: pickRandom(colorPalette),
+    }
+
+    return {
+      id: `bot-${weapon}-${Date.now()}-${i}`,
+      name: names[i],
+      hp,
+      accuracy,
+      damageMin,
+      damageMax,
+      visualId: `robot-${i + 1}`,
+      visual,
+    }
+  })
 }
 
 /**

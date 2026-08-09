@@ -58,10 +58,11 @@ describe("ensureEvenParticipants", () => {
 
 
 describe("botPersonaSelectRobot", () => {
+  const mockVisual = { headType: "square" as const, bodyType: "square" as const, weaponType: "drill" as const, color: "#cc3333" }
   const mockOptions: RobotTemplate[] = [
-    { id: "bot-alpha", name: "Iron Crusher", hp: 100, accuracy: 80, damageMin: 1, damageMax: 10, visualId: "robot-1" },
-    { id: "bot-beta", name: "Steel Viper", hp: 100, accuracy: 80, damageMin: 1, damageMax: 10, visualId: "robot-2" },
-    { id: "bot-gamma", name: "Chrome Fang", hp: 100, accuracy: 80, damageMin: 1, damageMax: 10, visualId: "robot-3" },
+    { id: "bot-alpha", name: "Iron Crusher", hp: 100, accuracy: 80, damageMin: 1, damageMax: 10, visualId: "robot-1", visual: mockVisual },
+    { id: "bot-beta", name: "Steel Viper", hp: 100, accuracy: 80, damageMin: 1, damageMax: 10, visualId: "robot-2", visual: { ...mockVisual, weaponType: "blaster" as const } },
+    { id: "bot-gamma", name: "Chrome Fang", hp: 100, accuracy: 80, damageMin: 1, damageMax: 10, visualId: "robot-3", visual: { ...mockVisual, weaponType: "bazooka" as const } },
   ]
 
   it("returns an id from the provided options", () => {
@@ -89,7 +90,7 @@ describe("botPersonaSelectRobot", () => {
 
   it("works with a single option", () => {
     const singleOption: RobotTemplate[] = [
-      { id: "bot-alpha", name: "Iron Crusher", hp: 100, accuracy: 80, damageMin: 1, damageMax: 10, visualId: "robot-1" },
+      { id: "bot-alpha", name: "Iron Crusher", hp: 100, accuracy: 80, damageMin: 1, damageMax: 10, visualId: "robot-1", visual: mockVisual },
     ]
     const result = botPersonaSelectRobot(singleOption)
     expect(result).toBe("bot-alpha")

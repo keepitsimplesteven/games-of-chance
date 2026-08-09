@@ -1,4 +1,12 @@
-/** A robot template defining base stats — V1 has one, future has many */
+/** Visual configuration for a composed robot */
+export interface RobotVisual {
+  headType: "square" | "rounded" | "triangular" | "hexagonal"
+  bodyType: "square" | "rounded" | "triangular" | "hexagonal"
+  weaponType: "drill" | "blaster" | "bazooka"
+  color: string                 // hex color from theme palette
+}
+
+/** A robot template defining base stats */
 export interface RobotTemplate {
   id: string                    // unique template identifier
   name: string                  // display name (e.g., "Iron Crusher")
@@ -6,7 +14,8 @@ export interface RobotTemplate {
   accuracy: number              // hit chance percentage (1-100)
   damageMin: number             // minimum damage per hit
   damageMax: number             // maximum damage per hit
-  visualId: string              // reference to client-side sprite/visual
+  visualId: string              // legacy: kept for compatibility
+  visual: RobotVisual           // composed robot visual config
 }
 
 /** A robot instance assigned to a player for a game */
