@@ -11,6 +11,15 @@
 import { describe, it, expect } from "vitest"
 import * as fc from "fast-check"
 import { bigWheelPlugin } from "../BigWheelPlugin"
+import type { GameSettings } from "@games-of-chance/shared"
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+const defaultSettings: GameSettings = {
+  roundCount: 3,
+  pickWindowMs: 15_000,
+  tuning: {},
+}
 
 // ── Arbitraries ────────────────────────────────────────────────────────────
 
@@ -54,9 +63,7 @@ describe("Feature: big-wheel, Property 8: Score delta equals spin total", () => 
           const scoreResult = bigWheelPlugin.scoreRound(
             { [spinnerPlayerId]: { type: "spin" } },
             spinResult,
-            [{ id: spinnerPlayerId, name: "Test", connected: true }],
-            {}
-          )
+            [{ id: spinnerPlayerId, name: "Test", role: "player" as const, connected: true, connectionId: spinnerPlayerId }], defaultSettings)
 
           // Verify: deltas maps the player's ID to the spin 2 value (progressive scoring)
           expect(scoreResult.deltas[spinnerPlayerId]).toBe(spin2Value)
@@ -92,9 +99,7 @@ describe("Feature: big-wheel, Property 8: Score delta equals spin total", () => 
           const scoreResult = bigWheelPlugin.scoreRound(
             { [spinnerPlayerId]: { type: "spin" } },
             spinResult,
-            [{ id: spinnerPlayerId, name: "Test", connected: true }],
-            {}
-          )
+            [{ id: spinnerPlayerId, name: "Test", role: "player" as const, connected: true, connectionId: spinnerPlayerId }], defaultSettings)
 
           // Verify: deltas contains the spin value (progressive scoring)
           expect(scoreResult.deltas[spinnerPlayerId]).toBe(spinValue)
@@ -135,9 +140,7 @@ describe("Feature: big-wheel, Property 8: Score delta equals spin total", () => 
             const score1 = bigWheelPlugin.scoreRound(
               { [playerId]: { type: "spin" } },
               spin1Result,
-              [{ id: playerId, name: "Test", connected: true }],
-              {}
-            )
+              [{ id: playerId, name: "Test", role: "player" as const, connected: true, connectionId: playerId }], defaultSettings)
             const delta1 = score1.deltas[playerId] ?? 0
             gameScores[playerId] = (gameScores[playerId] ?? 0) + delta1
 
@@ -152,9 +155,7 @@ describe("Feature: big-wheel, Property 8: Score delta equals spin total", () => 
             const score2 = bigWheelPlugin.scoreRound(
               { [playerId]: { type: "spin" } },
               spin2Result,
-              [{ id: playerId, name: "Test", connected: true }],
-              {}
-            )
+              [{ id: playerId, name: "Test", role: "player" as const, connected: true, connectionId: playerId }], defaultSettings)
             const delta2 = score2.deltas[playerId] ?? 0
             gameScores[playerId] = (gameScores[playerId] ?? 0) + delta2
           }

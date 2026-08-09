@@ -263,17 +263,19 @@ export default function SettingsPanel(): JSX.Element | null {
 
             {tuningOpen && (
               <div className="mt-2 flex flex-col gap-4">
-                {schema.map((field) => (
-                  <SchemaField
-                    key={field.key}
-                    field={field}
-                    value={
-                      gameSettings.tuning[field.key] ?? field.defaultValue
-                    }
-                    onChange={handleTuningChange}
-                    disabled={settingsLocked}
-                  />
-                ))}
+                {schema.map((field) => {
+                  const val = gameSettings.tuning[field.key] ?? field.defaultValue
+                  if (Array.isArray(val)) return null
+                  return (
+                    <SchemaField
+                      key={field.key}
+                      field={field}
+                      value={val}
+                      onChange={handleTuningChange}
+                      disabled={settingsLocked}
+                    />
+                  )
+                })}
               </div>
             )}
           </div>

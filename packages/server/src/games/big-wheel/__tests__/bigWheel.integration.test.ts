@@ -19,8 +19,15 @@ import {
   resolveDisconnectedTurn,
 } from "../disconnection"
 import { BIG_WHEEL } from "../constants"
+import type { GameSettings } from "@games-of-chance/shared"
 
 // ── Helpers ────────────────────────────────────────────────────────────────
+
+const defaultSettings: GameSettings = {
+  roundCount: 3,
+  pickWindowMs: BIG_WHEEL.PICK_WINDOW_MS,
+  tuning: {},
+}
 
 function makePlayer(id: string, name: string, connected = true) {
   return { id, name, role: "player" as const, connected, connectionId: connected ? id : null }
@@ -40,7 +47,7 @@ describe("Big Wheel Integration Tests", () => {
         makePlayer("p2", "Bob"),
         makePlayer("p3", "Charlie"),
       ]
-      const reelStrip = BIG_WHEEL.DEFAULT_REEL_STRIP
+      const reelStrip = [...BIG_WHEEL.DEFAULT_REEL_STRIP]
 
       // Initialize plugin state
       setBigWheelState({
@@ -62,7 +69,7 @@ describe("Big Wheel Integration Tests", () => {
         setBigWheelState({
           spinOrder: ["p1", "p2", "p3"],
           currentTurnIndex: turnIdx,
-          spinResults: gameScores, // reuse as tracking
+          spinResults: {},
           currentSpinNumber: 1,
           reelStrip,
           disconnectedPlayers: [],
@@ -71,7 +78,7 @@ describe("Big Wheel Integration Tests", () => {
         // Spin 1
         const spin1Result = bigWheelPlugin.resolveRound(
           { [playerId]: { type: "spin" } },
-          {}
+          defaultSettings
         )
         expect(spin1Result.spinnerPlayerId).toBe(playerId)
         expect(spin1Result.spinNumber).toBe(1)
@@ -84,9 +91,7 @@ describe("Big Wheel Integration Tests", () => {
         const score1Result = bigWheelPlugin.scoreRound(
           { [playerId]: { type: "spin" } },
           spin1Result,
-          players,
-          {}
-        )
+          players, defaultSettings)
         expect(score1Result.deltas[playerId]).toBe(spin1Result.value)
 
         // Accumulate spin 1 score
@@ -105,7 +110,7 @@ describe("Big Wheel Integration Tests", () => {
         // Spin 2
         const spin2Result = bigWheelPlugin.resolveRound(
           { [playerId]: { type: "spin" } },
-          {}
+          defaultSettings
         )
         expect(spin2Result.spinnerPlayerId).toBe(playerId)
         expect(spin2Result.spinNumber).toBe(2)
@@ -118,9 +123,7 @@ describe("Big Wheel Integration Tests", () => {
         const scoreResult = bigWheelPlugin.scoreRound(
           { [playerId]: { type: "spin" } },
           spin2Result,
-          players,
-          {}
-        )
+          players, defaultSettings)
         expect(scoreResult.deltas[playerId]).toBe(spin2Result.value)
 
         // Accumulate game scores
@@ -155,7 +158,7 @@ describe("Big Wheel Integration Tests", () => {
         makePlayer("p1", "Alice"),
         makePlayer("p2", "Bob"),
       ]
-      const reelStrip = BIG_WHEEL.DEFAULT_REEL_STRIP
+      const reelStrip = [...BIG_WHEEL.DEFAULT_REEL_STRIP]
 
       // --- Player 1 spins normally ---
       setBigWheelState({
@@ -170,8 +173,8 @@ describe("Big Wheel Integration Tests", () => {
       // P1 Spin 1
       const p1Spin1 = bigWheelPlugin.resolveRound(
         { p1: { type: "spin" } },
-        {}
-      )
+          defaultSettings
+        )
       expect(p1Spin1.spinnerPlayerId).toBe("p1")
       expect(p1Spin1.spinNumber).toBe(1)
 
@@ -188,8 +191,8 @@ describe("Big Wheel Integration Tests", () => {
       // P1 Spin 2
       const p1Spin2 = bigWheelPlugin.resolveRound(
         { p1: { type: "spin" } },
-        {}
-      )
+          defaultSettings
+        )
       expect(p1Spin2.spinNumber).toBe(2)
       expect(p1Spin2.spinTotal).toBe(p1Spin1.value + p1Spin2.value)
 
@@ -236,7 +239,7 @@ describe("Big Wheel Integration Tests", () => {
     })
 
     it("active spinner disconnects mid-turn after spin 1 — spin 2 auto-resolves", () => {
-      const reelStrip = BIG_WHEEL.DEFAULT_REEL_STRIP
+      const reelStrip = [...BIG_WHEEL.DEFAULT_REEL_STRIP]
 
       // P1 has already completed spin 1
       setBigWheelState({
@@ -266,7 +269,7 @@ describe("Big Wheel Integration Tests", () => {
 
   describe("Test 3: Timeout auto-resolve", () => {
     it("auto-resolve produces valid result with correct reel strip value", () => {
-      const reelStrip = BIG_WHEEL.DEFAULT_REEL_STRIP
+      const reelStrip = [...BIG_WHEEL.DEFAULT_REEL_STRIP]
 
       setBigWheelState({
         spinOrder: ["p1"],
@@ -279,7 +282,7 @@ describe("Big Wheel Integration Tests", () => {
 
       // Simulate timeout: server calls resolveRound regardless of whether
       // the player submitted a pick (resolveRound doesn't care about picks content)
-      const result = bigWheelPlugin.resolveRound({}, {})
+      const result = bigWheelPlugin.resolveRound({}, defaultSettings)
 
       // Verify the result has valid reelIndex and value
       expect(result.reelIndex).toBeGreaterThanOrEqual(0)
@@ -295,7 +298,7 @@ describe("Big Wheel Integration Tests", () => {
     })
 
     it("auto-resolve on spin 2 produces valid spinTotal", () => {
-      const reelStrip = BIG_WHEEL.DEFAULT_REEL_STRIP
+      const reelStrip = [...BIG_WHEEL.DEFAULT_REEL_STRIP]
       const spin1Value = 45
 
       setBigWheelState({
@@ -308,7 +311,7 @@ describe("Big Wheel Integration Tests", () => {
       })
 
       // Timeout on spin 2 — server auto-resolves
-      const result = bigWheelPlugin.resolveRound({}, {})
+      const result = bigWheelPlugin.resolveRound({}, defaultSettings)
 
       // Verify valid result
       expect(result.reelIndex).toBeGreaterThanOrEqual(0)

@@ -100,7 +100,7 @@ describe("Feature: big-wheel, Property 5: Leaderboard ordering invariant", () =>
             currentTurnIndex: 0,
             spinResults: {},
             currentSpinNumber: 1,
-            reelStrip: BIG_WHEEL.DEFAULT_REEL_STRIP,
+            reelStrip: [...BIG_WHEEL.DEFAULT_REEL_STRIP],
             disconnectedPlayers: [],
           })
 
@@ -141,7 +141,7 @@ describe("Feature: big-wheel, Property 5: Leaderboard ordering invariant", () =>
             currentTurnIndex: 0,
             spinResults: {},
             currentSpinNumber: 1,
-            reelStrip: BIG_WHEEL.DEFAULT_REEL_STRIP,
+            reelStrip: [...BIG_WHEEL.DEFAULT_REEL_STRIP],
             disconnectedPlayers: [],
           })
 
@@ -179,7 +179,7 @@ describe("Feature: big-wheel, Property 5: Leaderboard ordering invariant", () =>
             currentTurnIndex: 0,
             spinResults: {},
             currentSpinNumber: 1,
-            reelStrip: BIG_WHEEL.DEFAULT_REEL_STRIP,
+            reelStrip: [...BIG_WHEEL.DEFAULT_REEL_STRIP],
             disconnectedPlayers: [],
           })
 
@@ -222,7 +222,7 @@ describe("Feature: big-wheel, Property 5: Leaderboard ordering invariant", () =>
             currentTurnIndex: 0,
             spinResults: {},
             currentSpinNumber: 1,
-            reelStrip: BIG_WHEEL.DEFAULT_REEL_STRIP,
+            reelStrip: [...BIG_WHEEL.DEFAULT_REEL_STRIP],
             disconnectedPlayers: [],
           })
 

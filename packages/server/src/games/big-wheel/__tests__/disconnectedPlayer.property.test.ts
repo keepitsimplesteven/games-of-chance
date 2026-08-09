@@ -10,6 +10,15 @@ import { describe, it, expect } from "vitest"
 import * as fc from "fast-check"
 import { resolveDisconnectedTurn } from "../disconnection"
 import { setBigWheelState, bigWheelPlugin } from "../BigWheelPlugin"
+import type { GameSettings } from "@games-of-chance/shared"
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+const defaultSettings: GameSettings = {
+  roundCount: 3,
+  pickWindowMs: 15_000,
+  tuning: {},
+}
 
 // ── Arbitraries ────────────────────────────────────────────────────────────
 
@@ -91,8 +100,8 @@ describe("Feature: big-wheel, Property 7: Disconnected player zero score", () =>
         const scoreResult = bigWheelPlugin.scoreRound(
           { [playerId]: { type: "spin" } },
           spinResult,
-          [{ id: playerId, name: "test", connected: false }],
-          {}
+          [{ id: playerId, name: "test", role: "player" as const, connected: false, connectionId: null }],
+          defaultSettings
         )
 
         // Verify: deltas for the disconnected player is 0

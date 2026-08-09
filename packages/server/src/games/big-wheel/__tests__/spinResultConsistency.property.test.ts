@@ -11,6 +11,15 @@
 import { describe, it, expect } from "vitest"
 import * as fc from "fast-check"
 import { bigWheelPlugin, setBigWheelState } from "../BigWheelPlugin"
+import type { GameSettings } from "@games-of-chance/shared"
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+const defaultSettings: GameSettings = {
+  roundCount: 3,
+  pickWindowMs: 15_000,
+  tuning: {},
+}
 
 // ── Arbitraries ────────────────────────────────────────────────────────────
 
@@ -49,10 +58,7 @@ describe("Feature: big-wheel, Property 1: Spin result round-trip consistency", (
         })
 
         // Resolve the round with the active spinner's pick
-        const result = bigWheelPlugin.resolveRound(
-          { [spinnerId]: { type: "spin" } },
-          {}
-        )
+        const result = bigWheelPlugin.resolveRound({ [spinnerId]: { type: "spin" } }, defaultSettings)
 
         // Verify: reelIndex is in valid range
         expect(result.reelIndex).toBeGreaterThanOrEqual(0)
@@ -93,10 +99,7 @@ describe("Feature: big-wheel, Property 1: Spin result round-trip consistency", (
           })
 
           // Resolve the round with the active spinner's pick
-          const result = bigWheelPlugin.resolveRound(
-            { [spinnerId]: { type: "spin" } },
-            {}
-          )
+          const result = bigWheelPlugin.resolveRound({ [spinnerId]: { type: "spin" } }, defaultSettings)
 
           // Verify: reelIndex is in valid range
           expect(result.reelIndex).toBeGreaterThanOrEqual(0)
