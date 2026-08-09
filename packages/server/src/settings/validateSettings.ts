@@ -35,7 +35,7 @@ export function validateSettingsUpdate(
 
   // Validate tuning keys against the plugin's settingsSchema
   if (changes.tuning !== undefined) {
-    const sanitizedTuning: Record<string, number | boolean | string> = {}
+    const sanitizedTuning: Record<string, number | boolean | string | number[]> = {}
 
     // If no schema, ignore all tuning keys
     if (schema !== undefined) {

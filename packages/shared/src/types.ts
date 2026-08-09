@@ -57,7 +57,7 @@ export interface GameSettings {
   /** Duration of the pick window in milliseconds */
   pickWindowMs: number
   /** Game-specific tuning constants (keyed by constant name) */
-  tuning: Record<string, number | boolean | string>
+  tuning: Record<string, number | boolean | string | number[]>
   /** Visual theme applied to all players in the room (defaults to "retro-casino") */
   theme?: ThemeId
 }

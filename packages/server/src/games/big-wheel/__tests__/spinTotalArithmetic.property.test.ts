@@ -9,6 +9,15 @@
 import { describe, it, expect } from "vitest"
 import * as fc from "fast-check"
 import { bigWheelPlugin, setBigWheelState } from "../BigWheelPlugin"
+import type { GameSettings } from "@games-of-chance/shared"
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+const defaultSettings: GameSettings = {
+  roundCount: 3,
+  pickWindowMs: 15_000,
+  tuning: {},
+}
 
 // ── Arbitraries ────────────────────────────────────────────────────────────
 
@@ -66,10 +75,7 @@ describe("Feature: big-wheel, Property 2: Spin total arithmetic", () => {
         })
 
         // Resolve spin 2
-        const result = bigWheelPlugin.resolveRound(
-          { [spinnerId]: { type: "spin" } },
-          {}
-        )
+        const result = bigWheelPlugin.resolveRound({ [spinnerId]: { type: "spin" } }, defaultSettings)
 
         // The spin2 value is whatever the plugin resolved from the reel strip
         const spin2Value = result.value
