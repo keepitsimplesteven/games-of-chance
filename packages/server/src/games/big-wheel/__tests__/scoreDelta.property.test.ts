@@ -14,8 +14,8 @@ import { bigWheelPlugin } from "../BigWheelPlugin"
 
 // ── Arbitraries ────────────────────────────────────────────────────────────
 
-/** Generate a player ID */
-const playerIdArb = fc.string({ minLength: 1, maxLength: 20 }).filter((s) => s.trim().length > 0)
+/** Generate a player ID (avoid prototype property names like valueOf, toString, etc.) */
+const playerIdArb = fc.stringMatching(/^[a-z][a-z0-9_-]{0,15}$/)
 
 /** Generate a reel value in valid range */
 const reelValueArb = fc.integer({ min: 1, max: 10_000 })
@@ -24,14 +24,15 @@ const reelValueArb = fc.integer({ min: 1, max: 10_000 })
 
 describe("Feature: big-wheel, Property 8: Score delta equals spin total", () => {
   /**
-   * Property 8a: After spin 2, deltas[spinnerPlayerId] === spinTotal
+   * Property 8a: After spin 2, deltas[spinnerPlayerId] === spin 2 value
    *
    * For any player completing a turn (spin 2 resolved), the scoreRound method
-   * SHALL return a deltas record mapping the player's ID to exactly their spinTotal.
+   * SHALL return a deltas record mapping the player's ID to the spin 2 value
+   * (progressive scoring — each spin contributes independently).
    *
    * **Validates: Requirements 6.2**
    */
-  it("spin 2 result: deltas[spinnerPlayerId] === spinTotal", () => {
+  it("spin 2 result: deltas[spinnerPlayerId] === spin 2 value", () => {
     fc.assert(
       fc.property(
         playerIdArb,
@@ -57,8 +58,8 @@ describe("Feature: big-wheel, Property 8: Score delta equals spin total", () => 
             {}
           )
 
-          // Verify: deltas maps the player's ID to exactly their spinTotal
-          expect(scoreResult.deltas[spinnerPlayerId]).toBe(spinTotal)
+          // Verify: deltas maps the player's ID to the spin 2 value (progressive scoring)
+          expect(scoreResult.deltas[spinnerPlayerId]).toBe(spin2Value)
         }
       ),
       { numRuns: 100 }
@@ -66,13 +67,13 @@ describe("Feature: big-wheel, Property 8: Score delta equals spin total", () => 
   })
 
   /**
-   * Property 8b: After spin 1, deltas is empty
+   * Property 8b: After spin 1, deltas contains the spin 1 value
    *
-   * When spinNumber is 1, no score should be produced yet.
+   * When spinNumber is 1, the score delta equals the spin value (progressive scoring).
    *
    * **Validates: Requirements 6.2**
    */
-  it("spin 1 result: deltas is empty (no score yet)", () => {
+  it("spin 1 result: deltas[spinnerPlayerId] === spin value (progressive scoring)", () => {
     fc.assert(
       fc.property(
         playerIdArb,
@@ -95,8 +96,8 @@ describe("Feature: big-wheel, Property 8: Score delta equals spin total", () => 
             {}
           )
 
-          // Verify: deltas is empty after spin 1
-          expect(scoreResult.deltas).toEqual({})
+          // Verify: deltas contains the spin value (progressive scoring)
+          expect(scoreResult.deltas[spinnerPlayerId]).toBe(spinValue)
         }
       ),
       { numRuns: 100 }
@@ -105,7 +106,7 @@ describe("Feature: big-wheel, Property 8: Score delta equals spin total", () => 
 
   /**
    * Property 8c: Cumulative scoring — accumulating deltas across multiple
-   * players' turns produces correct game scores.
+   * players' turns produces correct game scores (sum of individual spin values).
    *
    * **Validates: Requirements 6.3**
    */
@@ -123,29 +124,43 @@ describe("Feature: big-wheel, Property 8: Score delta equals spin total", () => 
           for (const [playerId, spin1Value, spin2Value] of playerTurns) {
             const spinTotal = spin1Value + spin2Value
 
-            // Create a BigWheelSpinResult for spin 2 (completed turn)
-            const spinResult = {
+            // Spin 1 — scores the spin1 value
+            const spin1Result = {
+              spinnerPlayerId: playerId,
+              spinNumber: 1 as const,
+              reelIndex: 0,
+              value: spin1Value,
+              spinTotal: null,
+            }
+            const score1 = bigWheelPlugin.scoreRound(
+              { [playerId]: { type: "spin" } },
+              spin1Result,
+              [{ id: playerId, name: "Test", connected: true }],
+              {}
+            )
+            const delta1 = score1.deltas[playerId] ?? 0
+            gameScores[playerId] = (gameScores[playerId] ?? 0) + delta1
+
+            // Spin 2 — scores the spin2 value
+            const spin2Result = {
               spinnerPlayerId: playerId,
               spinNumber: 2 as const,
               reelIndex: 0,
               value: spin2Value,
               spinTotal,
             }
-
-            // Call scoreRound to get the delta
-            const scoreResult = bigWheelPlugin.scoreRound(
+            const score2 = bigWheelPlugin.scoreRound(
               { [playerId]: { type: "spin" } },
-              spinResult,
+              spin2Result,
               [{ id: playerId, name: "Test", connected: true }],
               {}
             )
-
-            // Accumulate the delta into the game score
-            const delta = scoreResult.deltas[playerId] ?? 0
-            gameScores[playerId] = (gameScores[playerId] ?? 0) + delta
+            const delta2 = score2.deltas[playerId] ?? 0
+            gameScores[playerId] = (gameScores[playerId] ?? 0) + delta2
           }
 
           // Verify: final game scores match expected accumulated spin totals
+          // (spin1 + spin2 for each turn, accumulated per player)
           const expectedScores: Record<string, number> = {}
           for (const [playerId, spin1Value, spin2Value] of playerTurns) {
             expectedScores[playerId] = (expectedScores[playerId] ?? 0) + (spin1Value + spin2Value)

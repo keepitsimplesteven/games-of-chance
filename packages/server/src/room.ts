@@ -1384,6 +1384,7 @@ export default class GameRoom implements Party.Server {
       }
       const currentRound = bracket.rounds[bracket.currentRoundIndex]
       initializeDrives(currentRound.matchups)
+      this.state.round.roundNumber = roundNumber
       this.beginPlaycallerDown()
       return
     }

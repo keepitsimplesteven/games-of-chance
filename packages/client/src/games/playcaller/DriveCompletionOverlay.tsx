@@ -26,6 +26,10 @@ export function DriveCompletionOverlay({
   const theme = useTheme()
   const getPlayerName = usePlayerName()
   const summary = computeDriveSummary(driveState)
+
+  // Guard: if completion data is missing, skip rendering
+  if (!summary) return null
+
   const isTouchdown = summary.endingType === "touchdown"
 
   return (
