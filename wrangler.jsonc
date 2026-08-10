@@ -3,8 +3,16 @@
   "main": "packages/server/src/room.ts",
   "compatibility_date": "2024-12-01",
   "assets": {
-    "directory": "./packages/client/dist"
+    "directory": "./packages/client/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
   },
+  "routes": [
+    {
+      "pattern": "lads.stevenalbers.com",
+      "custom_domain": true
+    }
+  ],
   "durable_objects": {
     "bindings": [
       {
