@@ -19,6 +19,7 @@ export interface GameStore {
   roomId: string | null
   playerId: string | null
   clientId: string | null
+  reconnectPlayerId: string | null
   playerName: string | null
   role: "host" | "player" | null
   scoringMode: ScoringMode | undefined
@@ -73,6 +74,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   roomId: null,
   playerId: null,
   clientId: null,
+  reconnectPlayerId: null,
   playerName: null,
   role: null,
   scoringMode: undefined,
@@ -94,13 +96,35 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // Non-regression guard: once IN_ROOM, never transition backwards
     if (current === "IN_ROOM") return
 
-    // Generate a stable client ID for this session
-    const clientId = get().clientId ?? crypto.randomUUID()
+    // Generate a stable client ID for this session, or restore from localStorage
+    const storageKey = `goc:session:${roomId}`
+    let clientId = get().clientId
+    let reconnectPlayerId: string | null = null
+
+    if (!clientId) {
+      // Check localStorage for an existing session in this room
+      try {
+        const stored = localStorage.getItem(storageKey)
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (parsed.clientId && parsed.playerId) {
+            clientId = parsed.clientId
+            reconnectPlayerId = parsed.playerId
+          }
+        }
+      } catch {
+        // localStorage unavailable or corrupt — ignore
+      }
+      if (!clientId) {
+        clientId = crypto.randomUUID()
+      }
+    }
 
     set({
       roomId,
       playerName: name,
       clientId,
+      reconnectPlayerId,
       role,
       scoringMode,
       progressionMode,
@@ -205,18 +229,41 @@ export const useGameStore = create<GameStore>((set, get) => ({
   // ── Internal Actions ───────────────────────────────────────────────────
 
   _onStateSync: (state: RoomState) => {
-    const { currentRoundNumber, playerId, clientId } = get()
+    const { currentRoundNumber, playerId, clientId, roomId, reconnectPlayerId } = get()
 
-    // Match self in roster: by playerId if set, otherwise by clientId (stable client-generated ID)
-    const me = playerId
+    // Match self in roster: by playerId if set, otherwise by reconnectPlayerId (reconnection),
+    // otherwise by clientId (stable client-generated ID).
+    // Note: don't require p.connected — on reconnection the first STATE_SYNC arrives before
+    // JOIN is processed, so the player may still be marked disconnected.
+    let me = playerId
       ? state.players.find((p) => p.id === playerId)
-      : state.players.find((p) => p.id === clientId)
+      : undefined
+    if (!me && reconnectPlayerId) {
+      me = state.players.find((p) => p.id === reconnectPlayerId)
+    }
+    if (!me && clientId) {
+      me = state.players.find((p) => p.id === clientId)
+    }
 
     const serverRole = me?.role ?? get().role
 
     // Set playerId from roster if not yet set
     if (!playerId && me) {
-      set({ playerId: me.id })
+      set({ playerId: me.id, reconnectPlayerId: null })
+
+      // Persist session to localStorage for reconnection
+      if (roomId && me.id && clientId) {
+        try {
+          const storageKey = `goc:session:${roomId}`
+          localStorage.setItem(storageKey, JSON.stringify({
+            clientId,
+            playerId: me.id,
+            playerName: me.name,
+          }))
+        } catch {
+          // localStorage unavailable — silent fail
+        }
+      }
     }
 
     // Clear battle HP state when returning to lobby (game ended)
