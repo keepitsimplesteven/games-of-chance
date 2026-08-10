@@ -260,7 +260,7 @@ export interface BigWheelGameState {
 
 /** Client → Server messages */
 export type ClientMessage =
-  | { type: "JOIN"; payload: { name: string; role: "host" | "player"; clientId: string; scoringMode?: ScoringMode; roomSize?: number; progressionMode?: ProgressionMode } }
+  | { type: "JOIN"; payload: { name: string; role: "host" | "player"; clientId: string; reconnectPlayerId?: string; scoringMode?: ScoringMode; roomSize?: number; progressionMode?: ProgressionMode } }
   | { type: "SUBMIT_PICK"; payload: { pick: unknown } }
   | { type: "START_ROUND"; payload?: never }
   | { type: "END_GAME"; payload?: never }

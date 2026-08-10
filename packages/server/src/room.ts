@@ -64,6 +64,12 @@ import "@games-of-chance/simulation/src/pick-generators/coin-toss"
 
 // ── Server-side live state (not sent to clients directly) ──────────────────
 
+/** Tracks a vacated slot — a human player who disconnected and is now bot-controlled */
+interface VacatedSlot {
+  playerId: string
+  originalName: string
+}
+
 interface LiveRoomState {
   config: RoomConfig
   players: Record<string, Player>
@@ -84,6 +90,12 @@ interface LiveRoomState {
   gameVotes: Record<string, string[]>
   /** Tournament progress — only tracked when progressionMode is "tournament" */
   tournamentProgress: TournamentProgress | null
+  /**
+   * Vacated slots: players who were human-controlled but have disconnected.
+   * Their slot stays occupied (bot-controlled) until they reconnect with the same clientId.
+   * Key = the player's original clientId (stable identity).
+   */
+  vacatedSlots: Record<string, VacatedSlot>
 }
 
 // ── Default configuration ──────────────────────────────────────────────────
@@ -181,6 +193,7 @@ export class GameRoom extends Server {
       pluginState: {},
       gameVotes: {},
       tournamentProgress: null,
+      vacatedSlots: {},
     }
   }
 
@@ -268,6 +281,9 @@ export class GameRoom extends Server {
     )
     if (!player) return
 
+    // Skip bot-prefixed IDs (true bots never "disconnect" through websocket)
+    if (this.botManager.isBot(player.id)) return
+
     // Mark disconnected
     player.connected = false
     player.connectionId = null
@@ -277,7 +293,7 @@ export class GameRoom extends Server {
     if (player.role === "host") {
       player.role = "player"
       const nextHost = Object.values(this.state.players).find(
-        (p) => p.connected && p.id !== player.id && !this.botManager.isBot(p.id)
+        (p) => p.connected && p.id !== player.id && !this.botManager.isBot(p.id) && !this.isVacatedSlot(p.id)
       )
       if (nextHost) {
         nextHost.role = "host"
@@ -288,8 +304,13 @@ export class GameRoom extends Server {
       // If no humans remain, no one is host. First human to rejoin becomes host.
     }
 
-    // Remove the disconnected player from the roster so a bot can replace them
-    delete this.state.players[player.id]
+    // ── Vacate the slot: keep the player in the roster, mark as bot-controlled ──
+    const originalName = player.name
+    this.state.vacatedSlots[player.id] = { playerId: player.id, originalName }
+    // Prefix name with [BOT] so everyone knows it's bot-controlled
+    if (!player.name.startsWith("[BOT] ")) {
+      player.name = `[BOT] ${originalName}`
+    }
 
     // ── Big Wheel: handle disconnection ───────────────────────────────────
     if (this.state.config.gameType === "big-wheel") {
@@ -316,30 +337,74 @@ export class GameRoom extends Server {
     ) {
       this.cancelDeadlineTimer()
       this.broadcastState()
-      // Reconcile bots after a human disconnects (add a bot to replace the human)
-      this.reconcileBots()
       this.scheduleResolve(0)
       return
     }
 
     this.broadcastState()
-
-    // Reconcile bots after a human disconnects (add a bot to replace the human)
-    this.reconcileBots()
   }
 
   // ── Message handlers ───────────────────────────────────────────────────
 
   private handleJoin(
     connection: Connection,
-    payload: { name: string; role: "host" | "player"; clientId: string; scoringMode?: "grand-prix" | "chips"; roomSize?: number; progressionMode?: ProgressionMode }
+    payload: { name: string; role: "host" | "player"; clientId: string; reconnectPlayerId?: string; scoringMode?: "grand-prix" | "chips"; roomSize?: number; progressionMode?: ProgressionMode }
   ) {
     const playerCount = Object.keys(this.state.players).length
 
-    // Reject if at capacity: when all slots are filled by humans (no bots to remove)
+    // ── Reconnection check ───────────────────────────────────────────────
+    // Check if either the explicit reconnectPlayerId OR the clientId matches
+    // a vacated slot. This handles both page-refresh reconnection (reconnectPlayerId)
+    // and WebSocket auto-reconnection (clientId matches the vacated player's ID).
+    const reconnectId = payload.reconnectPlayerId || payload.clientId
+    if (reconnectId && this.state.vacatedSlots[reconnectId] && this.state.players[reconnectId]) {
+      const vacated = this.state.vacatedSlots[reconnectId]
+      const existingPlayer = this.state.players[reconnectId]
+
+      // Restore the player to human control
+      existingPlayer.connected = true
+      existingPlayer.connectionId = connection.id
+      existingPlayer.name = vacated.originalName
+
+      // If no host exists, promote this reconnecting player to host
+      if (!this.hasConnectedHost()) {
+        existingPlayer.role = "host"
+      }
+
+      // Remove from vacated tracking
+      delete this.state.vacatedSlots[reconnectId]
+
+      this.broadcastState()
+      return
+    }
+
+    // Also check: is the clientId already an active (connected) player?
+    // This happens when PartySocket auto-reconnects after a brief drop —
+    // the onClose/onConnect race may mean the player is still marked connected.
+    if (this.state.players[payload.clientId]?.connected) {
+      // Just re-link the connection ID (the old WebSocket is dead)
+      const existingPlayer = this.state.players[payload.clientId]
+      existingPlayer.connectionId = connection.id
+      this.broadcastState()
+      return
+    }
+
+    // ── New player join ──────────────────────────────────────────────────
+    // Check capacity: room is FULL if all slots have been claimed by a human at some point.
+    // A "claimed" slot is either an active human OR a vacated slot (bot holding a human's place).
+    const vacatedCount = Object.keys(this.state.vacatedSlots).length
+    const activeHumanCount = Object.values(this.state.players).filter(
+      (p) => !this.botManager.isBot(p.id) && !this.state.vacatedSlots[p.id]
+    ).length
+    const totalHumanClaimed = activeHumanCount + vacatedCount
+
+    // Check if there's a bot slot available (one that was never claimed by a human)
     const botCount = Object.keys(this.state.players).filter(id => this.botManager.isBot(id)).length
-    const humanCount = playerCount - botCount
-    if (humanCount >= this.state.config.roomSize) {
+    if (botCount === 0 && totalHumanClaimed >= this.state.config.roomSize) {
+      this.sendError(connection, "ROOM_FULL", "Room is at maximum capacity")
+      return
+    }
+    if (totalHumanClaimed >= this.state.config.roomSize) {
       this.sendError(connection, "ROOM_FULL", "Room is at maximum capacity")
       return
     }
@@ -1476,7 +1541,10 @@ export class GameRoom extends Server {
     this.cancelBotPickTimers()
 
     const botIds = this.botManager.getBotIds()
-    if (botIds.length === 0) return
+    // Also generate picks for vacated (bot-controlled) human slots
+    const vacatedIds = Object.keys(this.state.vacatedSlots)
+    const allBotControlled = [...botIds, ...vacatedIds]
+    if (allBotControlled.length === 0) return
 
     const plugin = registry.lookup(this.state.config.gameType)
     const picks = this.botManager.generatePicks(
@@ -1484,17 +1552,43 @@ export class GameRoom extends Server {
       this.state.gameSettings
     )
 
-    // Submit all bot picks immediately (no delay)
-    for (const botId of botIds) {
-      const pick = picks[botId]
+    // Generate picks for vacated slots using the same logic as regular bots
+    const vacatedPicks: Record<string, unknown> = {}
+    for (const vacatedId of vacatedIds) {
+      switch (this.state.config.gameType) {
+        case "coin-toss": {
+          const side = Math.random() < 0.5 ? "HEADS" : "TAILS"
+          vacatedPicks[vacatedId] = { side }
+          break
+        }
+        case "battle-bots": {
+          const templates = getRobotTemplates(this.state.gameSettings)
+          const selected = templates[Math.floor(Math.random() * templates.length)]
+          vacatedPicks[vacatedId] = { robotTemplateId: selected.id }
+          break
+        }
+        case "big-wheel": {
+          vacatedPicks[vacatedId] = { type: "spin" }
+          break
+        }
+        default:
+          break
+      }
+    }
+
+    const allPicks = { ...picks, ...vacatedPicks }
+
+    // Submit all bot-controlled picks immediately (no delay)
+    for (const id of allBotControlled) {
+      const pick = allPicks[id]
       if (pick === undefined) continue
-      if (botId in this.state.round.picks) continue
+      if (id in this.state.round.picks) continue
 
       // Validate pick via plugin (same validation as human picks)
       if (!plugin.validatePick(pick)) continue
 
-      // Record the bot's pick instantly
-      this.state.round.picks[botId] = pick
+      // Record the bot-controlled pick instantly
+      this.state.round.picks[id] = pick
     }
 
     // After all bot picks are in, check if all players have picked → early resolution
@@ -2076,6 +2170,11 @@ export class GameRoom extends Server {
     return Object.values(this.state.players).some(
       (p) => p.role === "host" && p.connected
     )
+  }
+
+  /** Check if a player ID is currently a vacated (bot-controlled) slot */
+  private isVacatedSlot(playerId: string): boolean {
+    return playerId in this.state.vacatedSlots
   }
 
   /** Get the player ID of the current host, or null if no host */

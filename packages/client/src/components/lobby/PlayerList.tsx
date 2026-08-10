@@ -8,6 +8,11 @@ function isBot(playerId: string): boolean {
   return playerId.startsWith("bot:")
 }
 
+/** Check if a player name indicates bot-controlled (vacated human slot) */
+function isBotControlled(playerName: string): boolean {
+  return playerName.startsWith("[BOT] ")
+}
+
 export default function PlayerList() {
   const roomState = useGameStore((s) => s.roomState)
   const playerId = useGameStore((s) => s.playerId)
@@ -104,8 +109,8 @@ export default function PlayerList() {
                   />
 
                   {/* Bot icon */}
-                  {isBotPlayer && (
-                    <span className="text-sm" aria-label="Bot" title="Bot">
+                  {(isBotPlayer || isBotControlled(player.name)) && (
+                    <span className="text-sm" aria-label="Bot" title={isBotPlayer ? "Bot" : "Bot-controlled (player disconnected)"}>
                       🤖
                     </span>
                   )}

@@ -23,6 +23,9 @@ export function usePartySocket(
 ) {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("connecting")
   const socketRef = useRef<PartySocket | null>(null)
+  // Use a ref for role so it doesn't trigger socket re-creation when the server promotes us
+  const roleRef = useRef(role)
+  roleRef.current = role
 
   useEffect(() => {
     // Don't connect if roomId or playerName is not set
@@ -56,10 +59,10 @@ export function usePartySocket(
       })
 
       // Send JOIN message upon connection with clientId for stable identity
-      const { clientId, scoringMode, progressionMode, roomSize } = useGameStore.getState()
+      const { clientId, reconnectPlayerId, scoringMode, progressionMode, roomSize } = useGameStore.getState()
       const joinMsg: ClientMessage = {
         type: "JOIN",
-        payload: { name: playerName, role, clientId: clientId!, ...(scoringMode ? { scoringMode } : {}), ...(roomSize ? { roomSize } : {}), ...(progressionMode ? { progressionMode } : {}) },
+        payload: { name: playerName, role: roleRef.current, clientId: clientId!, ...(reconnectPlayerId ? { reconnectPlayerId } : {}), ...(scoringMode ? { scoringMode } : {}), ...(roomSize ? { roomSize } : {}), ...(progressionMode ? { progressionMode } : {}) },
       }
       socket.send(JSON.stringify(joinMsg))
     })
@@ -78,9 +81,9 @@ export function usePartySocket(
           const store = useGameStore.getState()
           store._onStateSync(msg.payload)
 
-          // Check if the player is in the roster by clientId → transition to IN_ROOM
-          const { clientId, playerId } = store
-          const matchId = playerId || clientId
+          // Re-read from store AFTER _onStateSync has updated it
+          const { clientId, playerId, reconnectPlayerId } = useGameStore.getState()
+          const matchId = playerId || reconnectPlayerId || clientId
           const isInRoster = matchId
             ? msg.payload.players.some((p) => p.id === matchId && p.connected)
             : false
@@ -125,7 +128,7 @@ export function usePartySocket(
       socketRef.current = null
       useGameStore.setState({ _socketSend: null })
     }
-  }, [roomId, playerName, role])
+  }, [roomId, playerName])
 
   // ── Send function ────────────────────────────────────────────────────────
 

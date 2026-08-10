@@ -23,6 +23,36 @@ export default function RoomPage() {
   const [name, setName] = useState("")
   const [error, setError] = useState<string | null>(null)
 
+  // ── Auto-reconnect from localStorage on mount ────────────────────────────
+  // Skip localStorage reconnection if ?fresh is in the URL (dev convenience)
+  const isFreshSession = new URLSearchParams(location.search).has("fresh")
+  const [autoReconnectAttempted, setAutoReconnectAttempted] = useState(false)
+  useEffect(() => {
+    if (autoReconnectAttempted || joinState !== "NAME_ENTRY" || !roomId) return
+    setAutoReconnectAttempted(true)
+
+    if (isFreshSession) {
+      // Clear stored session so this tab gets a brand-new identity
+      try { localStorage.removeItem(`goc:session:${roomId}`) } catch { /* noop */ }
+      return
+    }
+
+    try {
+      const storageKey = `goc:session:${roomId}`
+      const stored = localStorage.getItem(storageKey)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (parsed.clientId && parsed.playerId && parsed.playerName) {
+          // We have a stored session — auto-reconnect without showing name entry
+          useGameStore.getState().connect(roomId, parsed.playerName, "player", undefined, undefined, undefined)
+          return
+        }
+      }
+    } catch {
+      // localStorage unavailable or corrupt — fall through to name entry
+    }
+  }, [roomId, joinState, autoReconnectAttempted, isFreshSession])
+
   // Connect the PartySocket when joinState is CONNECTING or IN_ROOM
   const shouldConnect = joinState === "CONNECTING" || joinState === "IN_ROOM"
   usePartySocket(
