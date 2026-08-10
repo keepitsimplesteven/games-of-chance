@@ -1,4 +1,5 @@
 import { motion } from "framer-motion"
+import { useTheme } from "../../theme"
 
 interface SpinButtonProps {
   /** Whether the current user is the active spinner */
@@ -14,11 +15,13 @@ interface SpinButtonProps {
 /**
  * SpinButton — Large "SPIN!" button visible only to the active spinner during the PICKING phase.
  * Disabled during RESOLVING or after a pick has been submitted.
- * Uses a red/vibrant color scheme with a scale effect on press.
+ * Uses theme btnPrimary styling with a scale effect on press.
  *
  * Validates: Requirements 9.4, 9.5
  */
 export function SpinButton({ isActiveSpinner, phase, disabled, onSpin }: SpinButtonProps) {
+  const theme = useTheme()
+
   // Only render when the current user is the active spinner and phase is PICKING
   if (!isActiveSpinner || phase !== "PICKING") {
     return null
@@ -34,12 +37,9 @@ export function SpinButton({ isActiveSpinner, phase, disabled, onSpin }: SpinBut
       className={`
         rounded-xl px-10 py-4 text-2xl font-extrabold uppercase tracking-wide
         shadow-lg transition-colors
-        focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2
-        ${
-          disabled
-            ? "cursor-not-allowed bg-gray-400 text-gray-200"
-            : "bg-red-600 text-white hover:bg-red-700 active:bg-red-800"
-        }
+        focus:outline-none focus:ring-2 focus:ring-[#f5c542] focus:ring-offset-2 focus:ring-offset-[#111111]
+        ${disabled ? "cursor-not-allowed opacity-50" : ""}
+        ${theme.btnPrimary}
       `}
     >
       {disabled ? "Spinning..." : "SPIN!"}

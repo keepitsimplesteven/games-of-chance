@@ -42,9 +42,9 @@ export default function GameView() {
 
   // Only show leaderboard after animation completes (prevents spoiling the result)
   // During PICKING phase, show leaderboard (previous round's scores are already revealed)
-  // For Big Wheel: show after each spin animation completes (roundAnimationDone gates this)
   // Coin-toss: leaderboard is integrated into CoinTossContainer, skip generic one
-  const showLeaderboard = !isPlaycaller && gameType !== "coin-toss" && (phase === "PICKING" || roundAnimationDone)
+  // Big-wheel: leaderboard is integrated into BigWheelContainer with spin order, skip generic one
+  const showLeaderboard = !isPlaycaller && gameType !== "coin-toss" && gameType !== "big-wheel" && (phase === "PICKING" || roundAnimationDone)
 
   // Dynamic game container based on gameType
   const renderGameContainer = () => {

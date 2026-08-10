@@ -1,4 +1,5 @@
 import { motion } from "framer-motion"
+import { useTheme } from "../../theme"
 
 interface SpinResultDisplayProps {
   /** The value the wheel landed on for the current spin, or null if not yet resolved */
@@ -23,6 +24,8 @@ export function SpinResultDisplay({
   spinTotal,
   previousSpins,
 }: SpinResultDisplayProps) {
+  const theme = useTheme()
+
   // Nothing to display if no value has been resolved
   if (value === null && previousSpins.length === 0) {
     return null
@@ -33,15 +36,15 @@ export function SpinResultDisplay({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="flex flex-col items-center gap-2 rounded-lg bg-green-50 px-6 py-4"
+      className={`flex flex-col items-center gap-2 rounded-lg px-6 py-4 ${theme.card}`}
     >
       {/* Current spin result */}
       {value !== null && (
         <>
-          <div className="text-sm text-gray-600">
+          <div className={`text-sm ${theme.mutedText}`}>
             Spin {spinNumber} landed on:
           </div>
-          <div className="text-4xl font-extrabold text-green-700">
+          <div className={`text-4xl font-extrabold ${theme.accentText}`}>
             {value}
           </div>
         </>
@@ -49,9 +52,9 @@ export function SpinResultDisplay({
 
       {/* Individual spin breakdown */}
       {previousSpins.length > 0 && (
-        <div className="flex items-center gap-3 text-sm text-gray-600">
+        <div className={`flex items-center gap-3 text-sm ${theme.mutedText}`}>
           {previousSpins.map((val, i) => (
-            <span key={i} className="rounded bg-gray-100 px-2 py-0.5 font-medium">
+            <span key={i} className={`rounded px-2 py-0.5 font-medium ${theme.listItem}`}>
               Spin {i + 1}: {val}
             </span>
           ))}
@@ -60,8 +63,8 @@ export function SpinResultDisplay({
 
       {/* Running total */}
       {spinTotal !== null && (
-        <div className="text-base font-semibold text-gray-800">
-          Total: <span className="text-green-700">{spinTotal}</span>
+        <div className={`text-base font-semibold ${theme.bodyText}`}>
+          Total: <span className={theme.accentText}>{spinTotal}</span>
         </div>
       )}
     </motion.div>

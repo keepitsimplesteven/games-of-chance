@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef } from "react"
 import { useGameStore } from "../../store/useGameStore"
+import { useTheme } from "../../theme"
+import { useDeferredRevealValue } from "../../hooks/useDeferredRevealValue"
 import type { BigWheelGameState, BigWheelSpinResult } from "@games-of-chance/shared"
 import { WheelAnimation } from "./WheelAnimation"
+import { BigWheelLeaderboard } from "./BigWheelLeaderboard"
 
 // ── BigWheelContainer ──────────────────────────────────────────────────────
 
@@ -13,6 +16,7 @@ import { WheelAnimation } from "./WheelAnimation"
  * Validates: Requirements 9.1, 9.4, 10.1
  */
 export function BigWheelContainer() {
+  const theme = useTheme()
   const roomState = useGameStore((s) => s.roomState)
   const playerId = useGameStore((s) => s.playerId)
   const pickSubmitted = useGameStore((s) => s.pickSubmitted)
@@ -25,14 +29,17 @@ export function BigWheelContainer() {
   const bigWheelGameState = roomState.bigWheelGameState as BigWheelGameState | null | undefined
   const roundResult = roomState.round.result as BigWheelSpinResult | null
 
-  // Don't render during LOBBY or if no Big Wheel state
+  // Gate the leaderboard behind deferred reveal to prevent spoiling spin results
+  const gameLeaderboard = useDeferredRevealValue(roomState.gameLeaderboard)
+
+  // Don't render during LOBBY or END_GAME
   if (phase === "LOBBY") return null
   if (phase === "END_GAME") return null
 
   // If no Big Wheel game state is available yet, show loading
   if (!bigWheelGameState) {
     return (
-      <div className="flex flex-col items-center gap-4 py-8 text-gray-500">
+      <div className={`flex flex-col items-center gap-4 py-8 ${theme.mutedText}`}>
         Waiting for game state...
       </div>
     )
@@ -47,16 +54,15 @@ export function BigWheelContainer() {
     reelStrip,
   } = bigWheelGameState
 
+  // Gate spin results behind deferred reveal so leaderboard doesn't spoil
+  const deferredSpinResults = useDeferredRevealValue(spinResults)
+
   // Determine if current user is the active spinner
   const isActiveSpinner = playerId === activeSpinnerId
 
   // Get active spinner player info
   const activeSpinner = players.find((p) => p.id === activeSpinnerId)
   const activeSpinnerName = activeSpinner?.name ?? "Unknown"
-
-  // Get the active spinner's results so far
-  const activeSpinnerResults = spinResults[activeSpinnerId] ?? []
-  const spinTotal = activeSpinnerResults.reduce((sum, v) => sum + v, 0)
 
   // Handle spin button click
   const handleSpin = () => {
@@ -78,10 +84,8 @@ export function BigWheelContainer() {
 
   useEffect(() => {
     if (phase === "RESULT" && roundResult) {
-      // Create a unique ID for this result to detect new spins
       const resultId = `${roundResult.spinnerPlayerId}-${roundResult.spinNumber}-${roundResult.reelIndex}`
       if (resultId !== lastResultIdRef.current) {
-        // Only animate if this result belongs to the current active spinner we're displaying
         if (roundResult.spinnerPlayerId === activeSpinnerId) {
           lastResultIdRef.current = resultId
           lastResultRef.current = roundResult
@@ -92,10 +96,9 @@ export function BigWheelContainer() {
     }
   }, [phase, roundResult, activeSpinnerId])
 
-  // Also trigger a visual "fast spin" during RESOLVING before the result comes back
+  // Visual spin indicator during RESOLVING
   useEffect(() => {
     if (phase === "RESOLVING" && !wheelSpinning) {
-      // Start a visual spin with no target — the real target will arrive shortly
       setWheelSpinning(false)
       setWheelLandingIndex(null)
     }
@@ -103,18 +106,35 @@ export function BigWheelContainer() {
 
   const handleSpinComplete = () => {
     setWheelSpinning(false)
-    // Signal that animation is done — unlocks leaderboard display
+    // Signal that animation is done — unlocks deferred value display
     useGameStore.setState({ roundAnimationDone: true })
-    // Add the landed value to confirmed spins only for the current active spinner
     if (lastResultRef.current && lastResultRef.current.spinnerPlayerId === activeSpinnerId) {
       setConfirmedSpins((prev) => {
-        // Prevent duplicates: only add if this spin number isn't already tracked
         const spinNum = lastResultRef.current!.spinNumber
         if (prev.length < spinNum) {
           return [...prev, lastResultRef.current!.value]
         }
         return prev
       })
+
+      // Auto-advance to spin 2 after spin 1 animation completes — no button needed.
+      // Only the active spinner (or host) triggers this to avoid race conditions.
+      // For bots, the server handles auto-advance via BOT_SPIN_DELAY_MS — skip client-side.
+      if (lastResultRef.current.spinNumber === 1) {
+        const { role, playerId: myId } = useGameStore.getState()
+        const isMeActiveSpinner = myId === activeSpinnerId
+        // Check if active spinner is a bot (connectionId === null)
+        const spinnerPlayer = useGameStore.getState().roomState?.players.find(
+          (p) => p.id === activeSpinnerId
+        )
+        const isBot = spinnerPlayer?.connectionId === null
+        if (!isBot && (isMeActiveSpinner || role === "host")) {
+          // Linger on spin 1 result for 2s so player can register the value
+          setTimeout(() => {
+            useGameStore.getState().startRound()
+          }, 2000)
+        }
+      }
     }
   }
 
@@ -135,13 +155,13 @@ export function BigWheelContainer() {
     <div className="flex flex-col items-center gap-4">
       {/* Active Spinner Info */}
       <div className="text-center">
-        <div className="text-lg font-bold text-gray-800">
+        <div className={`text-lg font-bold ${theme.bodyText}`}>
           {activeSpinnerName}
           {isActiveSpinner && (
-            <span className="ml-2 text-sm font-normal text-blue-600">(You)</span>
+            <span className={`ml-2 text-sm font-normal ${theme.accentText}`}>(You)</span>
           )}
         </div>
-        <div className="text-sm text-gray-500">
+        <div className={`text-sm ${theme.mutedText}`}>
           Spin {phase === "RESULT" && roundResult ? roundResult.spinNumber : currentSpinNumber} of 2
         </div>
       </div>
@@ -156,108 +176,101 @@ export function BigWheelContainer() {
         />
       </div>
 
-      {/* Spin Button — only shown to active spinner during PICKING phase */}
+      {/* Spin Button — shown to active spinner during PICKING phase */}
       {phase === "PICKING" && isActiveSpinner && (
         <button
           type="button"
           onClick={handleSpin}
           disabled={pickSubmitted}
-          className="rounded-lg bg-red-600 px-8 py-3 text-lg font-bold text-white shadow-lg transition hover:bg-red-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+          className={`rounded-lg px-8 py-3 text-lg font-bold shadow-lg transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${theme.btnPrimary}`}
         >
           {pickSubmitted ? "Spinning..." : "SPIN!"}
         </button>
       )}
 
+      {/* 
+        After spin 1: auto-advances to spin 2 PICKING (see handleSpinComplete).
+        After spin 2 result lands: show "Next Player" / "View Results" for host and active spinner.
+      */}
+
+      {/* After spin 2 completes — "Next Player" or "View Results" button for host (always) and active spinner */}
+      {phase === "RESULT" && !wheelSpinning && roundResult?.spinNumber === 2 && (isActiveSpinner || useGameStore.getState().role === "host") && (
+        <button
+          type="button"
+          onClick={() => useGameStore.getState().startRound()}
+          className={`rounded-lg px-6 py-2 text-sm font-semibold shadow-sm transition active:scale-95 ${theme.btnSecondary}`}
+        >
+          {currentTurnIndex >= spinOrder.length - 1 ? "View Results" : "Next Player"}
+        </button>
+      )}
+
+      {/* Host override: subtle advance button during any RESULT phase the host isn't the active spinner */}
+      {phase === "RESULT" && !wheelSpinning && !isActiveSpinner && useGameStore.getState().role === "host" && roundResult?.spinNumber === 1 && (
+        <button
+          type="button"
+          onClick={() => useGameStore.getState().startRound()}
+          className={`rounded-lg px-4 py-1.5 text-xs font-semibold shadow-sm transition active:scale-95 ${theme.btnGhost}`}
+        >
+          Advance
+        </button>
+      )}
+
       {/* Waiting message for non-active players during PICKING */}
       {phase === "PICKING" && !isActiveSpinner && (
-        <div className="text-sm text-gray-500">
+        <div className={`text-sm ${theme.mutedText}`}>
           Waiting for {activeSpinnerName} to spin...
         </div>
       )}
 
       {/* Resolving state indicator */}
       {phase === "RESOLVING" && (
-        <div className="text-sm font-medium text-amber-600">
+        <div className={`text-sm font-medium ${theme.accentText}`}>
           Spinning...
         </div>
       )}
 
       {/* Spin Result Display — only shown after wheel animation completes */}
       {phase === "RESULT" && roundResult && !wheelSpinning && (
-        <div className="flex flex-col items-center gap-1 rounded-lg bg-green-50 px-6 py-3">
-          <div className="text-sm text-gray-600">
+        <div className={`flex flex-col items-center gap-1 rounded-lg px-6 py-3 ${theme.card}`}>
+          <div className={`text-sm ${theme.mutedText}`}>
             Spin {roundResult.spinNumber} landed on:
           </div>
-          <div className="text-3xl font-bold text-green-700">
+          <div className={`text-3xl font-bold ${theme.accentText}`}>
             {roundResult.value}
           </div>
           {roundResult.spinTotal !== null && (
-            <div className="text-sm font-medium text-gray-700">
+            <div className={`text-sm font-medium ${theme.bodyText}`}>
               Total: {roundResult.spinTotal}
             </div>
           )}
         </div>
       )}
 
-      {/* Next Spin / Next Player button — shown to active spinner OR host during RESULT */}
-      {phase === "RESULT" && !wheelSpinning && (isActiveSpinner || useGameStore.getState().role === "host") && (
-        <button
-          type="button"
-          onClick={() => useGameStore.getState().startRound()}
-          className="rounded-lg bg-indigo-600 px-6 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 active:scale-95"
-        >
-          {roundResult?.spinNumber === 1
-            ? "Spin Again"
-            : currentTurnIndex >= spinOrder.length - 1
-              ? "View Results"
-              : "Next Player"}
-        </button>
-      )}
-
-      {/* Spin Results Summary — show after wheel animation completes, persists through spin 2 */}
+      {/* Spin Results Summary — show after wheel animation completes */}
       {confirmedSpins.length > 0 && (
-        <div className="text-sm text-gray-600">
+        <div className={`text-sm ${theme.mutedText}`}>
           {confirmedSpins.map((val, i) => (
             <span key={i}>
               Spin {i + 1}: {val}
               {i < confirmedSpins.length - 1 && " | "}
             </span>
           ))}
-          <span className="ml-2 font-medium">
+          <span className={`ml-2 font-medium ${theme.bodyText}`}>
             Total: {confirmedTotal}
           </span>
         </div>
       )}
 
-      {/* Spin Order Queue */}
-      <div className="mt-4 w-full max-w-sm">
-        <div className="mb-1 text-center text-xs font-medium uppercase tracking-wide text-gray-400">
-          Spin Order
-        </div>
-        <div className="flex flex-wrap justify-center gap-2">
-          {spinOrder.map((pid, index) => {
-            const player = players.find((p) => p.id === pid)
-            const isDone = index < currentTurnIndex
-            const isCurrent = index === currentTurnIndex
-            return (
-              <div
-                key={pid}
-                className={`rounded px-2 py-1 text-xs font-medium ${
-                  isDone
-                    ? "bg-green-100 text-green-700 line-through"
-                    : isCurrent
-                      ? "bg-blue-100 text-blue-700 ring-1 ring-blue-300"
-                      : "bg-gray-100 text-gray-500"
-                }`}
-              >
-                {isDone && "✓ "}
-                {isCurrent && "→ "}
-                {player?.name ?? "Unknown"}
-              </div>
-            )
-          })}
-        </div>
-      </div>
+      {/* Integrated Leaderboard + Spin Order */}
+      <BigWheelLeaderboard
+        leaderboard={gameLeaderboard}
+        spinOrder={spinOrder}
+        currentTurnIndex={currentTurnIndex}
+        spinResults={deferredSpinResults}
+        players={players}
+        activeSpinnerId={activeSpinnerId}
+        currentPlayerId={playerId}
+      />
     </div>
   )
 }

@@ -45,7 +45,7 @@ const theme = useTheme()
 - Border green: `#2a7a3a`
 - Gold accent: `#f5c542` (titles, scores, emphasis)
 - Body text: `#f0f0f0` (light text on dark)
-- Muted: `#3a9a4a` (secondary green text)
+- Muted: `#7dcea0` (secondary green text — WCAG AA compliant on dark green)
 - Red chip: `#cc3333` (danger, primary buttons)
 - Blue chip: `#2255aa` (secondary buttons)
 - Font: `font-mono`

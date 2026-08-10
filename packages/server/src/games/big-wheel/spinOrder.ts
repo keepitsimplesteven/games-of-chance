@@ -16,9 +16,11 @@ function shuffle<T>(arr: T[]): T[] {
 /**
  * Determines the spin order for a Big Wheel game.
  *
- * Players are sorted by their session leaderboard rank in ascending order
- * (rank 1 spins first). Players sharing the same rank are shuffled randomly
- * using a Fisher-Yates shuffle within their tied group.
+ * Players are sorted by their session leaderboard rank in DESCENDING order
+ * (last place spins first, first place spins last). This creates more
+ * dramatic lead changes and comeback narratives throughout the game.
+ * Players sharing the same rank are shuffled randomly using a Fisher-Yates
+ * shuffle within their tied group.
  *
  * @param playerIds - Array of player IDs participating in the game
  * @param sessionLeaderboard - Current session leaderboard entries
@@ -35,17 +37,17 @@ export function determineSpinOrder(
   }
 
   // Assign a fallback rank for players not on the leaderboard (e.g. new players).
-  // They get a rank higher than any existing rank so they spin last.
+  // They get rank 0 so they spin first (they have no standing yet).
   const maxRank = sessionLeaderboard.length > 0
     ? Math.max(...sessionLeaderboard.map((e) => e.rank))
     : 0
   const fallbackRank = maxRank + 1
 
-  // Sort players by rank ascending
+  // Sort players by rank DESCENDING (last place first → first place last)
   const sorted = [...playerIds].sort((a, b) => {
     const rankA = rankMap.get(a) ?? fallbackRank
     const rankB = rankMap.get(b) ?? fallbackRank
-    return rankA - rankB
+    return rankB - rankA
   })
 
   // Group players by rank
