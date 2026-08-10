@@ -1,3 +1,5 @@
+import { useTheme } from "../../theme"
+
 interface SpinnerInfoProps {
   /** Name of the active spinner */
   spinnerName: string
@@ -15,15 +17,17 @@ interface SpinnerInfoProps {
  * Validates: Requirements 10.2
  */
 export function SpinnerInfo({ spinnerName, isCurrentUser, spinNumber }: SpinnerInfoProps) {
+  const theme = useTheme()
+
   return (
     <div className="flex flex-col items-center gap-1 text-center">
-      <div className="text-lg font-bold text-gray-800">
+      <div className={`text-lg font-bold ${theme.bodyText}`}>
         {spinnerName}
         {isCurrentUser && (
-          <span className="ml-2 text-sm font-normal text-blue-600">(You)</span>
+          <span className={`ml-2 text-sm font-normal ${theme.accentText}`}>(You)</span>
         )}
       </div>
-      <div className="text-sm text-gray-500">
+      <div className={`text-sm ${theme.mutedText}`}>
         Spin {spinNumber} of 2
       </div>
     </div>

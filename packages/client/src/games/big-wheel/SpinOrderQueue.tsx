@@ -1,4 +1,5 @@
 import type { Player } from "@games-of-chance/shared"
+import { useTheme } from "../../theme"
 
 // ── SpinOrderQueue ─────────────────────────────────────────────────────────
 
@@ -15,16 +16,18 @@ interface SpinOrderQueueProps {
  * SpinOrderQueue — shows upcoming spinner order with visual indicators
  * for completed, active, and pending players.
  *
- * - Completed (index < currentTurnIndex): green with ✓ checkmark, strikethrough
- * - Active (index === currentTurnIndex): blue highlight with → arrow
- * - Pending (index > currentTurnIndex): gray, pending
+ * - Completed (index < currentTurnIndex): success color with ✓ checkmark
+ * - Active (index === currentTurnIndex): accent highlight with → arrow
+ * - Pending (index > currentTurnIndex): muted, pending
  *
  * Validates: Requirements 7.5, 10.3
  */
 export function SpinOrderQueue({ spinOrder, currentTurnIndex, players }: SpinOrderQueueProps) {
+  const theme = useTheme()
+
   return (
     <div className="w-full max-w-sm">
-      <div className="mb-1 text-center text-xs font-medium uppercase tracking-wide text-gray-400">
+      <div className={`mb-1 text-center text-xs font-medium uppercase tracking-wide ${theme.mutedText}`}>
         Spin Order
       </div>
       <div className="flex flex-wrap justify-center gap-2">
@@ -39,10 +42,10 @@ export function SpinOrderQueue({ spinOrder, currentTurnIndex, players }: SpinOrd
               key={pid}
               className={`rounded px-2 py-1 text-xs font-medium ${
                 isDone
-                  ? "bg-green-100 text-green-700 line-through"
+                  ? `${theme.statusSuccess} bg-[#7dcea0]/10 line-through`
                   : isCurrent
-                    ? "bg-blue-100 text-blue-700 ring-1 ring-blue-300"
-                    : "bg-gray-100 text-gray-500"
+                    ? `${theme.accentText} bg-[#f5c542]/10 ring-1 ring-[#f5c542]`
+                    : `${theme.mutedText} bg-[#0f3d18]`
               }`}
             >
               {isDone && "✓ "}
