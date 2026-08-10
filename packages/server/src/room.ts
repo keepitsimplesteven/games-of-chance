@@ -2323,9 +2323,11 @@ export class GameRoom extends Server {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    return (
-      (await routePartykitRequest(request, env)) ||
-      new Response("Not Found", { status: 404 })
-    );
+    // Try to route WebSocket/party requests first
+    const partyResponse = await routePartykitRequest(request, env);
+    if (partyResponse) return partyResponse;
+
+    // Fall back to serving static assets (SPA)
+    return env.ASSETS.fetch(request);
   },
 } satisfies ExportedHandler<Env>;

@@ -2,4 +2,5 @@
 
 interface Env {
   GameRoom: DurableObjectNamespace;
+  ASSETS: Fetcher;
 }

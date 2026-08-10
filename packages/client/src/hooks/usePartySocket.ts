@@ -4,7 +4,7 @@ import type { ServerMessage, ClientMessage } from "@games-of-chance/shared"
 import { useGameStore, setJoinState } from "../store/useGameStore"
 import type { ConnectionStatus } from "../store/useGameStore"
 
-const PARTYKIT_HOST = import.meta.env.VITE_PARTYKIT_HOST || "localhost:1999"
+const PARTYKIT_HOST = import.meta.env.VITE_PARTYKIT_HOST || window.location.host
 
 /**
  * Custom hook that creates and manages a PartySocket connection to a game room.
