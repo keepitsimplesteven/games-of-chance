@@ -1,9 +1,12 @@
 import { render, screen } from "@testing-library/react"
-import { describe, it, expect, beforeEach } from "vitest"
+import { describe, it, expect, beforeEach, vi } from "vitest"
 import { useGameStore } from "../../../store/useGameStore"
 import { PlaycallerContainer } from "../PlaycallerContainer"
 import { BracketVisualization } from "../BracketVisualization"
 import type { RoomState, Bracket, PlaycallerGameState } from "@games-of-chance/shared"
+
+// jsdom does not implement scrollTo — stub it globally
+Element.prototype.scrollTo = vi.fn()
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -123,7 +126,7 @@ describe("PlaycallerContainer", () => {
 
     // MatchPanel renders VS and player names
     expect(screen.getByText("VS")).toBeInTheDocument()
-    expect(screen.getByText("p1")).toBeInTheDocument()
+    expect(screen.getByText("Alice")).toBeInTheDocument()
   })
 
   it('renders "Spectating" for eliminated player', () => {

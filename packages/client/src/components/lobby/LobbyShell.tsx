@@ -31,6 +31,8 @@ export default function LobbyShell({ children }: LobbyShellProps) {
   // END_TOURNAMENT is a terminal state — show celebration view, no game selection
   const isTournamentEnd = phase === "END_TOURNAMENT"
 
+  // Playcaller in active drive mode: render full-viewport without surrounding chrome
+  const isPlaycallerActive = gameType === "playcaller" && !isLobby && !isTournamentEnd && phase !== "END_GAME" && phase !== "SPLASH"
   // Track previous lobby state for scroll-to-top on return
   const wasInGame = useRef(false)
 
