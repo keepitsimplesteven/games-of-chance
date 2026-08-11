@@ -60,6 +60,18 @@ export interface ThemeDefinition {
   /** Neutral/pending state */
   statusNeutral: string
 
+  // ── Leaderboard ──
+  /** Ring class applied to the current player's row */
+  currentPlayerRing: string
+  /** Rank badge style for 1st place (gold) */
+  rankBadge1: string
+  /** Rank badge style for 2nd place (silver) */
+  rankBadge2: string
+  /** Rank badge style for 3rd place (bronze) */
+  rankBadge3: string
+  /** Rank badge style for 4th place and below */
+  rankBadgeDefault: string
+
   // ── Game-specific field colors (for SVG use) ──
   field: {
     background: string

@@ -192,6 +192,7 @@ export class FastPlayAdapter {
       gameSettings: settings,
       settingsLocked: true,
       simulation: true,
+      preGameRanks: {},
     }
 
     const msg = {

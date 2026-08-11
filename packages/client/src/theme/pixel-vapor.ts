@@ -34,6 +34,13 @@ export const pixelVapor: ThemeDefinition = {
   statusDanger: "text-[#ff71ce] [text-shadow:0_0_6px_rgba(255,113,206,0.5)]",
   statusNeutral: "text-[#e040fb]/60",
 
+  // Leaderboard
+  currentPlayerRing: "ring-1 ring-[#e040fb]",
+  rankBadge1: "bg-[#f5c542] text-[#111111]",
+  rankBadge2: "bg-[#c0c0c0] text-[#111111]",
+  rankBadge3: "bg-[#cd7f32] text-[#111111]",
+  rankBadgeDefault: "bg-[#1a002e] text-[#e040fb]",
+
   // Field (SVG colors)
   field: {
     background: "#0d0018",

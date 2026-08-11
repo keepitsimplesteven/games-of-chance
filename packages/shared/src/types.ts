@@ -211,6 +211,8 @@ export interface RoomState {
   gameVotes?: Record<string, string[]>
   /** Tournament progress — present when progressionMode is "tournament" */
   tournamentProgress?: TournamentProgress | null
+  /** Pre-game session rank snapshot for risers/fallers display. Key = playerId, value = rank before game started. */
+  preGameRanks: Record<string, number>
 }
 
 // ── Battle Bots ────────────────────────────────────────────────────────────
