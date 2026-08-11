@@ -99,13 +99,13 @@ describe("BattleBotsPlugin.scoreRound", () => {
       const deltas = scoreResult.deltas
       const values = Object.values(deltas)
 
-      // All values should be either 0 or 1
+      // All values should be either 0 or 25
       for (const v of values) {
-        expect(v === 0 || v === 1).toBe(true)
+        expect(v === 0 || v === 25).toBe(true)
       }
 
-      // Exactly 2 winners (value=1) and 2 losers (value=0)
-      const winners = values.filter(v => v === 1)
+      // Exactly 2 winners (value=25) and 2 losers (value=0)
+      const winners = values.filter(v => v === 25)
       const losers = values.filter(v => v === 0)
       expect(winners).toHaveLength(2)
       expect(losers).toHaveLength(2)
@@ -175,15 +175,15 @@ describe("BattleBotsPlugin.scoreRound", () => {
 
       const scoreResult = battleBotsPlugin.scoreRound(picks, round3Result, players, settings)
 
-      // totalParticipants = 4, so:
-      // rank 1 → 4 - 1 = 3 points
-      // rank 2 → 4 - 2 = 2 points
-      // rank 3 → 4 - 3 = 1 point
-      // rank 4 → 4 - 4 = 0 points
+      // totalParticipants = 4, so: (totalParticipants - rank) * 10
+      // rank 1 → (4 - 1) * 10 = 30 points
+      // rank 2 → (4 - 2) * 10 = 20 points
+      // rank 3 → (4 - 3) * 10 = 10 points
+      // rank 4 → (4 - 4) * 10 = 0 points
       expect(scoreResult.deltas).toEqual({
-        player1: 3,
-        player2: 2,
-        player3: 1,
+        player1: 30,
+        player2: 20,
+        player3: 10,
         player4: 0,
       })
     })

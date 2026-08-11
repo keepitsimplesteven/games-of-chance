@@ -101,10 +101,10 @@ describe("Full 3-round game flow (4 players)", () => {
     expect(winnerIds).toHaveLength(2)
     expect(loserIds).toHaveLength(2)
 
-    // ─── Round 2: scoreRound — 1 for winners, 0 for losers ──────────────────
+    // ─── Round 2: scoreRound — 25 for winners, 0 for losers ──────────────────
     const round2Score = battleBotsPlugin.scoreRound(picks, round2Result, players, defaultSettings)
     for (const winnerId of winnerIds) {
-      expect(round2Score.deltas[winnerId]).toBe(1)
+      expect(round2Score.deltas[winnerId]).toBe(25)
     }
     for (const loserId of loserIds) {
       expect(round2Score.deltas[loserId]).toBe(0)
@@ -160,9 +160,9 @@ describe("Full 3-round game flow (4 players)", () => {
     // ─── Round 3: scoreRound — ranking-based points ──────────────────────────
     const round3Score = battleBotsPlugin.scoreRound(picks, round3Result, players, defaultSettings)
 
-    // Points = totalParticipants(4) - rank
+    // Points = (totalParticipants(4) - rank) * 10
     for (const ranking of finalRankings) {
-      const expectedPoints = 4 - ranking.rank
+      const expectedPoints = (4 - ranking.rank) * 10
       expect(round3Score.deltas[ranking.playerId]).toBe(expectedPoints)
     }
 
