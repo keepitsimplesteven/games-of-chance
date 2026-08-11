@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import { type ReactNode, useEffect, useRef } from "react"
 import { useGameStore } from "../../store/useGameStore"
 import { useTheme } from "../../theme"
 import PlayerList from "./PlayerList"
@@ -13,6 +13,8 @@ import ScoreAdjustmentNotification from "../../host-panel/ScoreAdjustmentNotific
 import TournamentEndView from "./TournamentEndView"
 import { SessionStandingsPopover } from "../game/SessionStandingsPopover"
 import { PlaycallerLeaderboard } from "../../games/playcaller/PlaycallerLeaderboard"
+import { ViewportContainer } from "../layout/ViewportContainer"
+import { GAME_GRID_CONFIGS } from "../layout/viewport-constants"
 
 interface LobbyShellProps {
   children?: ReactNode
@@ -31,31 +33,68 @@ export default function LobbyShell({ children }: LobbyShellProps) {
 
   // Playcaller in active drive mode: render full-viewport without surrounding chrome
   const isPlaycallerActive = gameType === "playcaller" && !isLobby && !isTournamentEnd && phase !== "END_GAME" && phase !== "SPLASH"
+  // Track previous lobby state for scroll-to-top on return
+  const wasInGame = useRef(false)
+
+  // Restore scroll position to top when returning to LOBBY phase
+  useEffect(() => {
+    if (!isLobby && !isTournamentEnd) {
+      wasInGame.current = true
+    }
+    if (isLobby && wasInGame.current) {
+      window.scrollTo(0, 0)
+      wasInGame.current = false
+    }
+  }, [isLobby, isTournamentEnd])
+
+  // Active game mode: all game types get ViewportContainer
+  const isGameActive = !isLobby && !isTournamentEnd
+
+  // Determine grid rows for the active game type
+  const gridRows = GAME_GRID_CONFIGS[gameType || "coin-toss"]?.rows ?? "auto 1fr auto"
 
   // Show session standings popover during active games (non-lobby, non-tournament-end)
-  const showStandingsPopover = !isLobby && !isTournamentEnd
+  const showStandingsPopover = isGameActive
 
-  // Full-viewport mode for playcaller — skip page padding, standings, etc.
-  if (isPlaycallerActive) {
+  // Active game mode — ALL game types wrapped in ViewportContainer
+  if (isGameActive) {
     return (
-      <div className="h-[100dvh] overflow-hidden flex flex-col">
-        {/* Compact header with session standings popover */}
-        <PlaycallerHeader />
+      <>
+        <ViewportContainer gridRows={gridRows}>
+          {/* Compact header with title, share link, connection status, standings */}
+          {gameType === "playcaller" ? (
+            <PlaycallerHeader />
+          ) : (
+            <header className="flex items-center justify-between px-2 py-1 shrink-0">
+              <h1 className={`text-sm font-bold ${theme.titleText}`}>Games of Chance</h1>
+              <div className="flex items-center gap-1.5">
+                <SessionStandingsPopover
+                  trigger={<StandingsTriggerIcon />}
+                />
+                <ShareLink />
+                <ConnectionStatus />
+              </div>
+            </header>
+          )}
 
-        {/* Game fills the rest of the viewport */}
-        <div className="flex-1 min-h-0 overflow-hidden">
-          <GameView />
-        </div>
+          {/* Game fills the primary grid area */}
+          <div className="min-h-0 overflow-hidden">
+            <GameView />
+          </div>
 
-        {/* Host Control Panel — renders as overlay across all phases */}
+          {/* Bottom slot — kept empty for auto row (controls rendered inside GameView) */}
+          <div />
+        </ViewportContainer>
+
+        {/* Host Control Panel — renders as overlay outside ViewportContainer */}
         <HostControlPanel />
         <ScoreAdjustmentNotification />
-      </div>
+      </>
     )
   }
 
   return (
-    <div className="flex min-h-screen flex-col p-4">
+    <div className="flex min-h-screen flex-col overflow-y-auto p-4">
       {/* Header with connection status, share icon, and session standings popover */}
       <header className="mb-4 flex items-center justify-between">
         <h1 className={`text-lg font-bold ${theme.titleText}`}>Games of Chance</h1>
@@ -93,13 +132,6 @@ export default function LobbyShell({ children }: LobbyShellProps) {
             <HostControls />
           </div>
         </>
-      )}
-
-      {/* Game view — renders when a game is active (phase ≠ LOBBY and not END_TOURNAMENT) */}
-      {!isLobby && !isTournamentEnd && (
-        <div className="mt-4 flex flex-1 flex-col">
-          <GameView />
-        </div>
       )}
 
       {/* Children (additional content) */}

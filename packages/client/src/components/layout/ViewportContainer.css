@@ -1,0 +1,47 @@
+.viewport-container {
+  /* Fallback for older browsers */
+  height: 100vh;
+  /* Modern: smallest guaranteed viewport */
+  height: 100svh;
+  /* Cap for large screens */
+  height: min(100svh, 1366px);
+
+  width: 100vw;
+  width: min(100vw, 1024px);
+
+  overflow: hidden;
+
+  /* Safe area insets with fallback to 0px */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+
+  /* Grid layout for children */
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+
+  /* Centering on large screens */
+  margin: 0 auto;
+
+  /* Prevent any internal scroll bounce */
+  overscroll-behavior: none;
+}
+
+/* Large-screen centering when viewport exceeds max bounds */
+@media (min-width: 1025px), (min-height: 1367px) {
+  .viewport-container {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* Sub-600px fallback: allow scrolling on very short viewports
+   so interactive elements remain tappable */
+@media (max-height: 599px) {
+  .viewport-container {
+    overflow: auto;
+  }
+}
