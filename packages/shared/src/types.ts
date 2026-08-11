@@ -98,7 +98,7 @@ export interface Player {
  * Valid room phases. NO BETWEEN_ROUNDS phase exists.
  * RESULT transitions directly to PICKING (next round) or LOBBY (game ended).
  */
-export type RoundPhase = "LOBBY" | "PICKING" | "RESOLVING" | "RESULT" | "END_GAME" | "END_TOURNAMENT"
+export type RoundPhase = "LOBBY" | "SPLASH" | "PICKING" | "RESOLVING" | "RESULT" | "END_GAME" | "END_TOURNAMENT"
 
 export interface RoundState {
   phase: RoundPhase

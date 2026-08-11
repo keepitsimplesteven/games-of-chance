@@ -30,7 +30,7 @@ export default function LobbyShell({ children }: LobbyShellProps) {
   const isTournamentEnd = phase === "END_TOURNAMENT"
 
   // Playcaller in active drive mode: render full-viewport without surrounding chrome
-  const isPlaycallerActive = gameType === "playcaller" && !isLobby && !isTournamentEnd && phase !== "END_GAME"
+  const isPlaycallerActive = gameType === "playcaller" && !isLobby && !isTournamentEnd && phase !== "END_GAME" && phase !== "SPLASH"
 
   // Show session standings popover during active games (non-lobby, non-tournament-end)
   const showStandingsPopover = !isLobby && !isTournamentEnd

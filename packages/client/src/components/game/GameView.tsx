@@ -8,6 +8,7 @@ import GameLeaderboard from "./GameLeaderboard"
 import PhaseIndicator from "./PhaseIndicator"
 import GameCompleteScreen from "./GameCompleteScreen"
 import CongratulationsScreen from "./CongratulationsScreen"
+import GameSplashScreen from "./GameSplashScreen"
 import RoundControls from "./RoundControls"
 
 /**
@@ -37,6 +38,11 @@ export default function GameView() {
 
   // Only render when a game is active (phase ≠ LOBBY)
   if (!phase || phase === "LOBBY") return null
+
+  // SPLASH phase — show game splash screen with host "Play Game" button
+  if (phase === "SPLASH") {
+    return <GameSplashScreen />
+  }
 
   // END_TOURNAMENT phase — finale game completed in tournament mode → podium
   if (phase === "END_TOURNAMENT") {

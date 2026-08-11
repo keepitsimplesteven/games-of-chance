@@ -507,9 +507,10 @@ export class GameRoom extends Server {
       return
     }
 
-    // Phase guard: can only start from LOBBY or RESULT
+    // Phase guard: can only start from LOBBY, SPLASH, or RESULT
     if (
       this.state.round.phase !== "LOBBY" &&
+      this.state.round.phase !== "SPLASH" &&
       this.state.round.phase !== "RESULT"
     ) {
       this.sendError(
@@ -519,6 +520,18 @@ export class GameRoom extends Server {
       )
       return
     }
+
+    // LOBBY → SPLASH transition: show splash screen before starting the game
+    if (this.state.round.phase === "LOBBY") {
+      this.state.round.phase = "SPLASH"
+      this.state.settingsLocked = true
+      this.state.gameVotes = {}
+      this.broadcastState()
+      return
+    }
+
+    // SPLASH → beginRound: host clicks "Play Game" to start the actual game
+    // (falls through to the rest of the method which calls beginRound())
 
     // Playcaller: advance to next bracket round when SKIP_GAMEPLAY is false
     if (
