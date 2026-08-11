@@ -3,28 +3,25 @@ import { useTheme } from "../../theme"
 import { SplashLayout } from "../../components/game/SplashLayout"
 
 /**
- * CoinTossSplash — Game-specific splash screen for Coin Toss.
+ * PlaycallerSplash — Game-specific splash screen for Playcaller.
  *
  * Built on SplashLayout for viewport containment compatibility.
- * Shows game rules, scoring mechanics, and streak system.
+ * Shows tournament bracket format, drive mechanics, and scoring info.
  * Host sees "Play Game" button; non-hosts see waiting message.
  */
-export function CoinTossSplash() {
+export function PlaycallerSplash() {
   const role = useGameStore((s) => s.role)
   const startRound = useGameStore((s) => s.startRound)
-  const settings = useGameStore((s) => s.roomState?.gameSettings)
+  const players = useGameStore((s) => s.roomState?.players)
   const theme = useTheme()
 
   const isHost = role === "host"
-  const basePoints = Number(settings?.tuning?.CORRECT_GUESS_CHIPS) || 10
-  const streakThreshold = Number(settings?.tuning?.STREAK_THRESHOLD) || 3
-  const streakMultiplier = Number(settings?.tuning?.STREAK_MULTIPLIER) || 2
-  const roundCount = settings?.roundCount ?? 10
+  const playerCount = players?.length ?? 0
 
   return (
     <SplashLayout
-      emoji="🪙"
-      title="Coin Toss"
+      emoji="🏈"
+      title="Playcaller"
       action={
         isHost ? (
           <button
@@ -46,27 +43,29 @@ export function CoinTossSplash() {
         <div className={`rounded-lg px-3 py-2 ${theme.card}`}>
           <h3 className={`font-semibold mb-1 ${theme.accentText}`}>How to Play</h3>
           <p className={`${theme.mutedText}`}>
-            Pick heads or tails each round. If the coin lands on your pick, you score!
+            Head-to-head bracket tournament! Call offensive or defensive plays each down and drive the ball down the field.
           </p>
         </div>
 
         <div className={`rounded-lg px-3 py-2 ${theme.card}`}>
-          <h3 className={`font-semibold mb-1 ${theme.accentText}`}>Scoring</h3>
+          <h3 className={`font-semibold mb-1 ${theme.accentText}`}>Plays</h3>
           <ul className={`space-y-0.5 ${theme.mutedText}`}>
-            <li>✓ Correct guess: <span className="text-white font-medium">+{basePoints} pts</span></li>
-            <li>✗ Wrong guess: <span className="text-white font-medium">0 pts</span></li>
+            <li>🏃 <span className="text-white font-medium">Run Safe</span> — steady gains, low risk</li>
+            <li>💨 <span className="text-white font-medium">Run Aggressive</span> — big gains or losses</li>
+            <li>🎯 <span className="text-white font-medium">Pass Safe</span> — moderate gains</li>
+            <li>🚀 <span className="text-white font-medium">Pass Aggressive</span> — high risk, high reward</li>
           </ul>
         </div>
 
         <div className={`rounded-lg px-3 py-2 ${theme.card}`}>
-          <h3 className={`font-semibold mb-1 ${theme.accentText}`}>Streak Bonus</h3>
+          <h3 className={`font-semibold mb-1 ${theme.accentText}`}>Scoring</h3>
           <p className={`${theme.mutedText}`}>
-            Get <span className="text-white font-medium">{streakThreshold}</span> correct in a row for a <span className="text-white font-medium">×{streakMultiplier}</span> multiplier!
+            Drive <span className="text-white font-medium">35 yards</span> to score a touchdown. Points awarded by bracket placement — <span className="text-white font-medium">1st gets 250 pts</span>!
           </p>
         </div>
 
         <p className={`text-center text-xs ${theme.mutedText}`}>
-          {roundCount} rounds · 10s pick window
+          {playerCount} player{playerCount !== 1 ? "s" : ""} · 20s play clock · single elimination
         </p>
       </div>
     </SplashLayout>

@@ -3,28 +3,25 @@ import { useTheme } from "../../theme"
 import { SplashLayout } from "../../components/game/SplashLayout"
 
 /**
- * CoinTossSplash — Game-specific splash screen for Coin Toss.
+ * BigWheelSplash — Game-specific splash screen for Big Wheel.
  *
  * Built on SplashLayout for viewport containment compatibility.
- * Shows game rules, scoring mechanics, and streak system.
+ * Shows game rules, spin mechanics, and scoring info.
  * Host sees "Play Game" button; non-hosts see waiting message.
  */
-export function CoinTossSplash() {
+export function BigWheelSplash() {
   const role = useGameStore((s) => s.role)
   const startRound = useGameStore((s) => s.startRound)
-  const settings = useGameStore((s) => s.roomState?.gameSettings)
+  const players = useGameStore((s) => s.roomState?.players)
   const theme = useTheme()
 
   const isHost = role === "host"
-  const basePoints = Number(settings?.tuning?.CORRECT_GUESS_CHIPS) || 10
-  const streakThreshold = Number(settings?.tuning?.STREAK_THRESHOLD) || 3
-  const streakMultiplier = Number(settings?.tuning?.STREAK_MULTIPLIER) || 2
-  const roundCount = settings?.roundCount ?? 10
+  const playerCount = players?.length ?? 0
 
   return (
     <SplashLayout
-      emoji="🪙"
-      title="Coin Toss"
+      emoji="🎡"
+      title="Big Wheel"
       action={
         isHost ? (
           <button
@@ -46,27 +43,28 @@ export function CoinTossSplash() {
         <div className={`rounded-lg px-3 py-2 ${theme.card}`}>
           <h3 className={`font-semibold mb-1 ${theme.accentText}`}>How to Play</h3>
           <p className={`${theme.mutedText}`}>
-            Pick heads or tails each round. If the coin lands on your pick, you score!
+            Each player takes a turn spinning the wheel. You get <span className="text-white font-medium">2 spins</span> — your total is the sum of both!
           </p>
         </div>
 
         <div className={`rounded-lg px-3 py-2 ${theme.card}`}>
           <h3 className={`font-semibold mb-1 ${theme.accentText}`}>Scoring</h3>
           <ul className={`space-y-0.5 ${theme.mutedText}`}>
-            <li>✓ Correct guess: <span className="text-white font-medium">+{basePoints} pts</span></li>
-            <li>✗ Wrong guess: <span className="text-white font-medium">0 pts</span></li>
+            <li>🎯 Wheel values range from <span className="text-white font-medium">5 to 100</span></li>
+            <li>➕ Both spins are added together</li>
+            <li>🏆 Highest total wins!</li>
           </ul>
         </div>
 
         <div className={`rounded-lg px-3 py-2 ${theme.card}`}>
-          <h3 className={`font-semibold mb-1 ${theme.accentText}`}>Streak Bonus</h3>
+          <h3 className={`font-semibold mb-1 ${theme.accentText}`}>Turn Order</h3>
           <p className={`${theme.mutedText}`}>
-            Get <span className="text-white font-medium">{streakThreshold}</span> correct in a row for a <span className="text-white font-medium">×{streakMultiplier}</span> multiplier!
+            Players spin one at a time. Watch others spin and see where you stack up on the leaderboard!
           </p>
         </div>
 
         <p className={`text-center text-xs ${theme.mutedText}`}>
-          {roundCount} rounds · 10s pick window
+          {playerCount} player{playerCount !== 1 ? "s" : ""} · 2 spins each
         </p>
       </div>
     </SplashLayout>

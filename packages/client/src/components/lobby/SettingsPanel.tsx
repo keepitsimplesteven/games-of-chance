@@ -54,6 +54,7 @@ export default function SettingsPanel(): JSX.Element | null {
   const theme = useTheme()
 
   const [tuningOpen, setTuningOpen] = useState(true)
+  const [isExpanded, setIsExpanded] = useState(false)
 
   // Host-only access control
   if (role !== "host") return null
@@ -106,34 +107,58 @@ export default function SettingsPanel(): JSX.Element | null {
   return (
     <section
       aria-label="Game Settings"
-      className={`rounded-xl p-4 shadow-sm ${theme.card}`}
+      className={`rounded-xl shadow-sm ${theme.card}`}
     >
-      {/* Header with lock indicator */}
-      <div className="mb-4 flex items-center gap-2">
-        <h2 className={`text-base font-bold ${theme.headingText}`}>Settings</h2>
-        {settingsLocked && (
-          <span
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${theme.statusNeutral}`}
-            aria-label="Settings locked"
-          >
-            <svg
-              className="h-3.5 w-3.5"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              aria-hidden="true"
+      {/* Accordion header — click to expand/collapse */}
+      <button
+        type="button"
+        onClick={() => setIsExpanded(!isExpanded)}
+        aria-expanded={isExpanded}
+        className={`flex min-h-[44px] w-full items-center justify-between rounded-xl px-4 py-3 text-left transition ${isExpanded ? "" : ""}`}
+      >
+        <div className="flex items-center gap-2">
+          <h2 className={`text-base font-bold ${theme.headingText}`}>Settings</h2>
+          {settingsLocked && (
+            <span
+              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${theme.statusNeutral}`}
+              aria-label="Settings locked"
             >
-              <path
-                fillRule="evenodd"
-                d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z"
-                clipRule="evenodd"
-              />
-            </svg>
-            Locked
-          </span>
-        )}
-      </div>
+              <svg
+                className="h-3.5 w-3.5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              Locked
+            </span>
+          )}
+        </div>
+        <svg
+          className={`h-4 w-4 transition-transform ${theme.mutedText} ${
+            isExpanded ? "rotate-180" : ""
+          }`}
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            fillRule="evenodd"
+            d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+            clipRule="evenodd"
+          />
+        </svg>
+      </button>
 
-      <div className="flex flex-col gap-4">
+      {/* Collapsible content */}
+      {isExpanded && (
+        <div className="px-4 pb-4">
+          <div className="flex flex-col gap-4">
         {/* Round count */}
         <div className="flex flex-col gap-1">
           <label
@@ -280,7 +305,9 @@ export default function SettingsPanel(): JSX.Element | null {
             )}
           </div>
         )}
-      </div>
+          </div>
+        </div>
+      )}
     </section>
   )
 }

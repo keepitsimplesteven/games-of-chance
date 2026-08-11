@@ -1,6 +1,8 @@
 import { useGameStore } from "../../store/useGameStore"
 import { CoinTossContainer } from "../../games/coin-toss/CoinTossContainer"
 import { CoinTossSplash } from "../../games/coin-toss/CoinTossSplash"
+import { BigWheelSplash } from "../../games/big-wheel/BigWheelSplash"
+import { PlaycallerSplash } from "../../games/playcaller/PlaycallerSplash"
 import { BattleBotsView } from "../../games/battle-bots/BattleBotsView"
 import { BattleBotsLeaderboard } from "../../games/battle-bots/BattleBotsLeaderboard"
 import { BigWheelContainer } from "../../games/big-wheel/BigWheelContainer"
@@ -45,6 +47,10 @@ export default function GameView() {
     switch (gameType) {
       case "coin-toss":
         return <CoinTossSplash />
+      case "big-wheel":
+        return <BigWheelSplash />
+      case "playcaller":
+        return <PlaycallerSplash />
       default:
         return <GameSplashScreen />
     }

@@ -1,5 +1,6 @@
 import { useGameStore } from "../../store/useGameStore"
 import { useTheme } from "../../theme"
+import { SplashLayout } from "./SplashLayout"
 
 /** Game metadata for splash display */
 const GAME_INFO: Record<string, { name: string; emoji: string }> = {
@@ -10,12 +11,10 @@ const GAME_INFO: Record<string, { name: string; emoji: string }> = {
 }
 
 /**
- * GameSplashScreen — displayed during the SPLASH phase after the host launches a game.
+ * GameSplashScreen — Generic fallback splash screen displayed during the
+ * SPLASH phase when no game-specific splash component exists.
  *
- * Shows:
- * - Game name and emoji
- * - Host: "Play Game" button (sends START_ROUND to transition to PICKING)
- * - Non-hosts: "Waiting for host to start game..." message
+ * Built on SplashLayout for viewport containment compatibility.
  */
 export default function GameSplashScreen() {
   const role = useGameStore((s) => s.role)
@@ -27,29 +26,24 @@ export default function GameSplashScreen() {
   const isHost = role === "host"
 
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-4">
-      <div className={`flex flex-col items-center gap-6 rounded-2xl px-8 py-10 shadow-lg ${theme.listItem}`}>
-        <span className="text-6xl" aria-hidden="true">
-          {info.emoji}
-        </span>
-        <h2 className={`text-2xl font-bold ${theme.titleText}`}>
-          {info.name}
-        </h2>
-
-        {isHost ? (
+    <SplashLayout
+      emoji={info.emoji}
+      title={info.name}
+      action={
+        isHost ? (
           <button
             type="button"
             onClick={startRound}
-            className={`mt-4 w-full max-w-xs rounded-lg px-6 py-3 text-base font-semibold shadow-sm transition active:scale-[0.98] ${theme.btnPrimary}`}
+            className={`w-full rounded-lg px-6 py-3 text-base font-semibold shadow-sm transition active:scale-[0.98] ${theme.btnPrimary}`}
           >
             Play Game
           </button>
         ) : (
-          <p className={`mt-4 text-sm ${theme.mutedText}`}>
+          <p className={`text-center text-sm ${theme.mutedText}`}>
             Waiting for host to start game...
           </p>
-        )}
-      </div>
-    </div>
+        )
+      }
+    />
   )
 }
