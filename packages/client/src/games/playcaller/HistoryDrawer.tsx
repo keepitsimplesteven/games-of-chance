@@ -54,7 +54,8 @@ export function HistoryDrawer({ entries, isOpen, onClose }: HistoryDrawerProps) 
             animate="expanded"
             exit="collapsed"
             transition={{ duration: 0.25, ease: "easeInOut" }}
-            className="absolute top-full left-0 right-0 z-20 mt-1 rounded border-2 border-[#2a7a3a] bg-[#111] p-2 max-h-[250px] overflow-y-auto shadow-lg"
+            className="absolute top-full left-0 right-0 z-20 mt-1 rounded border-2 border-[#2a7a3a] bg-[#111] p-2 overflow-y-auto shadow-lg"
+            style={{ maxHeight: 'min(250px, 60svh)' }}
             role="region"
             aria-label="Drive history"
           >
