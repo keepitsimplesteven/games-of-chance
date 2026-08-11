@@ -1,5 +1,6 @@
 import { useGameStore } from "../../store/useGameStore"
 import { CoinTossContainer } from "../../games/coin-toss/CoinTossContainer"
+import { CoinTossSplash } from "../../games/coin-toss/CoinTossSplash"
 import { BattleBotsView } from "../../games/battle-bots/BattleBotsView"
 import { BattleBotsLeaderboard } from "../../games/battle-bots/BattleBotsLeaderboard"
 import { BigWheelContainer } from "../../games/big-wheel/BigWheelContainer"
@@ -39,9 +40,14 @@ export default function GameView() {
   // Only render when a game is active (phase ≠ LOBBY)
   if (!phase || phase === "LOBBY") return null
 
-  // SPLASH phase — show game splash screen with host "Play Game" button
+  // SPLASH phase — show game-specific splash or fallback to generic
   if (phase === "SPLASH") {
-    return <GameSplashScreen />
+    switch (gameType) {
+      case "coin-toss":
+        return <CoinTossSplash />
+      default:
+        return <GameSplashScreen />
+    }
   }
 
   // END_TOURNAMENT phase — finale game completed in tournament mode → podium
