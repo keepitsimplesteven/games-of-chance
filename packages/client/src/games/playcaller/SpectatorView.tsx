@@ -1,4 +1,5 @@
 import type { Matchup, RoundPhase } from "@games-of-chance/shared"
+import { ResponsiveText } from "../../components/layout/ResponsiveText"
 import { usePlayerName } from "./hooks/usePlayerName"
 
 interface SpectatorViewProps {
@@ -58,7 +59,7 @@ function MatchupCard({ matchup, seeds, phase, getPlayerName }: MatchupCardProps)
   const isResolved = winner !== null
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800 p-4 flex flex-col gap-2">asdfasdfasdf
+    <div className="rounded-lg border border-gray-700 bg-gray-800 p-2 flex flex-col gap-2">
       <PlayerRow
         playerId={playerA}
         displayName={getPlayerName(playerA)}
@@ -67,7 +68,9 @@ function MatchupCard({ matchup, seeds, phase, getPlayerName }: MatchupCardProps)
         isResolved={isResolved}
       />
       <div className="text-center text-xs text-gray-500">
-        {phase === "RESOLVING" && !isResolved ? "Resolving..." : "vs"}
+        <ResponsiveText minSize={10} maxSize={14}>
+          {phase === "RESOLVING" && !isResolved ? "Resolving..." : "vs"}
+        </ResponsiveText>
       </div>
       <PlayerRow
         playerId={playerB}
@@ -97,8 +100,10 @@ function PlayerRow({ playerId, displayName, seed, isWinner, isResolved }: Player
 
   return (
     <div className={`flex items-center justify-between ${textColor}`}>
-      <span className="truncate">{displayName}</span>
-      <span className="text-xs text-gray-400 ml-2">#{seed}</span>
+      <ResponsiveText truncate className="min-w-0 flex-1">
+        {displayName}
+      </ResponsiveText>
+      <span className="text-xs text-gray-400 ml-2 shrink-0">#{seed}</span>
     </div>
   )
 }

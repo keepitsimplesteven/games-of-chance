@@ -25,7 +25,11 @@ export default function HostControlPanel() {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-4 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-gray-800 text-white shadow-lg"
+        className="fixed z-40 flex h-12 w-12 items-center justify-center rounded-full bg-gray-800 text-white shadow-lg"
+        style={{
+          bottom: 'calc(1rem + var(--safe-area-bottom, 0px))',
+          right: 'calc(1rem + var(--safe-area-right, 0px))',
+        }}
         aria-label="Open Host Control Panel"
       >
         ⚙️
@@ -39,13 +43,21 @@ export default function HostControlPanel() {
     : null
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white">
-      <header className="flex items-center justify-between border-b px-4 py-3">
+    <div
+      className="fixed inset-0 z-50 flex flex-col bg-zinc-900 text-white"
+      style={{
+        paddingTop: 'var(--safe-area-top, 0px)',
+        paddingBottom: 'var(--safe-area-bottom, 0px)',
+        paddingLeft: 'var(--safe-area-left, 0px)',
+        paddingRight: 'var(--safe-area-right, 0px)',
+      }}
+    >
+      <header className="flex items-center justify-between border-b border-zinc-700 px-4 py-3">
         <h2 className="text-lg font-bold">Host Controls</h2>
         <button
           type="button"
           onClick={() => { setIsOpen(false); setActiveAction(null) }}
-          className="text-2xl text-gray-500"
+          className="text-2xl text-zinc-400"
           aria-label="Close"
         >
           ×
@@ -58,7 +70,7 @@ export default function HostControlPanel() {
             <button
               type="button"
               onClick={() => setActiveAction(null)}
-              className="mb-4 text-sm text-blue-600"
+              className="mb-4 text-sm text-blue-400"
             >
               ← Back
             </button>
@@ -78,8 +90,8 @@ export default function HostControlPanel() {
                     onClick={() => setActiveAction(action.id)}
                     className={`flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left ${
                       available
-                        ? "border-gray-200 bg-white hover:bg-gray-50"
-                        : "border-gray-100 bg-gray-50 opacity-50"
+                        ? "border-zinc-600 bg-zinc-800 hover:bg-zinc-700"
+                        : "border-zinc-700 bg-zinc-800 opacity-50"
                     }`}
                   >
                     <span className="text-xl">{action.icon()}</span>
