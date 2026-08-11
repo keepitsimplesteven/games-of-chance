@@ -34,6 +34,13 @@ export const retroCasino: ThemeDefinition = {
   statusDanger: "text-[#ff6b6b]",
   statusNeutral: "text-[#f0f0f0]/60",
 
+  // Leaderboard
+  currentPlayerRing: "ring-1 ring-[#f5c542]",
+  rankBadge1: "bg-[#f5c542] text-[#111111]",
+  rankBadge2: "bg-[#c0c0c0] text-[#111111]",
+  rankBadge3: "bg-[#cd7f32] text-[#111111]",
+  rankBadgeDefault: "bg-[#1b5e2a] text-[#f0f0f0]",
+
   // Field (SVG colors)
   field: {
     background: "#111111",

@@ -96,6 +96,8 @@ interface LiveRoomState {
    * Key = the player's original clientId (stable identity).
    */
   vacatedSlots: Record<string, VacatedSlot>
+  /** Pre-game session rank snapshot for risers/fallers computation */
+  preGameRanks: Record<string, number>
 }
 
 // ── Default configuration ──────────────────────────────────────────────────
@@ -194,6 +196,7 @@ export class GameRoom extends Server {
       gameVotes: {},
       tournamentProgress: null,
       vacatedSlots: {},
+      preGameRanks: {},
     }
   }
 
@@ -1364,6 +1367,32 @@ export class GameRoom extends Server {
     // Reset streak counters at the start of a new game (round 1)
     if (roundNumber === 1) {
       resetCoinTossStreakState()
+
+      // ── Capture pre-game session ranks for risers/fallers computation ────
+      // On first game of session (empty session leaderboard): assign all players rank 1
+      // Otherwise: snapshot each player's current session rank
+      const playerIds = Object.keys(this.state.players)
+      if (this.state.sessionLeaderboard.length === 0) {
+        // First game — no prior session rankings exist
+        const snapshot: Record<string, number> = {}
+        for (const id of playerIds) {
+          snapshot[id] = 1
+        }
+        this.state.preGameRanks = snapshot
+      } else {
+        // Subsequent games — capture each player's current session rank
+        const snapshot: Record<string, number> = {}
+        for (const id of playerIds) {
+          const entry = this.state.sessionLeaderboard.find(e => e.playerId === id)
+          if (entry) {
+            snapshot[id] = entry.rank
+          } else {
+            // Player joined after last game — assign rank 1 (no indicator will show)
+            snapshot[id] = 1
+          }
+        }
+        this.state.preGameRanks = snapshot
+      }
     }
 
     // ── Big Wheel: initialize plugin state on first round ─────────────────
@@ -2416,6 +2445,7 @@ export class GameRoom extends Server {
       playcallerGameState,
       gameVotes: this.state.gameVotes,
       tournamentProgress: this.state.tournamentProgress,
+      preGameRanks: this.state.preGameRanks,
     }
   }
 }

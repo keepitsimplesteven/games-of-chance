@@ -1,11 +1,13 @@
 import { useGameStore } from "../../store/useGameStore"
 import { CoinTossContainer } from "../../games/coin-toss/CoinTossContainer"
 import { BattleBotsView } from "../../games/battle-bots/BattleBotsView"
+import { BattleBotsLeaderboard } from "../../games/battle-bots/BattleBotsLeaderboard"
 import { BigWheelContainer } from "../../games/big-wheel/BigWheelContainer"
 import { PlaycallerContainer } from "../../games/playcaller/PlaycallerContainer"
 import GameLeaderboard from "./GameLeaderboard"
 import PhaseIndicator from "./PhaseIndicator"
-import FinalResultsScreen from "./FinalResultsScreen"
+import GameCompleteScreen from "./GameCompleteScreen"
+import CongratulationsScreen from "./CongratulationsScreen"
 import RoundControls from "./RoundControls"
 
 /**
@@ -19,10 +21,14 @@ import RoundControls from "./RoundControls"
  * Playcaller games render full-viewport — phase indicator, leaderboard, and
  * round controls are omitted so the DriveView can fill the screen without scroll.
  *
- * On END_GAME response (phase returns to LOBBY): this component returns null,
+ * END_GAME routing:
+ * - END_TOURNAMENT phase (finale game completed in tournament mode) → CongratulationsScreen (podium)
+ * - END_GAME phase (non-finale or endless mode) → GameCompleteScreen (ranked list with risers/fallers)
+ *
+ * On RETURN_TO_LOBBY response (phase returns to LOBBY): this component returns null,
  * effectively hiding the game view and allowing the lobby tiles to show again.
  *
- * Validates: Requirements 6.6, 17.3
+ * Validates: Requirements 6.6, 6.7, 17.3
  */
 export default function GameView() {
   const phase = useGameStore((s) => s.roomState?.round.phase)
@@ -32,9 +38,16 @@ export default function GameView() {
   // Only render when a game is active (phase ≠ LOBBY)
   if (!phase || phase === "LOBBY") return null
 
-  // END_GAME phase — show the final results screen with podium layout
+  // END_TOURNAMENT phase — finale game completed in tournament mode → podium
+  if (phase === "END_TOURNAMENT") {
+    return <CongratulationsScreen />
+  }
+
+  // END_GAME phase — show the GameCompleteScreen (ranked list with risers/fallers)
+  // In endless mode, this is always the end screen (no finale exists).
+  // In tournament mode, non-finale games also land here.
   if (phase === "END_GAME") {
-    return <FinalResultsScreen />
+    return <GameCompleteScreen />
   }
 
   // Playcaller renders full-viewport — omit phase indicator, leaderboard, round controls
@@ -44,7 +57,9 @@ export default function GameView() {
   // During PICKING phase, show leaderboard (previous round's scores are already revealed)
   // Coin-toss: leaderboard is integrated into CoinTossContainer, skip generic one
   // Big-wheel: leaderboard is integrated into BigWheelContainer with spin order, skip generic one
-  const showLeaderboard = !isPlaycaller && gameType !== "coin-toss" && gameType !== "big-wheel" && (phase === "PICKING" || roundAnimationDone)
+  // Battle-bots: uses BattleBotsLeaderboard (BaseLeaderboard wrapper), skip generic one
+  const showLeaderboard = !isPlaycaller && gameType !== "coin-toss" && gameType !== "big-wheel" && gameType !== "battle-bots" && (phase === "PICKING" || roundAnimationDone)
+  const showBattleBotsLeaderboard = gameType === "battle-bots" && (phase === "PICKING" || roundAnimationDone)
 
   // Dynamic game container based on gameType
   const renderGameContainer = () => {
@@ -81,6 +96,7 @@ export default function GameView() {
 
       {/* Game leaderboard — hidden during RESOLVING to avoid spoiling the result */}
       {showLeaderboard && <GameLeaderboard />}
+      {showBattleBotsLeaderboard && <BattleBotsLeaderboard />}
 
       {/* Host round controls (Next Round / End Game) */}
       <RoundControls />

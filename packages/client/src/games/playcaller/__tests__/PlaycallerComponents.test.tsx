@@ -72,6 +72,7 @@ function buildMockRoomState(overrides?: Partial<RoomState>): RoomState {
       tuning: {},
     },
     settingsLocked: true,
+    preGameRanks: {},
     playcallerGameState: {
       bracket: buildMockBracket(),
       spectators: [],
