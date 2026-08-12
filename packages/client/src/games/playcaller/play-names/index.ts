@@ -1,33 +1,57 @@
 // packages/client/src/games/playcaller/play-names/index.ts
 
-import type { Circumstance, DefensivePlayId, OffensivePlayId, PlayNameEntry } from "./types"
-import { offenseNames } from "./offense-names"
-import { defenseNames } from "./defense-names"
+import type { PlayPoolRegistry, PlaySlot } from "./types"
+import { offensePlayPool } from "./offense-names"
+import { defensePlayPool } from "./defense-names"
+import { validatePlayDefinition } from "./validate"
 
-export { offenseNames } from "./offense-names"
-export { defenseNames } from "./defense-names"
+export { offensePlayPool } from "./offense-names"
+export { defensePlayPool } from "./defense-names"
 export { classifyCircumstance } from "./classify"
-export type { Circumstance, DefensivePlayId, OffensivePlayId, PlayNameEntry, PlayNameMap, PlayNamePool } from "./types"
+export { selectPlay } from "./select"
+export { validatePlayDefinition } from "./validate"
+export type {
+  Circumstance,
+  PlaySlot,
+  PlayDefinition,
+  PlayPool,
+  PlayPoolRegistry,
+} from "./types"
 
-/** Fallback entry returned when a lookup misses (should not happen with valid inputs) */
-const FALLBACK_ENTRY: PlayNameEntry = {
-  displayName: "Unknown Play",
-  formation: "Base",
+/** Combined registry of offense and defense play pools */
+export const playPoolRegistry: PlayPoolRegistry = {
+  offense: offensePlayPool,
+  defense: defensePlayPool,
 }
 
 /**
- * Look up the display name and formation for a play based on its ID, the current
- * circumstance, and the player's role (offense or defense).
- *
- * Returns a fallback PlayNameEntry if the combination is not found.
+ * Validate all PlayDefinitions at module load time.
+ * In development mode: throws on the first invalid definition.
+ * In production mode: logs warnings for invalid definitions.
  */
-export function getPlayName(
-  playId: OffensivePlayId | DefensivePlayId,
-  circumstance: Circumstance,
-  role: "offense" | "defense"
-): PlayNameEntry {
-  const pool = role === "offense" ? offenseNames : defenseNames
-  const entries = pool[circumstance]
-  if (!entries) return FALLBACK_ENTRY
-  return entries[playId] ?? FALLBACK_ENTRY
+function validateRegistry(registry: PlayPoolRegistry): void {
+  const roles = ["offense", "defense"] as const
+  const slots: PlaySlot[] = ["run-safe", "run-aggressive", "pass-safe", "pass-aggressive"]
+
+  for (const role of roles) {
+    const pool = registry[role]
+    for (const slot of slots) {
+      const definitions = pool[slot]
+      for (let i = 0; i < definitions.length; i++) {
+        try {
+          validatePlayDefinition(definitions[i])
+        } catch (error) {
+          const message = `Invalid PlayDefinition in ${role}/${slot}[${i}]: ${(error as Error).message}`
+          if (process.env.NODE_ENV === "development") {
+            throw new Error(message)
+          } else {
+            console.warn(message)
+          }
+        }
+      }
+    }
+  }
 }
+
+// Run validation at module load time
+validateRegistry(playPoolRegistry)

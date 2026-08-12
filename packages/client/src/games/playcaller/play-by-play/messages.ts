@@ -4,7 +4,7 @@
 // The "Default" entry is used as a fallback when a specific play has no
 // registered messages — ensures every play gets commentary.
 
-import type { PlayByPlayMessages } from "./types"
+import type { CommentaryPhase, PlayByPlayMessages } from "./types"
 
 /**
  * Registry of play-by-play commentary.
@@ -66,6 +66,16 @@ export const playByPlayRegistry: Record<string, PlayByPlayMessages> = {
         "The ball is loose and the defense has it!",
         "What a play by the defense — turnover!",
       ],
+      turnover_on_downs: [
+        "Turnover on downs! The offense couldn't convert!",
+        "That's it — they come up short on 4th down!",
+        "The defense holds! Turnover on downs!",
+      ],
+      first_down: [
+        "First down! The chains move.",
+        "That's enough for a first down!",
+        "They pick up the first — drive continues.",
+      ],
     },
   },
 
@@ -118,6 +128,49 @@ export const playByPlayRegistry: Record<string, PlayByPlayMessages> = {
         "Turnover! That throw was into double coverage!",
         "He had his man but the ball is stolen away!",
       ],
+      turnover_on_downs: [
+        "Turnover on downs! Couldn't connect on the deep ball!",
+        "That's a turnover on downs — the gamble didn't pay off!",
+        "They come up empty on 4th down!",
+      ],
+      first_down: [
+        "Caught for the first down! Drive stays alive!",
+        "That's a first down grab! Great hands!",
+        "He reels it in for a new set of downs!",
+      ],
     },
   },
+}
+
+/**
+ * Default generic commentary for the tier system.
+ * Maps CommentaryPhase → string[] (flat arrays).
+ * This is the guaranteed fallback tier that terminates the cascade —
+ * every phase has at least one message so resolution never fails.
+ *
+ * The outcome array is a flattened set of generic outcome messages
+ * (not keyed by OutcomeCategory) for use in the CommentaryTiers.default slot.
+ */
+export const defaultMessages: Record<CommentaryPhase, string[]> = {
+  preSnap: [
+    "The official sets the ball...",
+    "Offense breaks the huddle, coming to the line...",
+    "Both sides dig in at the line of scrimmage...",
+    "The play clock is winding down...",
+    "Offense gets set, checking the defense...",
+  ],
+  activePlay: [
+    "QB gets the snap off in time...",
+    "The ball is snapped, play is live...",
+    "Here we go, the play develops...",
+    "Snap is clean, execution underway...",
+    "The offense makes their move...",
+  ],
+  outcome: [
+    "The play is over.",
+    "Back to the huddle.",
+    "Reset the chains.",
+    "That's the end of the play.",
+    "The whistle blows.",
+  ],
 }

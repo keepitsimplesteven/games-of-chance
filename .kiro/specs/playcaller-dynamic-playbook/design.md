@@ -8,7 +8,7 @@ This design introduces a richer presentational layer for the Playcaller football
 2. **Play Pool & Selector** — replaces fixed 1:1 play-name mappings with weighted pools of `PlayDefinition` objects per slot/role/circumstance
 3. **Commentary Resolver** — introduces a 3-tier weighted cascade (play-specific 60% → circumstance 30% → default 10%) with independent rolls per phase
 4. **Outcome Categorizer** — expanded to 7 categories with corrected precedence order
-5. **Play Art Resolver** — adapts the existing art lookup to use circumstance + slot keys with a `standard` fallback
+5. **Play Art** — embedded directly in each `PlayDefinition` as a required `playArt: PlayArtData` field (no separate resolver or registry)
 
 The drive engine (`packages/server/src/games/playcaller/drive/engine.ts`) remains byte-for-byte unchanged. All new modules are pure functions operating on read-only snapshots of `down`, `yardsToGo`, and `yardLine`.
 
@@ -21,8 +21,6 @@ graph TD
         CC --> PS[Play Selector]
         PS --> PC[Play Cards UI]
         PS --> CR[Commentary Resolver]
-        CC --> PA[Play Art Resolver]
-        PA --> PC
     end
 
     subgraph "Server (Unchanged)"
@@ -33,7 +31,6 @@ graph TD
     subgraph "Data Layer"
         PP[Play Pool Registry] --> PS
         CM[Commentary Messages] --> CR
-        AD[Art Data Registry] --> PA
     end
 ```
 
@@ -42,7 +39,7 @@ graph TD
 1. Server resolves a play using only the `PlaySlot` identifier → produces `PlayOutcome` + `yardsGained`
 2. Client receives `DriveState` snapshot → derives `Circumstance` from `(down, yardsToGo, yardLine)`
 3. Play Selector filters the Play Pool for the current circumstance + slot → weighted random pick → `PlayDefinition`
-4. Play Art Resolver looks up art by `(circumstance, slot, role)` with standard fallback
+4. Play Card renders the `PlayArtData` from the selected `PlayDefinition` directly (no separate lookup)
 5. Commentary Resolver runs 3 independent tier rolls (one per phase), cascading on empty tiers
 6. Outcome Categorizer classifies `(PlayOutcome, yardsGained, yardsToGo, yardLine, down)` → `OutcomeCategory`
 
@@ -102,6 +99,8 @@ export interface PlayDefinition {
   formation: string
   /** Which circumstances this play is valid for */
   circumstances: Circumstance[]
+  /** Play art data rendered on the play card */
+  playArt: PlayArtData
   /** Relative selection weight, > 0, default 1 */
   weight?: number
   /** Optional play-specific commentary (partial — any subset of phases) */
@@ -201,26 +200,7 @@ export function categorizeOutcome(
 | 7 | `yardsGained >= yardsToGo && yardsGained < 10` | `first_down` |
 | 8 | otherwise (yardsGained >= 0 but < yardsToGo and < 10) | `small_gain` |
 
-### 7. Play Art Resolver (adapted)
-
-```typescript
-// packages/client/src/games/playcaller/play-art/resolve.ts
-
-export function resolvePlayArt(
-  circumstance: Circumstance,
-  slot: PlaySlot,
-  role: "offense" | "defense"
-): PlayArtData
-```
-
-**Algorithm:**
-1. Look up art registry by `(role, slot, circumstance)`
-2. If not found, look up `(role, slot, "standard")`
-3. If still not found, return empty formation (line of scrimmage + position markers, no routes)
-
-The `PlayArtVariants` type changes from `Record<Circumstance, PlayArtData>` to `Partial<Record<Circumstance, PlayArtData>>` — new circumstances can optionally define art or rely on the standard fallback.
-
-### 8. useCircumstance Hook (updated)
+### 7. useCircumstance Hook (updated)
 
 ```typescript
 // packages/client/src/games/playcaller/hooks/useCircumstance.ts
@@ -232,9 +212,9 @@ export function useCircumstance(driveState: DriveState | null): Circumstance {
 }
 ```
 
-### 9. usePlayCards Hook (updated)
+### 8. usePlayCards Hook (updated)
 
-The hook now calls `selectPlay` per slot instead of direct map lookup, and passes an RNG seeded per render cycle:
+The hook now calls `selectPlay` per slot instead of direct map lookup, and passes an RNG seeded per render cycle. The selected `PlayDefinition`'s `playArt` field is included directly in the returned `PlayCardData` — no separate art resolution step:
 
 ```typescript
 export function usePlayCards(
@@ -252,6 +232,7 @@ export function usePlayCards(
 | `displayName` | `string` | yes | 1–50 characters |
 | `formation` | `string` | yes | 1–30 characters |
 | `circumstances` | `Circumstance[]` | yes | ≥ 1 valid circumstance value |
+| `playArt` | `PlayArtData` | yes | ≥ 1 PlayerMarker, lineOfScrimmage 0–100 |
 | `weight` | `number` | no | > 0, default 1, fractional allowed |
 | `messages` | `Partial<PlayByPlayMessages>` | no | Any subset of 3 phases |
 
@@ -343,11 +324,11 @@ Each cell must have ≥ 1 `PlayDefinition`. The standard circumstance must have 
 
 **Validates: Requirements 9.2, 9.3, 9.4**
 
-### Property 10: Play Art Fallback Resolution
+### Property 10: Play Art Data Validity
 
-*For any* combination of `(circumstance: Circumstance, slot: PlaySlot, role: "offense" | "defense")`, calling `resolvePlayArt(circumstance, slot, role)` SHALL return a valid `PlayArtData` object. When art is not defined for the requested circumstance, it SHALL return the art for `"standard"`. Two different PlayDefinitions sharing the same slot and circumstance SHALL resolve to identical art data.
+*For any* PlayDefinition in the play pool registry, its `playArt` field SHALL contain at least one PlayerMarker and a `lineOfScrimmage` value between 0 and 100.
 
-**Validates: Requirements 8.1, 8.2, 8.3**
+**Validates: Requirements 8.1, 8.4**
 
 ### Property 11: Minimum Coverage Guarantee
 
@@ -360,7 +341,7 @@ Each cell must have ≥ 1 `PlayDefinition`. The standard circumstance must have 
 | Scenario | Handling Strategy |
 |----------|-------------------|
 | No PlayDefinitions match current circumstance | Fall back to `"standard"` entries for same slot/role. Log warning in dev mode. |
-| No art data for circumstance OR standard | Return empty formation diagram (line of scrimmage + markers only) |
+| PlayDefinition missing playArt | Reject at validation time with descriptive error naming the invalid definition |
 | Invalid circumstance value in PlayDefinition | Reject at load time with descriptive error naming the invalid value |
 | Weight ≤ 0 in PlayDefinition | Reject at validation time |
 | Empty displayName or formation | Reject at validation time |
@@ -392,7 +373,7 @@ The feature's core logic consists of pure functions with well-defined input/outp
 | 7: Tier Selection Distribution | `resolver.ts` | All-populated tiers, statistical assertion |
 | 8: Outcome Precedence | `categorize.ts` | All `PlayOutcome` values × random yards/down/yardLine |
 | 9: Presentational Purity | All presentational fns | Deep-freeze inputs, verify no throws |
-| 10: Art Fallback | `resolve.ts` (art) | All 56 combinations + partial registries |
+| 10: Art Data Validity | Pool data files | Scan all PlayDefinitions, verify playArt has ≥1 marker and valid lineOfScrimmage |
 | 11: Coverage Guarantee | Pool data files | Enumerate 56 cells, assert non-empty |
 
 ### Unit Tests (Vitest)
@@ -403,8 +384,8 @@ Example-based tests for specific scenarios and edge cases:
 - Single-entry pool always selects that entry
 - Fallback logging in dev mode (mock `console.warn`)
 - Commentary outcome phase uses correct OutcomeCategory key
-- Art empty-formation diagram shape (correct markers, no routes)
-- usePlayCards hook produces 4 independent cards
+- PlayDefinition validation rejects missing playArt field
+- usePlayCards hook produces 4 independent cards with playArt included
 - useCircumstance hook now depends on yardLine
 
 ### Integration Tests

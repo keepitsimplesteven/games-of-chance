@@ -15,7 +15,7 @@ This feature enhances the presentational layer of the Playcaller football game b
 - **Commentary_Resolver**: The function that selects play-by-play text for a given commentary phase using the three-tier weighted cascade
 - **Commentary_Phase**: One of the three sequential phases of play-by-play text: preSnap, activePlay, outcome
 - **Outcome_Category**: A classification of the play result used to select outcome-phase commentary (first_down, small_gain, big_gain, touchdown, incomplete, negative, turnover)
-- **Play_Art_System**: The SVG-based visual diagram system that renders formation art per play card
+- **Play_Art_System**: The SVG-based visual diagram system that renders the PlayArtData embedded in each Play_Definition directly onto the play card
 - **Drive_Engine**: The server-side game logic that resolves plays mechanically (unchanged by this feature)
 - **Weight**: A positive number representing relative selection probability within a pool (default 1)
 
@@ -119,16 +119,16 @@ This feature enhances the presentational layer of the Playcaller football game b
 3. THE Commentary_Resolver SHALL provide circumstance-level messages for each of the seven Circumstance values across all three Commentary_Phases, totaling at least 21 combinations each with at least 3 distinct messages
 4. Messages within the same Circumstance and Commentary_Phase array SHALL be distinct strings to ensure variety
 
-### Requirement 8: Play Art System Compatibility
+### Requirement 8: Play Art Embedded in Play Definitions
 
-**User Story:** As a developer, I want the play art system to continue functioning correctly when the circumstance set expands, so that every play card renders valid art.
+**User Story:** As a developer, I want each play definition to carry its own art data directly, so that art is always available when a play is selected and no separate lookup or fallback logic is needed.
 
 #### Acceptance Criteria
 
-1. THE Play_Art_System SHALL resolve a valid PlayArtData object for each combination of Circumstance (standard, short_yardage, medium_yardage, long_yardage, desperation, goal_line, must_convert), Play_Slot, and role (offense or defense)
-2. IF art data is not defined for a specific Circumstance and Play_Slot combination at lookup time, THEN THE Play_Art_System SHALL return the PlayArtData registered for the "standard" Circumstance and the same Play_Slot and role
-3. WHEN a Play_Definition is selected, THE Play_Art_System SHALL render art using only the active Circumstance and Play_Slot as lookup keys, independent of which specific Play_Definition display name was chosen
-4. IF neither the requested Circumstance nor the "standard" fallback has art data defined for a Play_Slot and role combination, THEN THE Play_Art_System SHALL render an empty formation diagram containing only the line of scrimmage and player position markers with no routes
+1. THE Play_Definition SHALL contain a required playArt field of type PlayArtData, representing the formation diagram for that specific play
+2. WHEN a Play_Definition is selected from the Play_Pool, THE Play_Art_System SHALL render the PlayArtData carried by that Play_Definition directly, with no separate art registry or resolver lookup
+3. THE PlayArtData shape SHALL consist of markers (PlayerMarker array), routes (RouteSegment array), an optional zones field (CoverageZone array for defense), and a lineOfScrimmage value (number 0–100)
+4. FOR EACH Play_Definition in the Play_Pool, THE Play_Definition SHALL have a playArt field containing at least one PlayerMarker and a valid lineOfScrimmage value between 0 and 100
 
 ### Requirement 9: Presentation-Only Guarantee
 

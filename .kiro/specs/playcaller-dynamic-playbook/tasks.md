@@ -2,12 +2,12 @@
 
 ## Overview
 
-Enhance the presentational layer of the Playcaller football game by expanding the circumstance classifier from 3 to 7 buckets, replacing fixed 1:1 play-name mappings with weighted play pools, introducing a 3-tier commentary cascade, rewriting the outcome categorizer with corrected precedence, and adapting the play art resolver with fallback logic. All changes are purely cosmetic — the drive engine remains unchanged.
+Enhance the presentational layer of the Playcaller football game by expanding the circumstance classifier from 3 to 7 buckets, replacing fixed 1:1 play-name mappings with weighted play pools, introducing a 3-tier commentary cascade, rewriting the outcome categorizer with corrected precedence, and embedding play art directly in each PlayDefinition. All changes are purely cosmetic — the drive engine remains unchanged.
 
 ## Tasks
 
-- [ ] 1. Expand types and interfaces
-  - [ ] 1.1 Expand Circumstance type and add PlayDefinition interfaces
+- [x] 1. Expand types and interfaces
+  - [x] 1.1 Expand Circumstance type and add PlayDefinition interfaces
     - Update `packages/client/src/games/playcaller/play-names/types.ts`:
       - Expand `Circumstance` union to include `"standard" | "short_yardage" | "medium_yardage" | "long_yardage" | "desperation" | "goal_line" | "must_convert"`
       - Add `PlaySlot` type alias: `"run-safe" | "run-aggressive" | "pass-safe" | "pass-aggressive"`
@@ -17,7 +17,7 @@ Enhance the presentational layer of the Playcaller football game by expanding th
       - Remove old `PlayNameEntry`, `PlayNamePool`, `PlayNameMap` types (replaced by new pool system)
     - _Requirements: 1.9, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
 
-  - [ ] 1.2 Expand OutcomeCategory and commentary types
+  - [x] 1.2 Expand OutcomeCategory and commentary types
     - Update `packages/client/src/games/playcaller/play-by-play/types.ts`:
       - Add `"turnover_on_downs"` and `"first_down"` to the `OutcomeCategory` union
       - Add `CommentaryPhase` type: `"preSnap" | "activePlay" | "outcome"`
@@ -26,46 +26,46 @@ Enhance the presentational layer of the Playcaller football game by expanding th
       - Update `PlayByPlayMessages` interface to align with `CommentaryPhase` keys
     - _Requirements: 5.1, 5.6, 6.1, 6.2, 6.3, 6.5, 6.7, 6.8, 6.9_
 
-  - [ ] 1.3 Update PlayArtVariants type to support partial circumstance coverage
+  - [x] 1.3 Update PlayArtVariants type to support partial circumstance coverage
     - Update `packages/client/src/games/playcaller/play-art/types.ts`:
       - Change `PlayArtVariants` from `Record<Circumstance, PlayArtData>` to `Partial<Record<Circumstance, PlayArtData>>`
     - _Requirements: 8.1, 8.2_
 
-- [ ] 2. Rewrite Circumstance Classifier
-  - [ ] 2.1 Implement expanded classifyCircumstance function
+- [x] 2. Rewrite Circumstance Classifier
+  - [x] 2.1 Implement expanded classifyCircumstance function
     - Rewrite `packages/client/src/games/playcaller/play-names/classify.ts`:
       - Change signature to accept three parameters: `(down: number, yardsToGo: number, yardLine: number)`
       - Implement priority rules in order: goal_line (yardLine ≤ 5) → desperation (down 4, yardsToGo ≥ 4) → must_convert (down 4, yardsToGo 1–3) → short_yardage (yardsToGo 1–2) → medium_yardage (yardsToGo 3–5) → long_yardage (yardsToGo 6–9) → standard
       - Ensure function is pure with no side effects or state mutation
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 1.10, 9.4_
 
-  - [ ]* 2.2 Write property test for Circumstance Classifier correctness
+  - [x]* 2.2 Write property test for Circumstance Classifier correctness
     - **Property 1: Circumstance Classifier Correctness**
     - Create test file at `packages/client/src/games/playcaller/play-names/__tests__/classify.property.test.ts`
     - Generate arbitrary `(down ∈ 1–4, yardsToGo ∈ 1–99, yardLine ∈ 1–99)` inputs
     - Assert the classifier returns the unique correct Circumstance per priority rules
     - **Validates: Requirements 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 1.10**
 
-  - [ ] 2.3 Update useCircumstance hook to pass yardLine
+  - [x] 2.3 Update useCircumstance hook to pass yardLine
     - Update `packages/client/src/games/playcaller/hooks/useCircumstance.ts`:
       - Pass `driveState.yardLine` as third argument to `classifyCircumstance`
       - Add `driveState?.yardLine` to the `useMemo` dependency array
     - _Requirements: 1.9, 9.2_
 
-- [ ] 3. Implement Play Pool and Selector
-  - [ ] 3.1 Create PlayDefinition validation function
+- [x] 3. Implement Play Pool and Selector
+  - [x] 3.1 Create PlayDefinition validation function
     - Create `packages/client/src/games/playcaller/play-names/validate.ts`:
       - Export `validatePlayDefinition(def: unknown): PlayDefinition` that validates displayName length (1–50), formation length (1–30), circumstances is non-empty with only valid Circumstance values, weight (if present) is > 0
       - Throw descriptive error on invalid definitions (naming invalid field/value)
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.7_
 
-  - [ ]* 3.2 Write property test for PlayDefinition validation
+  - [x]* 3.2 Write property test for PlayDefinition validation
     - **Property 2: PlayDefinition Validation**
     - Create test at `packages/client/src/games/playcaller/play-names/__tests__/validate.property.test.ts`
     - Generate arbitrary objects and verify acceptance only when all constraints are met
     - **Validates: Requirements 2.1, 2.2, 2.3, 2.4, 2.7**
 
-  - [ ] 3.3 Implement selectPlay function
+  - [x] 3.3 Implement selectPlay function
     - Create `packages/client/src/games/playcaller/play-names/select.ts`:
       - Export `selectPlay(pool: PlayDefinition[], circumstance: Circumstance, rng: () => number): PlayDefinition`
       - Filter pool to entries whose `circumstances` includes current circumstance
@@ -74,23 +74,23 @@ Enhance the presentational layer of the Playcaller football game by expanding th
       - Return the selected PlayDefinition
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 10.3_
 
-  - [ ]* 3.4 Write property test for Play Selector always returns valid match
+  - [x]* 3.4 Write property test for Play Selector always returns valid match
     - **Property 3: Play Selector Always Returns a Valid Match**
     - Create test at `packages/client/src/games/playcaller/play-names/__tests__/select.property.test.ts`
     - Generate non-empty pools with at least one "standard" entry and any valid Circumstance
     - Assert selectPlay always returns a PlayDefinition whose circumstances includes either the requested circumstance or "standard"
     - **Validates: Requirements 3.1, 3.3, 3.4, 3.5**
 
-  - [ ]* 3.5 Write property test for weighted selection distribution
+  - [x]* 3.5 Write property test for weighted selection distribution
     - **Property 4: Weighted Selection Distribution**
     - In the same test file, verify over 1000+ runs that selection frequency converges to `wi / Σwj` within statistical tolerance
     - **Validates: Requirements 3.2, 3.7**
 
-- [ ] 4. Checkpoint - Ensure all tests pass
+- [x] 4. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 5. Create Play Pool Data (offense and defense)
-  - [ ] 5.1 Create offense play pool registry
+- [x] 5. Create Play Pool Data (offense and defense)
+  - [x] 5.1 Create offense play pool registry
     - Rewrite `packages/client/src/games/playcaller/play-names/offense-names.ts`:
       - Define `PlayDefinition[]` arrays for each of the 4 offensive PlaySlots
       - Ensure coverage of all 7 circumstances per slot (at least 1 entry each)
@@ -101,7 +101,7 @@ Enhance the presentational layer of the Playcaller football game by expanding th
       - Export as `offensePlayPool: PlayPool`
     - _Requirements: 4.2, 4.3, 4.4, 10.1, 10.2_
 
-  - [ ] 5.2 Create defense play pool registry
+  - [x] 5.2 Create defense play pool registry
     - Rewrite `packages/client/src/games/playcaller/play-names/defense-names.ts`:
       - Define `PlayDefinition[]` arrays for each of the 4 defensive PlaySlots
       - Ensure coverage of all 7 circumstances per slot (at least 1 entry each)
@@ -110,7 +110,7 @@ Enhance the presentational layer of the Playcaller football game by expanding th
       - Export as `defensePlayPool: PlayPool`
     - _Requirements: 4.1, 10.1, 10.2_
 
-  - [ ] 5.3 Create PlayPoolRegistry and validate at load time
+  - [x] 5.3 Create PlayPoolRegistry and validate at load time
     - Update `packages/client/src/games/playcaller/play-names/index.ts`:
       - Import offense and defense pools
       - Construct `PlayPoolRegistry` combining both
@@ -129,23 +129,23 @@ Enhance the presentational layer of the Playcaller football game by expanding th
     - In the same test file, enumerate all 56 combinations (4 slots × 2 roles × 7 circumstances) and assert each has at least 1 valid PlayDefinition
     - **Validates: Requirements 10.1, 10.2**
 
-- [ ] 6. Rewrite Outcome Categorizer
-  - [ ] 6.1 Implement expanded categorizeOutcome function
+- [x] 6. Rewrite Outcome Categorizer
+  - [x] 6.1 Implement expanded categorizeOutcome function
     - Rewrite `categorizeOutcome` in `packages/client/src/games/playcaller/play-by-play/types.ts`:
       - Change signature to `(outcome, yardsGained, yardsToGo, yardLine, down)`
       - Implement precedence: turnover (interception/fumble) → incomplete → negative (yards < 0) → touchdown (yardsGained ≥ yardLine for success/critical_success) → turnover_on_downs (down 4, yards < yardsToGo) → big_gain (≥ 10) → first_down (≥ yardsToGo, < 10) → small_gain
       - Remove old `tackle_for_loss` handling (now covered by negative check)
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9_
 
-  - [ ]* 6.2 Write property test for Outcome Categorization precedence
+  - [x]* 6.2 Write property test for Outcome Categorization precedence
     - **Property 8: Outcome Categorization Precedence**
     - Create test at `packages/client/src/games/playcaller/play-by-play/__tests__/categorize.property.test.ts`
     - Generate arbitrary valid inputs (PlayOutcome, yardsGained, yardsToGo, yardLine, down)
     - Assert exactly one category returned, following precedence order
     - **Validates: Requirements 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9**
 
-- [ ] 7. Implement Commentary Resolver
-  - [ ] 7.1 Implement resolveCommentary function
+- [x] 7. Implement Commentary Resolver
+  - [x] 7.1 Implement resolveCommentary function
     - Create `packages/client/src/games/playcaller/play-by-play/resolver.ts`:
       - Export `resolveCommentary(phase, tiers, outcomeCategory, rng): string`
       - Tier selection: rng < 0.6 → play-specific, < 0.9 → circumstance, else → default
@@ -155,14 +155,14 @@ Enhance the presentational layer of the Playcaller football game by expanding th
       - Function must not mutate inputs or access DriveState
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.8, 9.3_
 
-  - [ ] 7.2 Create circumstance-level commentary data
+  - [x] 7.2 Create circumstance-level commentary data
     - Create `packages/client/src/games/playcaller/play-by-play/circumstance-messages.ts`:
       - Export `CircumstanceCommentary` registry: `Record<Circumstance, Record<CommentaryPhase, string[]>>`
       - Provide at least 3 distinct messages per (Circumstance, Phase) combination (minimum 63 messages total)
       - Messages should reflect the game situation (e.g., "4th and long" for desperation, "goal line stand" for goal_line)
     - _Requirements: 7.1, 7.2, 7.3, 7.4_
 
-  - [ ] 7.3 Create default generic commentary data
+  - [x] 7.3 Create default generic commentary data
     - Update `packages/client/src/games/playcaller/play-by-play/messages.ts`:
       - Ensure default tier has at least one message for every CommentaryPhase
       - For outcome phase, ensure at least one message per OutcomeCategory
@@ -181,43 +181,48 @@ Enhance the presentational layer of the Playcaller football game by expanding th
     - In the same test file, with all tiers populated, run 1000+ iterations and assert play-specific ≈ 60%, circumstance ≈ 30%, default ≈ 10% within tolerance
     - **Validates: Requirements 5.1**
 
-- [ ] 8. Checkpoint - Ensure all tests pass
+- [x] 8. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 9. Adapt Play Art Resolver
-  - [ ] 9.1 Implement resolvePlayArt function with fallback logic
-    - Create `packages/client/src/games/playcaller/play-art/resolve.ts`:
-      - Export `resolvePlayArt(circumstance, slot, role): PlayArtData`
-      - Look up art registry by (role, slot, circumstance)
-      - If not found, fall back to (role, slot, "standard")
-      - If still not found, return empty formation diagram (line of scrimmage + position markers, no routes)
-      - Art lookup uses only circumstance + slot as keys, independent of PlayDefinition displayName
+- [x] 9. Embed Play Art in Play Definitions
+  - [x] 9.1 Add playArt as required field on PlayDefinition and update validation
+    - Update `packages/client/src/games/playcaller/play-names/types.ts`:
+      - Import `PlayArtData` from `../play-art/types`
+      - Add required `playArt: PlayArtData` field to the `PlayDefinition` interface
+    - Update `packages/client/src/games/playcaller/play-names/validate.ts`:
+      - Add validation for `playArt`: must have ≥ 1 marker, `lineOfScrimmage` between 0 and 100
     - _Requirements: 8.1, 8.2, 8.3, 8.4_
 
-  - [ ] 9.2 Update offense and defense art data for new circumstances
-    - Update `packages/client/src/games/playcaller/play-art/offense.ts` and `defense.ts`:
-      - Change exports to use `Partial<Record<Circumstance, PlayArtData>>` per slot
-      - Add art variants for new circumstances where appropriate (goal_line, must_convert, etc.)
-      - Ensure "standard" art exists for every slot/role as the guaranteed fallback
-    - _Requirements: 8.1, 8.2_
+  - [x] 9.2 Add unique playArt data to every PlayDefinition in offense-names.ts
+    - Update `packages/client/src/games/playcaller/play-names/offense-names.ts`:
+      - Add a `playArt: PlayArtData` field to every PlayDefinition in all 4 offensive slots
+      - Each play should have a unique formation diagram (markers showing player positions, routes showing movement patterns appropriate to that play concept — e.g., a slant route shows a WR cutting inside, an HB Dive shows the RB hitting the A-gap)
+      - Ensure each playArt has ≥ 1 PlayerMarker and lineOfScrimmage 0–100
+    - _Requirements: 8.1, 8.2, 8.3, 8.4_
 
-  - [ ]* 9.3 Write property test for Play Art fallback resolution
-    - **Property 10: Play Art Fallback Resolution**
-    - Create test at `packages/client/src/games/playcaller/play-art/__tests__/resolve.property.test.ts`
-    - Generate all 56 combinations plus partial registries, assert a valid PlayArtData is always returned
-    - Assert two different PlayDefinitions sharing the same slot and circumstance resolve to identical art
-    - **Validates: Requirements 8.1, 8.2, 8.3**
+  - [x] 9.3 Add unique playArt data to every PlayDefinition in defense-names.ts
+    - Update `packages/client/src/games/playcaller/play-names/defense-names.ts`:
+      - Add a `playArt: PlayArtData` field to every PlayDefinition in all 4 defensive slots
+      - Each play should have a unique formation diagram (markers for defensive positions, routes for blitz paths, zones for coverage shells)
+      - Ensure each playArt has ≥ 1 PlayerMarker and lineOfScrimmage 0–100
+    - _Requirements: 8.1, 8.2, 8.3, 8.4_
 
-- [ ] 10. Wire components together (hooks and UI integration)
-  - [ ] 10.1 Update usePlayCards hook to use weighted pool selection
+  - [ ]* 9.4 Write property test for Play Art data validity on all PlayDefinitions
+    - **Property 10: Play Art Data Validity**
+    - Create test at `packages/client/src/games/playcaller/play-names/__tests__/play-art-validity.property.test.ts`
+    - Scan all PlayDefinitions in the play pool registry and verify each has a valid `playArt` field (≥ 1 marker, lineOfScrimmage 0–100)
+    - **Validates: Requirements 8.1, 8.4**
+
+- [x] 10. Wire components together (hooks and UI integration)
+  - [x] 10.1 Update usePlayCards hook to use weighted pool selection
     - Rewrite `packages/client/src/games/playcaller/hooks/usePlayCards.ts`:
       - Import `selectPlay` and the `PlayPoolRegistry`
       - For each of the 4 PlaySlots, call `selectPlay` with the current circumstance and an RNG function
-      - Return array of 4 `PlayCardData` objects (one per slot) with the selected PlayDefinition's displayName, formation, and resolved art
+      - Return array of 4 `PlayCardData` objects (one per slot) with the selected PlayDefinition's displayName, formation, and playArt directly from the PlayDefinition
       - Each slot selection is independent (separate random draw)
-    - _Requirements: 3.5, 3.6, 9.2_
+    - _Requirements: 3.5, 3.6, 8.2, 9.2_
 
-  - [ ] 10.2 Integrate commentary resolver into play-by-play flow
+  - [x] 10.2 Integrate commentary resolver into play-by-play flow
     - Update `packages/client/src/games/playcaller/play-by-play/selectCommentary.ts`:
       - Replace existing commentary selection with calls to `resolveCommentary`
       - Build `CommentaryTiers` from the selected PlayDefinition's messages (play-specific), circumstance-messages (circumstance tier), and default messages (default tier)
@@ -225,9 +230,10 @@ Enhance the presentational layer of the Playcaller football game by expanding th
       - Pass the computed OutcomeCategory when resolving the outcome phase
     - _Requirements: 5.1, 5.5, 5.6, 5.8, 9.3_
 
-  - [ ] 10.3 Update PlayCard component to use new PlayDefinition data
-    - Update any references in `packages/client/src/games/playcaller/PlayCard.tsx` and `PlayCardGrid.tsx` that read from the old `PlayNameEntry` / `PlayNameMap` structures to use the new `PlayDefinition` shape (displayName, formation)
-    - _Requirements: 2.1, 2.2_
+  - [x] 10.3 Update PlayCard component to render PlayDefinition.playArt directly
+    - Update any references in `packages/client/src/games/playcaller/PlayCard.tsx` and `PlayCardGrid.tsx` that read from the old `PlayNameEntry` / `PlayNameMap` structures to use the new `PlayDefinition` shape (displayName, formation, playArt)
+    - Render the `PlayArtData` from `PlayDefinition.playArt` directly — no separate art resolver or registry lookup
+    - _Requirements: 2.1, 2.2, 8.2_
 
   - [ ]* 10.4 Write property test for Presentational Purity
     - **Property 9: Presentational Purity (No State Mutation)**
@@ -236,27 +242,27 @@ Enhance the presentational layer of the Playcaller football game by expanding th
     - Assert no throws (no mutation attempted) and same inputs + same RNG seed produce same outputs
     - **Validates: Requirements 9.2, 9.3, 9.4**
 
-- [ ] 11. Checkpoint - Ensure all tests pass
+- [x] 11. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 12. Final verification and drive engine isolation check
-  - [ ] 12.1 Verify drive engine is unchanged
+- [x] 12. Final verification and drive engine isolation check
+  - [x] 12.1 Verify drive engine is unchanged
     - Confirm `packages/server/src/games/playcaller/drive/engine.ts` has zero modifications
     - Write a unit test that runs two drives with identical Play_Slot selections and RNG seed but different PlayDefinition displayNames, and asserts byte-equal resolution histories
     - _Requirements: 9.1, 9.5_
 
-  - [ ] 12.2 Update callers of categorizeOutcome to pass new parameters
+  - [x] 12.2 Update callers of categorizeOutcome to pass new parameters
     - Search for all call sites of `categorizeOutcome` across the codebase
     - Update each to pass the new `yardLine` and `down` parameters
     - Update `packages/server/src/games/playcaller/drive/playByPlay.ts` if it calls categorizeOutcome
     - _Requirements: 6.4, 6.5, 6.9_
 
   - [ ]* 12.3 Write integration test for end-to-end presentational flow
-    - Test: DriveState → classifyCircumstance → selectPlay → resolvePlayArt → resolveCommentary chain produces valid outputs for every combination
+    - Test: DriveState → classifyCircumstance → selectPlay → PlayDefinition.playArt → resolveCommentary chain produces valid outputs for every combination
     - Test: Drive engine produces identical PlayOutcome regardless of which PlayDefinition was selected
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5_
 
-- [ ] 13. Final checkpoint - Ensure all tests pass
+- [x] 13. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
@@ -281,13 +287,12 @@ Enhance the presentational layer of the Playcaller football game by expanding th
     { "id": 2, "tasks": ["2.2", "2.3", "3.1", "6.2"] },
     { "id": 3, "tasks": ["3.2", "3.3"] },
     { "id": 4, "tasks": ["3.4", "3.5", "5.1", "5.2"] },
-    { "id": 5, "tasks": ["5.3", "5.4", "5.5"] },
-    { "id": 6, "tasks": ["7.1", "7.2", "7.3"] },
-    { "id": 7, "tasks": ["7.4", "7.5", "9.1"] },
-    { "id": 8, "tasks": ["9.2", "9.3"] },
-    { "id": 9, "tasks": ["10.1", "10.2", "10.3"] },
-    { "id": 10, "tasks": ["10.4", "12.1", "12.2"] },
-    { "id": 11, "tasks": ["12.3"] }
+    { "id": 5, "tasks": ["5.3", "5.4", "5.5", "9.1"] },
+    { "id": 6, "tasks": ["7.1", "7.2", "7.3", "9.2", "9.3"] },
+    { "id": 7, "tasks": ["7.4", "7.5", "9.4"] },
+    { "id": 8, "tasks": ["10.1", "10.2", "10.3"] },
+    { "id": 9, "tasks": ["10.4", "12.1", "12.2"] },
+    { "id": 10, "tasks": ["12.3"] }
   ]
 }
 ```

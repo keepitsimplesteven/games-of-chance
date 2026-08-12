@@ -2,7 +2,8 @@ import { AnimatePresence, motion } from "framer-motion"
 import { historyDrawerVariants } from "./animations/variants"
 import { useTheme } from "../../theme"
 import { formatDownDistance } from "./field-utils"
-import { getPlayName, classifyCircumstance } from "./play-names"
+import { classifyCircumstance, selectPlay, offensePlayPool, defensePlayPool } from "./play-names"
+import type { PlaySlot } from "./play-names"
 import type { PlayHistoryEntry } from "./field-utils.types"
 
 export interface HistoryDrawerProps {
@@ -83,9 +84,11 @@ export function HistoryDrawer({ entries, isOpen, onClose }: HistoryDrawerProps) 
 
 /** A single history row */
 function HistoryRow({ entry }: { entry: PlayHistoryEntry }) {
-  const circumstance = classifyCircumstance(entry.down, entry.yardsToGo)
-  const offenseName = getPlayName(entry.offensivePlay, circumstance, "offense").displayName
-  const defenseName = getPlayName(entry.defensivePlay, circumstance, "defense").displayName
+  const circumstance = classifyCircumstance(entry.down, entry.yardsToGo, entry.yardLine)
+  const offenseSlot = entry.offensivePlay as PlaySlot
+  const defenseSlot = entry.defensivePlay as PlaySlot
+  const offenseName = selectPlay(offensePlayPool[offenseSlot], circumstance, Math.random).displayName
+  const defenseName = selectPlay(defensePlayPool[defenseSlot], circumstance, Math.random).displayName
   const outcomeText = formatOutcome(entry.result.outcome, entry.result.yardsGained)
   const outcomeColor = getOutcomeColor(entry.result.outcome, entry.result.yardsGained, entry.yardsToGo)
 

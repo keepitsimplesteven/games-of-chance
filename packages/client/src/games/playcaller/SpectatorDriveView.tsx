@@ -7,7 +7,8 @@ import { PlayClock } from "./PlayClock"
 import { PlayByPlayAnnouncer } from "./PlayByPlayAnnouncer"
 import { HistoryDrawer } from "./HistoryDrawer"
 import { formatPlayResult, yardLineToY } from "./field-utils"
-import { getPlayName, classifyCircumstance } from "./play-names"
+import { classifyCircumstance, selectPlay, offensePlayPool } from "./play-names"
+import type { PlaySlot } from "./play-names"
 import { selectCommentary } from "./play-by-play"
 import type { CommentaryLines } from "./play-by-play/selectCommentary"
 import type { DriveState } from "./field-utils.types"
@@ -105,15 +106,20 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
 
   if (playCount > 0 && commentaryRef.current.playCount !== playCount) {
     const entry = playHistory[playCount - 1]
-    const circ = classifyCircumstance(entry.down, entry.yardsToGo)
-    const playName = getPlayName(entry.offensivePlay, circ, "offense").displayName
+    const circ = classifyCircumstance(entry.down, entry.yardsToGo, entry.yardLine)
+    const slot = entry.offensivePlay as PlaySlot
+    const selectedPlay = selectPlay(offensePlayPool[slot], circ, Math.random)
     commentaryRef.current = {
       playCount,
       lines: selectCommentary(
-        playName,
+        selectedPlay.displayName,
         entry.result.outcome,
         entry.result.yardsGained,
-        entry.yardsToGo
+        entry.yardsToGo,
+        entry.yardLine,
+        entry.down,
+        circ,
+        selectedPlay.messages
       ),
     }
   }

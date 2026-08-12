@@ -11,7 +11,8 @@ import { PlayCardGrid } from "./PlayCardGrid"
 import { PlayClock } from "./PlayClock"
 import { PlayByPlayAnnouncer } from "./PlayByPlayAnnouncer"
 import { formatPlayResult, yardLineToY } from "./field-utils"
-import { getPlayName, classifyCircumstance } from "./play-names"
+import { classifyCircumstance, selectPlay, offensePlayPool } from "./play-names"
+import type { PlaySlot } from "./play-names"
 import { selectCommentary } from "./play-by-play"
 import type { CommentaryLines } from "./play-by-play/selectCommentary"
 import type { DriveState } from "./field-utils.types"
@@ -79,7 +80,7 @@ export function DriveView({
     if (!isWaitingForReveal) return circumstance
     const unrevealedEntry = driveState.playHistory[displayedPlayCount]
     if (unrevealedEntry) {
-      return classifyCircumstance(unrevealedEntry.down, unrevealedEntry.yardsToGo)
+      return classifyCircumstance(unrevealedEntry.down, unrevealedEntry.yardsToGo, unrevealedEntry.yardLine)
     }
     return circumstance
   }, [isWaitingForReveal, circumstance, driveState.playHistory, displayedPlayCount])
@@ -189,15 +190,20 @@ export function DriveView({
 
   if (playCount > 0 && commentaryRef.current.playCount !== playCount) {
     const lastEntry = driveState.playHistory[playCount - 1]
-    const circ = classifyCircumstance(lastEntry.down, lastEntry.yardsToGo)
-    const playName = getPlayName(lastEntry.offensivePlay, circ, "offense").displayName
+    const circ = classifyCircumstance(lastEntry.down, lastEntry.yardsToGo, lastEntry.yardLine)
+    const slot = lastEntry.offensivePlay as PlaySlot
+    const selectedPlay = selectPlay(offensePlayPool[slot], circ, Math.random)
     commentaryRef.current = {
       playCount,
       lines: selectCommentary(
-        playName,
+        selectedPlay.displayName,
         lastEntry.result.outcome,
         lastEntry.result.yardsGained,
-        lastEntry.yardsToGo
+        lastEntry.yardsToGo,
+        lastEntry.yardLine,
+        lastEntry.down,
+        circ,
+        selectedPlay.messages
       ),
     }
   }
