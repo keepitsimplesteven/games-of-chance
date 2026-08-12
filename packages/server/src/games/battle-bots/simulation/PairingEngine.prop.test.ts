@@ -6,7 +6,6 @@
 import { describe, it, expect } from "vitest"
 import * as fc from "fast-check"
 import { createPairings } from "./PairingEngine"
-import type { RobotInstance } from "../types"
 
 // ── Arbitraries ────────────────────────────────────────────────────────────
 
@@ -20,25 +19,6 @@ const evenParticipantsArb = fc
         { minLength: halfCount * 2, maxLength: halfCount * 2 }
       )
   )
-
-/** Creates a selectedRobots map for a given list of participant IDs */
-function buildSelectedRobots(
-  participants: string[]
-): Record<string, RobotInstance> {
-  const robots: Record<string, RobotInstance> = {}
-  for (const id of participants) {
-    robots[id] = {
-      templateId: "bot-alpha",
-      ownerId: id,
-      currentHp: 100,
-      maxHp: 100,
-      accuracy: 80,
-      damageMin: 1,
-      damageMax: 10,
-    }
-  }
-  return robots
-}
 
 // ── Property: Pairing Completeness ─────────────────────────────────────────
 
@@ -54,8 +34,7 @@ describe("Feature: battle-bots, Property: Pairing Completeness", () => {
   it("every participant appears in exactly one pairing", () => {
     fc.assert(
       fc.property(evenParticipantsArb, (participants) => {
-        const selectedRobots = buildSelectedRobots(participants)
-        const pairings = createPairings(participants, selectedRobots)
+        const pairings = createPairings(participants)
 
         // Collect all participant IDs from pairings
         const pairedIds: string[] = []
@@ -89,8 +68,7 @@ describe("Feature: battle-bots, Property: Pairing Count", () => {
   it("pairings.length * 2 equals participants.length", () => {
     fc.assert(
       fc.property(evenParticipantsArb, (participants) => {
-        const selectedRobots = buildSelectedRobots(participants)
-        const pairings = createPairings(participants, selectedRobots)
+        const pairings = createPairings(participants)
 
         expect(pairings.length * 2).toBe(participants.length)
       }),

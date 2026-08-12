@@ -1,38 +1,90 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useGameStore } from "../../store/useGameStore"
 import { useTheme } from "../../theme"
-import { RobotSelector } from "./PrepPhase/RobotSelector"
-import type { RobotOption } from "./PrepPhase/RobotSelector"
-import { BattleArena } from "./BattlePhase/BattleArena"
-import { BattleSidebar } from "./BattlePhase/BattleSidebar"
-import { FFAArena } from "./FFAPhase/FFAArena"
-import { FFASidebar } from "./FFAPhase/FFASidebar"
+import { PartCarousel } from "./PrepPhase/PartCarousel"
+import { VsScreen, type VsRobot } from "./BattlePhase/VsScreen"
+import { ReplayBattleArena } from "./BattlePhase/ReplayBattleArena"
+import { ReplayFFAArena } from "./FFAPhase/ReplayFFAArena"
+import { ReplaySidebar } from "./BattlePhase/ReplaySidebar"
+import { ReplayFFASidebar } from "./FFAPhase/ReplayFFASidebar"
 import { FinalRankings } from "./Results/FinalRankings"
+import { CompositeRobot, type RobotVisualConfig } from "./assets/RobotParts"
+
+// ── Types for TickLogPayload received from server ──
+
+interface TickLogPayload {
+  battleId: string
+  robots: Array<{
+    ownerId: string
+    name: string
+    stars: { damage: number; accuracy: number; speed: number }
+    visual: { weapon: string; head: string; body: string; color?: string }
+    maxHp: number
+  }>
+  tickLog: Array<{
+    tick: number
+    attacks: Array<{
+      attackerId: string
+      targetId: string
+      hit: boolean
+      damage: number
+      targetHpAfter: number
+    }>
+    eliminations: string[]
+  }>
+  gameSpeed: number
+  currentTickIndex?: number // present on reconnect — indicates replay position
+}
+
+/** Color palette assigned to robots by index (matches VsScreen/ReplayBattleArena) */
+const ROBOT_COLORS = [
+  "#e53935", // red
+  "#1e88e5", // blue
+  "#43a047", // green
+  "#fb8c00", // orange
+  "#8e24aa", // purple
+  "#00acc1", // cyan
+  "#f4511e", // deep orange
+  "#7cb342", // light green
+]
 
 /**
  * BattleBotsView — Main container that switches between PrepPhase, BattlePhase,
  * FFAPhase, and Results based on the current round number and phase.
  *
  * Reads room state from useGameStore and renders the appropriate sub-view:
- * - Round 1 + PICKING → RobotSelector
+ * - Round 1 + PICKING → PartCarousel
  * - Round 1 + RESULT → "Selections confirmed" message
- * - Round 2 + RESOLVING → BattleArena + BattleSidebar
+ * - Round 2 + RESOLVING → VsScreen → ReplayBattleArena
  * - Round 2 + RESULT → Battle results summary
- * - Round 3 + RESOLVING → FFAArena + FFASidebar
+ * - Round 3 + RESOLVING → VsScreen → ReplayFFAArena
  * - Round 3 + RESULT → FinalRankings
  *
  * Uses retro-casino theme tokens.
- * Validates: Requirements 12.1
+ * Validates: Requirements 7.2, 7.3, 13.6, 16.1
  */
 export function BattleBotsView() {
   const theme = useTheme()
   const roomState = useGameStore((s) => s.roomState)
-  const battleHPState = useGameStore((s) => s.battleHPState)
   const playerId = useGameStore((s) => s.playerId)
+
+  // VsScreen → Replay transition state for Round 2 and Round 3
+  const [phase2ShowVs, setPhase2ShowVs] = useState(true)
+  const [phase3ShowVs, setPhase3ShowVs] = useState(true)
 
   if (!roomState) return null
 
   const { phase, roundNumber, pickDeadlineMs, result } = roomState.round
+
+  // Reset VsScreen state when round/phase changes
+  useEffect(() => {
+    if (roundNumber === 2 && phase === "RESOLVING") {
+      setPhase2ShowVs(true)
+    }
+    if (roundNumber === 3 && phase === "RESOLVING") {
+      setPhase3ShowVs(true)
+    }
+  }, [roundNumber, phase])
 
   // Battle-bots has no RESULT animation — mark animation as done immediately
   // so the "Next Round" button becomes enabled
@@ -42,49 +94,89 @@ export function BattleBotsView() {
     }
   }, [phase, roundNumber])
 
+  // ── Helper: build playerNames map from roomState.players ──
+
+  const playerNames: Record<string, string> = {}
+  for (const player of roomState.players) {
+    playerNames[player.id] = player.name
+  }
+
   // ── Round 1: Prep Phase ────────────────────────────────────────────────
 
   if (roundNumber === 1 && phase === "PICKING") {
-    // Extract robot options for the current player from the round result or picks
-    // The server sends per-player options in the round state
-    const roundResult = result as Record<string, unknown> | null
-    const robotOptions = roundResult?.robotOptions as
-      | Record<string, { options: RobotOption[] }>
-      | undefined
-
-    const myOptions = playerId ? robotOptions?.[playerId]?.options : undefined
-
-    return (
-      <RobotSelector
-        options={myOptions ?? []}
-        pickDeadlineMs={pickDeadlineMs}
-      />
-    )
+    return <PartCarousel pickDeadlineMs={pickDeadlineMs} />
   }
 
   if (roundNumber === 1 && phase === "RESULT") {
+    const roundResult = result as Record<string, unknown> | null
+    const builds = (roundResult?.builds ?? {}) as Record<string, {
+      ownerId: string
+      name: string
+      stars: { damage: number; accuracy: number; speed: number }
+      visual: { weapon: string; head: string; body: string; color?: string }
+      maxHp: number
+    }>
+
+    const myRobot = playerId ? builds[playerId] : null
+    const buildEntries = Object.entries(builds)
+
     return (
-      <div className={`flex flex-col items-center gap-4 px-4 py-8 ${theme.font}`}>
-        <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-[#2a7a3a] bg-[#0f3d18]">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-10 w-10 text-[#3a9a4a]"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              fillRule="evenodd"
-              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-              clipRule="evenodd"
-            />
-          </svg>
+      <div className={`flex h-full flex-col gap-3 overflow-hidden px-3 py-3 ${theme.font}`}>
+        {/* Player's robot name reveal */}
+        {myRobot && (
+          <div className="text-center">
+            <p className={`text-xs uppercase tracking-wide ${theme.mutedText}`}>Your robot</p>
+            <h2 className={`text-lg font-bold ${theme.accentText}`}>{myRobot.name}</h2>
+          </div>
+        )}
+
+        {/* Title */}
+        <h3 className={`text-center text-sm font-bold uppercase tracking-wide ${theme.headingText}`}>
+          Battle Ready!
+        </h3>
+
+        {/* Grid of all robots */}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+            {buildEntries.map(([pid, robot]) => {
+              const isCurrentPlayer = pid === playerId
+              const ownerName = playerNames[robot.ownerId] ?? robot.ownerId.slice(0, 8)
+              const color = robot.visual.color ?? ROBOT_COLORS[0]
+              const visualConfig: RobotVisualConfig = {
+                weaponType: robot.visual.weapon as RobotVisualConfig["weaponType"],
+                headType: robot.visual.head as RobotVisualConfig["headType"],
+                bodyType: robot.visual.body as RobotVisualConfig["bodyType"],
+                color,
+              }
+
+              return (
+                <div
+                  key={pid}
+                  className={`flex flex-col items-center gap-1 rounded-lg p-2 ${theme.card} ${
+                    isCurrentPlayer ? "ring-2 ring-[#f5c542]" : ""
+                  }`}
+                  aria-label={`${robot.name} owned by ${ownerName}${isCurrentPlayer ? " (you)" : ""}`}
+                >
+                  <CompositeRobot config={visualConfig} size={48} />
+                  <span className={`text-xs font-bold leading-tight text-center ${theme.bodyText}`}>
+                    {robot.name}
+                  </span>
+                  <span className={`text-xs leading-tight ${theme.mutedText}`}>
+                    {ownerName}
+                  </span>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span>⚔️{robot.stars.damage}</span>
+                    <span>🎯{robot.stars.accuracy}</span>
+                    <span>⚡{robot.stars.speed}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
-        <h2 className={`text-xl font-bold ${theme.headingText}`}>
-          All Selections Confirmed
-        </h2>
-        <p className={`text-sm ${theme.mutedText}`}>
-          Robots locked in. Waiting for host to start battles…
+
+        <p className={`text-center text-xs ${theme.mutedText}`}>
+          Waiting for host to start battles…
         </p>
       </div>
     )
@@ -106,27 +198,65 @@ export function BattleBotsView() {
       robot2: { ownerId: string }
     }>
 
+    // Categorize winners and losers from pairings
+    const winners: string[] = []
+    const losers: string[] = []
+    for (const pairing of pairings) {
+      if (pairing.winnerId) {
+        winners.push(pairing.winnerId)
+        const loserId = pairing.player1Id === pairing.winnerId
+          ? pairing.player2Id
+          : pairing.player1Id
+        losers.push(loserId)
+      }
+    }
+
+    const getName = (id: string) =>
+      roomState.players.find((p) => p.id === id)?.name ?? getParticipantName(id)
+
     return (
-      <div className={`flex flex-col gap-4 px-4 py-8 ${theme.font}`}>
+      <div className={`flex h-full flex-col gap-3 overflow-hidden px-4 py-4 ${theme.font}`}>
         <h2 className={`text-center text-xl font-bold ${theme.titleText}`}>
           Battle Results
         </h2>
-        <div className="flex flex-col gap-2">
-          {pairings.map((pairing, i) => {
-            const winnerName =
-              roomState.players.find((p) => p.id === pairing.winnerId)?.name ??
-              pairing.winnerId
-            return (
-              <div
-                key={i}
-                className={`flex items-center justify-center gap-2 rounded-md px-4 py-3 ${theme.listItem}`}
-              >
-                <span className={`text-sm font-medium ${theme.accentText}`}>
-                  🏆 {winnerName} wins
-                </span>
-              </div>
-            )
-          })}
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
+          {/* Winners bracket */}
+          <div>
+            <h3 className={`mb-1 text-sm font-bold uppercase tracking-wide ${theme.accentText}`}>
+              Winners Bracket
+            </h3>
+            <div className="flex flex-col gap-1">
+              {winners.map((id) => (
+                <div
+                  key={id}
+                  className={`flex items-center gap-2 rounded-md px-3 py-2 ${theme.listItem}`}
+                >
+                  <span className="text-sm">🏆</span>
+                  <span className={`text-sm font-medium ${theme.bodyText}`}>
+                    {getName(id)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Losers bracket */}
+          <div>
+            <h3 className={`mb-1 text-sm font-bold uppercase tracking-wide ${theme.mutedText}`}>
+              Losers Bracket
+            </h3>
+            <div className="flex flex-col gap-1">
+              {losers.map((id) => (
+                <div
+                  key={id}
+                  className={`flex items-center gap-2 rounded-md px-3 py-2 ${theme.listItem}`}
+                >
+                  <span className={`text-sm font-medium ${theme.mutedText}`}>
+                    {getName(id)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
         <p className={`text-center text-sm ${theme.mutedText}`}>
           Waiting for host to start the Free-For-All…
@@ -149,15 +279,15 @@ export function BattleBotsView() {
       rank: number
       bracket: "winners" | "losers"
       isBot: boolean
+      score: number
     }>
 
-    // Filter out bot personas and compute display points (higher rank = more points)
-    const totalParticipants = finalRankings.length
+    // Filter out bot personas and use actual cumulative score
     const humanRankings = finalRankings
       .filter((r) => !r.isBot)
       .map((r) => ({
         ...r,
-        points: Math.max(0, totalParticipants - r.rank),
+        points: r.score,
       }))
 
     return <FinalRankings rankings={humanRankings} />
@@ -174,140 +304,214 @@ export function BattleBotsView() {
   // ── Render helpers ─────────────────────────────────────────────────────
 
   function renderBattlePhase() {
-    if (!battleHPState || !playerId) {
+    const roundResult = result as Record<string, unknown> | null
+    const tickLogPayloads = (roundResult?.tickLogPayloads ?? []) as TickLogPayload[]
+
+    if (!tickLogPayloads.length || !playerId) {
       return (
         <div className={`py-8 text-center ${theme.mutedText} ${theme.font}`}>
-          Battles starting…
+          Battle complete.
         </div>
       )
     }
 
-    // Find the player's own battle and other battles
-    let myBattleId: string | null = null
-    for (const [battleId, robots] of Object.entries(battleHPState)) {
-      if (robots.some((r) => r.ownerId === playerId)) {
-        myBattleId = battleId
-        break
+    // Find the player's own battle payload
+    const myPayload = tickLogPayloads.find((p) =>
+      p.robots?.some((r) => r.ownerId === playerId)
+    )
+    const otherPayloads = tickLogPayloads.filter((p) => p !== myPayload)
+
+    if (!myPayload) {
+      // Player not found in any battle — show first battle as spectator
+      const spectatorPayload = tickLogPayloads[0]
+      // Fallback: if spectator payload has empty robots or tickLog, show complete state
+      if (!spectatorPayload.robots?.length || !spectatorPayload.tickLog?.length) {
+        return (
+          <div className={`py-8 text-center ${theme.mutedText} ${theme.font}`}>
+            Battle complete — winner determined.
+          </div>
+        )
       }
+      return (
+        <ReplayBattleArena
+          tickLogPayload={spectatorPayload}
+          playerNames={playerNames}
+          currentPlayerId={playerId}
+          initialTickIndex={spectatorPayload.currentTickIndex}
+        />
+      )
     }
 
-    const otherBattles = Object.entries(battleHPState)
-      .filter(([id]) => id !== myBattleId)
-      .map(([battleId, robots]) => ({
-        battleId,
-        robot1: {
-          name: getParticipantName(robots[0]?.ownerId),
-          currentHp: robots[0]?.currentHp ?? 0,
-          maxHp: getMaxHp(),
-          eliminated: robots[0]?.eliminated ?? false,
-        },
-        robot2: {
-          name: getParticipantName(robots[1]?.ownerId),
-          currentHp: robots[1]?.currentHp ?? 0,
-          maxHp: getMaxHp(),
-          eliminated: robots[1]?.eliminated ?? false,
-        },
+    // Fallback: if payload has empty robots or tickLog, show complete state
+    if (!myPayload.robots?.length) {
+      return (
+        <div className={`py-8 text-center ${theme.mutedText} ${theme.font}`}>
+          Battle complete — winner determined.
+        </div>
+      )
+    }
+
+    if (!myPayload.tickLog?.length) {
+      return (
+        <div className={`py-8 text-center ${theme.mutedText} ${theme.font}`}>
+          Battle complete — winner determined.
+        </div>
+      )
+    }
+
+    // Determine if we should skip VsScreen (reconnect mid-replay)
+    const isReconnect = (myPayload.currentTickIndex ?? 0) > 0
+
+    // Show VsScreen first (unless reconnecting), then transition to replay
+    if (phase2ShowVs && !isReconnect) {
+      const vsRobots: VsRobot[] = myPayload.robots.map((r) => ({
+        name: r.name,
+        ownerName: playerNames[r.ownerId] ?? getParticipantName(r.ownerId),
+        visual: r.visual ?? { weapon: "drill", head: "square", body: "square" },
+        stars: r.stars,
+        isCurrentPlayer: r.ownerId === playerId,
       }))
 
-    if (myBattleId && battleHPState[myBattleId]) {
-      const myRobots = battleHPState[myBattleId]
-      const maxHp = getMaxHp()
-
-      const player1 = {
-        ownerId: myRobots[0]?.ownerId ?? "",
-        name: getParticipantName(myRobots[0]?.ownerId),
-        currentHp: myRobots[0]?.currentHp ?? 0,
-        maxHp,
-        eliminated: myRobots[0]?.eliminated ?? false,
-      }
-      const player2 = {
-        ownerId: myRobots[1]?.ownerId ?? "",
-        name: getParticipantName(myRobots[1]?.ownerId),
-        currentHp: myRobots[1]?.currentHp ?? 0,
-        maxHp,
-        eliminated: myRobots[1]?.eliminated ?? false,
-      }
-
       return (
-        <div className="flex flex-col gap-4 lg:flex-row">
-          <div className="flex-1">
-            <BattleArena
-              player1={player1}
-              player2={player2}
-              isPlayerBattle={true}
-            />
-          </div>
-          {otherBattles.length > 0 && (
-            <div className="lg:w-64">
-              <BattleSidebar battles={otherBattles} />
-            </div>
-          )}
-        </div>
+        <VsScreen
+          robots={vsRobots}
+          mode="1v1"
+          onComplete={() => setPhase2ShowVs(false)}
+        />
       )
     }
 
-    // Player not found in any battle (spectator?) — show all battles in sidebar style
-    return <BattleSidebar battles={otherBattles} />
+    return (
+      <div className="flex h-full flex-col gap-2 overflow-hidden lg:flex-row">
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <ReplayBattleArena
+            tickLogPayload={myPayload}
+            playerNames={playerNames}
+            currentPlayerId={playerId}
+            initialTickIndex={myPayload.currentTickIndex}
+          />
+        </div>
+        {otherPayloads.length > 0 && (
+          <div className="max-h-[160px] shrink-0 overflow-y-auto lg:max-h-full lg:w-64">
+            <ReplaySidebar
+              payloads={otherPayloads}
+              playerNames={playerNames}
+            />
+          </div>
+        )}
+      </div>
+    )
   }
 
   function renderFFAPhase() {
-    if (!battleHPState || !playerId) {
+    const roundResult = result as Record<string, unknown> | null
+    const tickLogPayloads = (roundResult?.tickLogPayloads ?? []) as TickLogPayload[]
+
+    if (!tickLogPayloads.length || !playerId) {
       return (
         <div className={`py-8 text-center ${theme.mutedText} ${theme.font}`}>
-          Free-for-all starting…
+          Battle complete.
         </div>
       )
     }
 
-    // Find which bracket the player is in
-    let myBracketId: string | null = null
-    let otherBracketId: string | null = null
+    // Find the player's own bracket payload
+    const myPayload = tickLogPayloads.find((p) =>
+      p.robots?.some((r) => r.ownerId === playerId)
+    )
+    const otherPayload = tickLogPayloads.find((p) => p !== myPayload)
 
-    for (const [bracketId, robots] of Object.entries(battleHPState)) {
-      if (robots.some((r) => r.ownerId === playerId)) {
-        myBracketId = bracketId
-      } else {
-        otherBracketId = bracketId
+    if (!myPayload) {
+      // Player not found — show first bracket as spectator
+      const spectatorPayload = tickLogPayloads[0]
+      // Fallback: if spectator payload has empty robots or tickLog, show complete state
+      if (!spectatorPayload.robots?.length || !spectatorPayload.tickLog?.length) {
+        return (
+          <div className={`py-8 text-center ${theme.mutedText} ${theme.font}`}>
+            Battle complete — winner determined.
+          </div>
+        )
       }
+      const bracketNameFallback = spectatorPayload.battleId.includes("winner")
+        ? "Winners Bracket"
+        : "Losers Bracket"
+      return (
+        <ReplayFFAArena
+          tickLogPayload={spectatorPayload}
+          playerNames={playerNames}
+          currentPlayerId={playerId}
+          bracketName={bracketNameFallback}
+          initialTickIndex={spectatorPayload.currentTickIndex}
+        />
+      )
     }
 
-    const maxHp = getMaxHp()
+    // Fallback: if payload has empty robots or tickLog, show complete state
+    if (!myPayload.robots?.length) {
+      return (
+        <div className={`py-8 text-center ${theme.mutedText} ${theme.font}`}>
+          Battle complete — winner determined.
+        </div>
+      )
+    }
 
-    const myBracketName = myBracketId?.includes("winner")
+    if (!myPayload.tickLog?.length) {
+      return (
+        <div className={`py-8 text-center ${theme.mutedText} ${theme.font}`}>
+          Battle complete — winner determined.
+        </div>
+      )
+    }
+
+    // Determine bracket name from battleId
+    const myBracketName = myPayload.battleId.includes("winner")
       ? "Winners Bracket"
       : "Losers Bracket"
-    const otherBracketName = otherBracketId?.includes("winner")
+    const otherBracketName = otherPayload?.battleId.includes("winner")
       ? "Winners Bracket"
       : "Losers Bracket"
 
-    const myCombatants = myBracketId
-      ? (battleHPState[myBracketId] ?? []).map((r) => ({
-          ownerId: r.ownerId,
-          name: getParticipantName(r.ownerId),
-          currentHp: r.currentHp,
-          maxHp,
-          eliminated: r.eliminated,
-        }))
-      : []
+    // Determine if we should skip VsScreen (reconnect mid-replay)
+    const isReconnect = (myPayload.currentTickIndex ?? 0) > 0
 
-    const otherRobots = otherBracketId
-      ? (battleHPState[otherBracketId] ?? []).map((r) => ({
-          ownerId: r.ownerId,
-          name: getParticipantName(r.ownerId),
-          currentHp: r.currentHp,
-          maxHp,
-          eliminated: r.eliminated,
-        }))
-      : []
+    // Show VsScreen first (unless reconnecting), then transition to replay
+    if (phase3ShowVs && !isReconnect) {
+      const vsRobots: VsRobot[] = myPayload.robots.map((r) => ({
+        name: r.name,
+        ownerName: playerNames[r.ownerId] ?? getParticipantName(r.ownerId),
+        visual: r.visual ?? { weapon: "drill", head: "square", body: "square" },
+        stars: r.stars,
+        isCurrentPlayer: r.ownerId === playerId,
+      }))
+
+      return (
+        <VsScreen
+          robots={vsRobots}
+          mode="ffa"
+          bracketName={myBracketName}
+          onComplete={() => setPhase3ShowVs(false)}
+        />
+      )
+    }
 
     return (
-      <div className="flex flex-col gap-4 lg:flex-row">
-        <div className="flex-1">
-          <FFAArena bracketName={myBracketName} combatants={myCombatants} />
+      <div className="flex h-full flex-col gap-2 overflow-hidden lg:flex-row">
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <ReplayFFAArena
+            tickLogPayload={myPayload}
+            playerNames={playerNames}
+            currentPlayerId={playerId}
+            bracketName={myBracketName}
+            initialTickIndex={myPayload.currentTickIndex}
+          />
         </div>
-        {otherRobots.length > 0 && (
-          <div className="lg:w-48">
-            <FFASidebar bracketName={otherBracketName} robots={otherRobots} />
+        {otherPayload && otherPayload.robots?.length > 0 && otherBracketName && (
+          <div className="max-h-[160px] shrink-0 overflow-y-auto lg:max-h-full lg:w-48">
+            <ReplayFFASidebar
+              payload={otherPayload}
+              bracketName={otherBracketName}
+              playerNames={playerNames}
+            />
           </div>
         )}
       </div>
@@ -321,11 +525,5 @@ export function BattleBotsView() {
     // Could be a bot persona — show a fallback
     if (ownerId.startsWith("bot_")) return `Bot ${ownerId.slice(4, 8)}`
     return ownerId.slice(0, 8)
-  }
-
-  function getMaxHp(): number {
-    // Read from game settings or fall back to default
-    const tuning = roomState?.gameSettings?.tuning
-    return Number(tuning?.BOT_HP) || 100
   }
 }

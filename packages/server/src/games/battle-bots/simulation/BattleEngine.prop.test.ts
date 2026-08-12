@@ -152,12 +152,13 @@ describe("Property: Battle Termination", () => {
         const cloned = participants.map(cloneRobot)
         const result = simulateFFA(cloned)
 
-        // Elimination order should include all participants
+        // Elimination order includes all participants (eliminated + survivor at end)
         expect(result.eliminationOrder.length).toBe(participants.length)
 
         // Last entry in eliminationOrder is the survivor (winner)
         const survivor = result.eliminationOrder[result.eliminationOrder.length - 1]
         expect(participants.map((p) => p.ownerId)).toContain(survivor)
+        expect(result.survivorId).toBe(survivor)
 
         // Tick log must be non-empty
         expect(result.tickLog.length).toBeGreaterThan(0)
@@ -175,7 +176,7 @@ describe("Property: Damage Bounds", () => {
    *
    * **Validates: Requirements 5.4, 5.5**
    */
-  it("1v1: all damage values are within attacker's [damageMin, damageMax]", () => {
+  it("1v1: all damage values are within attacker's [1, damageMax] or 0 (GSR negation)", () => {
     fc.assert(
       fc.property(robot1v1PairArb, ([r1, r2]) => {
         const robot1 = cloneRobot(r1)
@@ -185,10 +186,11 @@ describe("Property: Damage Bounds", () => {
         for (const tick of result.tickLog) {
           for (const attack of tick.attacks) {
             if (attack.hit) {
-              const attacker =
-                attack.attackerId === r1.ownerId ? r1 : r2
-              expect(attack.damage).toBeGreaterThanOrEqual(attacker.damageMin)
-              expect(attack.damage).toBeLessThanOrEqual(attacker.damageMax)
+              // Damage can be 0 if GSR negated it, otherwise in [1, damageMax]
+              if (attack.damage > 0) {
+                expect(attack.damage).toBeGreaterThanOrEqual(1)
+                expect(attack.damage).toBeLessThanOrEqual(attack.attackerId === r1.ownerId ? r1.damageMax : r2.damageMax)
+              }
             } else {
               expect(attack.damage).toBe(0)
             }
@@ -199,7 +201,7 @@ describe("Property: Damage Bounds", () => {
     )
   })
 
-  it("FFA: all damage values are within attacker's [damageMin, damageMax]", () => {
+  it("FFA: all damage values are within attacker's [1, damageMax] or 0 (GSR negation)", () => {
     fc.assert(
       fc.property(ffaParticipantsArb, (participants) => {
         const cloned = participants.map(cloneRobot)
@@ -214,9 +216,12 @@ describe("Property: Damage Bounds", () => {
         for (const tick of result.tickLog) {
           for (const attack of tick.attacks) {
             if (attack.hit) {
-              const stats = statsMap[attack.attackerId]
-              expect(attack.damage).toBeGreaterThanOrEqual(stats.damageMin)
-              expect(attack.damage).toBeLessThanOrEqual(stats.damageMax)
+              // Damage can be 0 if GSR negated it, otherwise in [1, damageMax]
+              if (attack.damage > 0) {
+                const stats = statsMap[attack.attackerId]
+                expect(attack.damage).toBeGreaterThanOrEqual(1)
+                expect(attack.damage).toBeLessThanOrEqual(stats.damageMax)
+              }
             } else {
               expect(attack.damage).toBe(0)
             }

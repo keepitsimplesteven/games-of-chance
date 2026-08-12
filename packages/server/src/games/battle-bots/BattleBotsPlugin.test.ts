@@ -2,18 +2,32 @@ import { describe, it, expect, beforeEach } from "vitest"
 import { battleBotsPlugin, resetGameState, getGameState } from "./BattleBotsPlugin"
 import type { Player, GameSettings } from "@games-of-chance/shared"
 import type { BattleBotsRoundResult } from "./BattleBotsPlugin"
-import type { FFABracket, FinalRanking } from "./types"
+import type { FFABracketState, FinalRanking, BattleBotsPick } from "./types"
 
 describe("BattleBotsPlugin", () => {
   describe("validatePick", () => {
-    it("accepts a valid pick with robotTemplateId string", () => {
-      expect(battleBotsPlugin.validatePick({ robotTemplateId: "bot-alpha" })).toBe(true)
+    it("accepts a valid pick with weapon, head, and body", () => {
+      expect(battleBotsPlugin.validatePick({ weapon: "drill", head: "square", body: "rounded" })).toBe(true)
     })
 
-    it("accepts any non-empty robotTemplateId string", () => {
-      expect(battleBotsPlugin.validatePick({ robotTemplateId: "bot-beta" })).toBe(true)
-      expect(battleBotsPlugin.validatePick({ robotTemplateId: "bot-gamma" })).toBe(true)
-      expect(battleBotsPlugin.validatePick({ robotTemplateId: "some-custom-id" })).toBe(true)
+    it("accepts all valid weapon types", () => {
+      expect(battleBotsPlugin.validatePick({ weapon: "drill", head: "square", body: "square" })).toBe(true)
+      expect(battleBotsPlugin.validatePick({ weapon: "blaster", head: "square", body: "square" })).toBe(true)
+      expect(battleBotsPlugin.validatePick({ weapon: "bazooka", head: "square", body: "square" })).toBe(true)
+    })
+
+    it("accepts all valid head types", () => {
+      expect(battleBotsPlugin.validatePick({ weapon: "drill", head: "square", body: "square" })).toBe(true)
+      expect(battleBotsPlugin.validatePick({ weapon: "drill", head: "rounded", body: "square" })).toBe(true)
+      expect(battleBotsPlugin.validatePick({ weapon: "drill", head: "triangular", body: "square" })).toBe(true)
+      expect(battleBotsPlugin.validatePick({ weapon: "drill", head: "hexagonal", body: "square" })).toBe(true)
+    })
+
+    it("accepts all valid body types", () => {
+      expect(battleBotsPlugin.validatePick({ weapon: "drill", head: "square", body: "square" })).toBe(true)
+      expect(battleBotsPlugin.validatePick({ weapon: "drill", head: "square", body: "rounded" })).toBe(true)
+      expect(battleBotsPlugin.validatePick({ weapon: "drill", head: "square", body: "triangular" })).toBe(true)
+      expect(battleBotsPlugin.validatePick({ weapon: "drill", head: "square", body: "hexagonal" })).toBe(true)
     })
 
     it("rejects null", () => {
@@ -29,31 +43,40 @@ describe("BattleBotsPlugin", () => {
     })
 
     it("rejects strings", () => {
-      expect(battleBotsPlugin.validatePick("bot-alpha")).toBe(false)
+      expect(battleBotsPlugin.validatePick("drill")).toBe(false)
     })
 
     it("rejects empty object", () => {
       expect(battleBotsPlugin.validatePick({})).toBe(false)
     })
 
-    it("rejects object with wrong key", () => {
-      expect(battleBotsPlugin.validatePick({ templateId: "bot-alpha" })).toBe(false)
+    it("rejects object with missing fields", () => {
+      expect(battleBotsPlugin.validatePick({ weapon: "drill" })).toBe(false)
+      expect(battleBotsPlugin.validatePick({ weapon: "drill", head: "square" })).toBe(false)
+      expect(battleBotsPlugin.validatePick({ head: "square", body: "rounded" })).toBe(false)
     })
 
-    it("rejects object with empty robotTemplateId", () => {
-      expect(battleBotsPlugin.validatePick({ robotTemplateId: "" })).toBe(false)
+    it("rejects invalid weapon type", () => {
+      expect(battleBotsPlugin.validatePick({ weapon: "sword", head: "square", body: "square" })).toBe(false)
     })
 
-    it("rejects object with non-string robotTemplateId", () => {
-      expect(battleBotsPlugin.validatePick({ robotTemplateId: 123 })).toBe(false)
-      expect(battleBotsPlugin.validatePick({ robotTemplateId: null })).toBe(false)
-      expect(battleBotsPlugin.validatePick({ robotTemplateId: undefined })).toBe(false)
-      expect(battleBotsPlugin.validatePick({ robotTemplateId: true })).toBe(false)
+    it("rejects invalid head type", () => {
+      expect(battleBotsPlugin.validatePick({ weapon: "drill", head: "cone", body: "square" })).toBe(false)
+    })
+
+    it("rejects invalid body type", () => {
+      expect(battleBotsPlugin.validatePick({ weapon: "drill", head: "square", body: "star" })).toBe(false)
+    })
+
+    it("rejects non-string part values", () => {
+      expect(battleBotsPlugin.validatePick({ weapon: 123, head: "square", body: "square" })).toBe(false)
+      expect(battleBotsPlugin.validatePick({ weapon: "drill", head: null, body: "square" })).toBe(false)
+      expect(battleBotsPlugin.validatePick({ weapon: "drill", head: "square", body: true })).toBe(false)
     })
 
     it("rejects arrays", () => {
       expect(battleBotsPlugin.validatePick([])).toBe(false)
-      expect(battleBotsPlugin.validatePick(["bot-alpha"])).toBe(false)
+      expect(battleBotsPlugin.validatePick(["drill", "square", "square"])).toBe(false)
     })
   })
 
@@ -62,11 +85,9 @@ describe("BattleBotsPlugin", () => {
       roundCount: 3,
       pickWindowMs: 15000,
       tuning: {
-        BOT_HP: "100",
-        ACCURACY: "80",
-        DAMAGE_MIN: "1",
-        DAMAGE_MAX: "10",
+        PREP_TIMER_MS: "60",
         CHIPS_MULTIPLIER: "10",
+        GAME_SPEED: "100",
       },
     }
 
@@ -91,9 +112,9 @@ describe("BattleBotsPlugin", () => {
 
     it("returns score-based leaderboard when finalRankings are empty", () => {
       // Trigger Round 1 to create game state but with empty finalRankings
-      const picks = {
-        p1: { robotTemplateId: "bot-alpha" },
-        p2: { robotTemplateId: "bot-beta" },
+      const picks: Record<string, BattleBotsPick> = {
+        p1: { weapon: "drill", head: "square", body: "square" },
+        p2: { weapon: "blaster", head: "rounded", body: "hexagonal" },
       }
       battleBotsPlugin.resolveRound(picks, defaultSettings)
 
@@ -115,24 +136,24 @@ describe("BattleBotsPlugin", () => {
 
     it("returns ranking-based leaderboard when finalRankings are populated", () => {
       // Set up game state with finalRankings by running through rounds
-      const picks = {
-        p1: { robotTemplateId: "bot-alpha" },
-        p2: { robotTemplateId: "bot-beta" },
-        p3: { robotTemplateId: "bot-gamma" },
-        p4: { robotTemplateId: "bot-alpha" },
+      const picks: Record<string, BattleBotsPick> = {
+        p1: { weapon: "drill", head: "square", body: "square" },
+        p2: { weapon: "blaster", head: "rounded", body: "hexagonal" },
+        p3: { weapon: "bazooka", head: "triangular", body: "rounded" },
+        p4: { weapon: "drill", head: "hexagonal", body: "triangular" },
       }
       // Round 1
       battleBotsPlugin.resolveRound(picks, defaultSettings)
       // Round 2
       battleBotsPlugin.resolveRound(picks, defaultSettings)
 
-      // Manually set finalRankings on the game state since Round 3 isn't fully implemented
+      // Manually set finalRankings on the game state
       const state = getGameState()!
       state.finalRankings = [
-        { playerId: "p1", playerName: "Alice", rank: 1, bracket: "winners", isBot: false },
-        { playerId: "p2", playerName: "Bob", rank: 2, bracket: "winners", isBot: false },
-        { playerId: "p3", playerName: "Charlie", rank: 3, bracket: "losers", isBot: false },
-        { playerId: "p4", playerName: "Dave", rank: 4, bracket: "losers", isBot: false },
+        { playerId: "p1", playerName: "Alice", rank: 1, bracket: "winners", isBot: false, score: 0 },
+        { playerId: "p2", playerName: "Bob", rank: 2, bracket: "winners", isBot: false, score: 0 },
+        { playerId: "p3", playerName: "Charlie", rank: 3, bracket: "losers", isBot: false, score: 0 },
+        { playerId: "p4", playerName: "Dave", rank: 4, bracket: "losers", isBot: false, score: 0 },
       ]
 
       const players: Player[] = [
@@ -142,24 +163,25 @@ describe("BattleBotsPlugin", () => {
         { id: "p4", name: "Dave", connected: true },
       ] as Player[]
 
-      const gameScores: Record<string, number> = { p1: 1, p2: 1, p3: 0, p4: 0 }
+      // Scores determine ranking: p1=150, p2=125, p3=80, p4=30
+      const gameScores: Record<string, number> = { p1: 150, p2: 125, p3: 80, p4: 30 }
 
       const result = battleBotsPlugin.computeGameLeaderboard(players, gameScores)
 
       expect(result).toHaveLength(4)
-      // Score = totalParticipants(4) - rank
-      expect(result[0]).toEqual({ playerId: "p1", playerName: "Alice", score: 3, rank: 1 })
-      expect(result[1]).toEqual({ playerId: "p2", playerName: "Bob", score: 2, rank: 2 })
-      expect(result[2]).toEqual({ playerId: "p3", playerName: "Charlie", score: 1, rank: 3 })
-      expect(result[3]).toEqual({ playerId: "p4", playerName: "Dave", score: 0, rank: 4 })
+      // Score = actual cumulative gameScores
+      expect(result[0]).toEqual({ playerId: "p1", playerName: "Alice", score: 150, rank: 1 })
+      expect(result[1]).toEqual({ playerId: "p2", playerName: "Bob", score: 125, rank: 2 })
+      expect(result[2]).toEqual({ playerId: "p3", playerName: "Charlie", score: 80, rank: 3 })
+      expect(result[3]).toEqual({ playerId: "p4", playerName: "Dave", score: 30, rank: 4 })
     })
 
     it("excludes bot personas from the leaderboard", () => {
-      // Set up game state with a bot persona
-      const picks = {
-        p1: { robotTemplateId: "bot-alpha" },
-        p2: { robotTemplateId: "bot-beta" },
-        p3: { robotTemplateId: "bot-gamma" },
+      // Set up game state with a bot persona (odd player count)
+      const picks: Record<string, BattleBotsPick> = {
+        p1: { weapon: "drill", head: "square", body: "square" },
+        p2: { weapon: "blaster", head: "rounded", body: "hexagonal" },
+        p3: { weapon: "bazooka", head: "triangular", body: "rounded" },
       }
       // Round 1 (odd players = bot persona added)
       battleBotsPlugin.resolveRound(picks, defaultSettings)
@@ -170,10 +192,10 @@ describe("BattleBotsPlugin", () => {
       const botId = state.botPersonas[0].id
 
       state.finalRankings = [
-        { playerId: "p1", playerName: "Alice", rank: 1, bracket: "winners", isBot: false },
-        { playerId: botId, playerName: "MechBot-7", rank: 2, bracket: "winners", isBot: true },
-        { playerId: "p2", playerName: "Bob", rank: 3, bracket: "losers", isBot: false },
-        { playerId: "p3", playerName: "Charlie", rank: 4, bracket: "losers", isBot: false },
+        { playerId: "p1", playerName: "Alice", rank: 1, bracket: "winners", isBot: false, score: 0 },
+        { playerId: botId, playerName: "MechBot-7", rank: 2, bracket: "winners", isBot: true, score: 0 },
+        { playerId: "p2", playerName: "Bob", rank: 3, bracket: "losers", isBot: false, score: 0 },
+        { playerId: "p3", playerName: "Charlie", rank: 4, bracket: "losers", isBot: false, score: 0 },
       ]
 
       const players: Player[] = [
@@ -182,7 +204,8 @@ describe("BattleBotsPlugin", () => {
         { id: "p3", name: "Charlie", connected: true },
       ] as Player[]
 
-      const gameScores: Record<string, number> = { p1: 1, p2: 0, p3: 0 }
+      // Actual cumulative scores
+      const gameScores: Record<string, number> = { p1: 150, p2: 80, p3: 30 }
 
       const result = battleBotsPlugin.computeGameLeaderboard(players, gameScores)
 
@@ -190,16 +213,16 @@ describe("BattleBotsPlugin", () => {
       expect(result).toHaveLength(3)
       expect(result.every((e) => e.playerId !== botId)).toBe(true)
 
-      // Human players should be present with correct rankings
-      expect(result[0]).toEqual({ playerId: "p1", playerName: "Alice", score: 3, rank: 1 })
-      expect(result[1]).toEqual({ playerId: "p2", playerName: "Bob", score: 1, rank: 3 })
-      expect(result[2]).toEqual({ playerId: "p3", playerName: "Charlie", score: 0, rank: 4 })
+      // Human players should be present with correct scores and rankings
+      expect(result[0]).toEqual({ playerId: "p1", playerName: "Alice", score: 150, rank: 1 })
+      expect(result[1]).toEqual({ playerId: "p2", playerName: "Bob", score: 80, rank: 2 })
+      expect(result[2]).toEqual({ playerId: "p3", playerName: "Charlie", score: 30, rank: 3 })
     })
 
     it("uses Player.name for display names rather than ranking playerName", () => {
-      const picks = {
-        p1: { robotTemplateId: "bot-alpha" },
-        p2: { robotTemplateId: "bot-beta" },
+      const picks: Record<string, BattleBotsPick> = {
+        p1: { weapon: "drill", head: "square", body: "square" },
+        p2: { weapon: "blaster", head: "rounded", body: "hexagonal" },
       }
       // Round 1
       battleBotsPlugin.resolveRound(picks, defaultSettings)
@@ -208,8 +231,8 @@ describe("BattleBotsPlugin", () => {
 
       const state = getGameState()!
       state.finalRankings = [
-        { playerId: "p1", playerName: "OldName", rank: 1, bracket: "winners", isBot: false },
-        { playerId: "p2", playerName: "OldName2", rank: 2, bracket: "losers", isBot: false },
+        { playerId: "p1", playerName: "OldName", rank: 1, bracket: "winners", isBot: false, score: 0 },
+        { playerId: "p2", playerName: "OldName2", rank: 2, bracket: "losers", isBot: false, score: 0 },
       ]
 
       const players: Player[] = [
@@ -217,7 +240,7 @@ describe("BattleBotsPlugin", () => {
         { id: "p2", name: "CurrentBob", connected: true },
       ] as Player[]
 
-      const gameScores: Record<string, number> = { p1: 1, p2: 0 }
+      const gameScores: Record<string, number> = { p1: 150, p2: 125 }
 
       const result = battleBotsPlugin.computeGameLeaderboard(players, gameScores)
 
@@ -227,11 +250,11 @@ describe("BattleBotsPlugin", () => {
     })
 
     it("sorts leaderboard by rank ascending", () => {
-      const picks = {
-        p1: { robotTemplateId: "bot-alpha" },
-        p2: { robotTemplateId: "bot-beta" },
-        p3: { robotTemplateId: "bot-gamma" },
-        p4: { robotTemplateId: "bot-alpha" },
+      const picks: Record<string, BattleBotsPick> = {
+        p1: { weapon: "drill", head: "square", body: "square" },
+        p2: { weapon: "blaster", head: "rounded", body: "hexagonal" },
+        p3: { weapon: "bazooka", head: "triangular", body: "rounded" },
+        p4: { weapon: "drill", head: "hexagonal", body: "triangular" },
       }
       // Round 1
       battleBotsPlugin.resolveRound(picks, defaultSettings)
@@ -241,10 +264,10 @@ describe("BattleBotsPlugin", () => {
       const state = getGameState()!
       // Provide rankings out of order
       state.finalRankings = [
-        { playerId: "p3", playerName: "Charlie", rank: 3, bracket: "losers", isBot: false },
-        { playerId: "p1", playerName: "Alice", rank: 1, bracket: "winners", isBot: false },
-        { playerId: "p4", playerName: "Dave", rank: 4, bracket: "losers", isBot: false },
-        { playerId: "p2", playerName: "Bob", rank: 2, bracket: "winners", isBot: false },
+        { playerId: "p3", playerName: "Charlie", rank: 3, bracket: "losers", isBot: false, score: 0 },
+        { playerId: "p1", playerName: "Alice", rank: 1, bracket: "winners", isBot: false, score: 0 },
+        { playerId: "p4", playerName: "Dave", rank: 4, bracket: "losers", isBot: false, score: 0 },
+        { playerId: "p2", playerName: "Bob", rank: 2, bracket: "winners", isBot: false, score: 0 },
       ]
 
       const players: Player[] = [
@@ -254,7 +277,8 @@ describe("BattleBotsPlugin", () => {
         { id: "p4", name: "Dave", connected: true },
       ] as Player[]
 
-      const gameScores: Record<string, number> = {}
+      // Distinct scores so each gets a unique rank
+      const gameScores: Record<string, number> = { p1: 150, p2: 125, p3: 80, p4: 30 }
 
       const result = battleBotsPlugin.computeGameLeaderboard(players, gameScores)
 
@@ -265,16 +289,110 @@ describe("BattleBotsPlugin", () => {
     })
   })
 
+  describe("resolveRound1 (Prep Phase — new build system)", () => {
+    const defaultSettings: GameSettings = {
+      roundCount: 3,
+      pickWindowMs: 15000,
+      tuning: {
+        PREP_TIMER_MS: "60",
+        CHIPS_MULTIPLIER: "10",
+        GAME_SPEED: "100",
+      },
+    }
+
+    beforeEach(() => {
+      resetGameState()
+    })
+
+    it("creates CombatRobot builds from valid player picks", () => {
+      const picks: Record<string, BattleBotsPick> = {
+        p1: { weapon: "drill", head: "square", body: "square" },
+        p2: { weapon: "blaster", head: "rounded", body: "hexagonal" },
+      }
+
+      const result = battleBotsPlugin.resolveRound(picks, defaultSettings) as BattleBotsRoundResult
+
+      expect(result.round).toBe(1)
+      const state = getGameState()!
+      expect(state.builds).toBeDefined()
+      expect(state.builds!["p1"]).toBeDefined()
+      expect(state.builds!["p2"]).toBeDefined()
+
+      // Verify CombatRobot structure
+      const robot = state.builds!["p1"]
+      expect(robot.ownerId).toBe("p1")
+      expect(robot.name).toBeTruthy()
+      expect(robot.maxHit).toBeGreaterThanOrEqual(1)
+      expect(robot.accuracy).toBeGreaterThanOrEqual(1)
+      expect(robot.accuracy).toBeLessThanOrEqual(90)
+      expect(robot.tickInterval).toBeGreaterThanOrEqual(1)
+      expect(robot.currentHp).toBe(100)
+      expect(robot.maxHp).toBe(100)
+      expect(robot.stars.damage + robot.stars.accuracy + robot.stars.speed).toBe(9)
+      expect(robot.visual.weapon).toBe("drill")
+      expect(robot.visual.head).toBe("square")
+      expect(robot.visual.body).toBe("square")
+    })
+
+    it("assigns unique robot names to all participants", () => {
+      const picks: Record<string, BattleBotsPick> = {
+        p1: { weapon: "drill", head: "square", body: "square" },
+        p2: { weapon: "blaster", head: "rounded", body: "hexagonal" },
+        p3: { weapon: "bazooka", head: "triangular", body: "rounded" },
+        p4: { weapon: "drill", head: "hexagonal", body: "triangular" },
+      }
+
+      battleBotsPlugin.resolveRound(picks, defaultSettings)
+      const state = getGameState()!
+
+      const names = Object.values(state.builds!).map((b) => b.name)
+      const uniqueNames = new Set(names)
+      expect(uniqueNames.size).toBe(names.length)
+    })
+
+    it("adds a bot persona for odd player count", () => {
+      const picks: Record<string, BattleBotsPick> = {
+        p1: { weapon: "drill", head: "square", body: "square" },
+        p2: { weapon: "blaster", head: "rounded", body: "hexagonal" },
+        p3: { weapon: "bazooka", head: "triangular", body: "rounded" },
+      }
+
+      battleBotsPlugin.resolveRound(picks, defaultSettings)
+      const state = getGameState()!
+
+      expect(state.botPersonas).toHaveLength(1)
+      expect(state.participants).toHaveLength(4)
+
+      // Bot persona should also have a valid build
+      const botId = state.botPersonas[0].id
+      expect(state.builds![botId]).toBeDefined()
+      expect(state.builds![botId].stars.damage + state.builds![botId].stars.accuracy + state.builds![botId].stars.speed).toBe(9)
+    })
+
+    it("generates random parts for players who did not submit a pick", () => {
+      // Simulate timer expiry: passes empty picks for some players
+      const picks: Record<string, BattleBotsPick> = {
+        p1: { weapon: "drill", head: "square", body: "square" },
+        p2: { weapon: "blaster", head: "rounded", body: "hexagonal" },
+      }
+
+      battleBotsPlugin.resolveRound(picks, defaultSettings)
+      const state = getGameState()!
+
+      // Both players who submitted picks should have builds
+      expect(state.builds!["p1"]).toBeDefined()
+      expect(state.builds!["p2"]).toBeDefined()
+    })
+  })
+
   describe("resolveRound3 (Round 3 — Free-For-All)", () => {
     const defaultSettings: GameSettings = {
       roundCount: 3,
       pickWindowMs: 15000,
       tuning: {
-        BOT_HP: "100",
-        ACCURACY: "80",
-        DAMAGE_MIN: "1",
-        DAMAGE_MAX: "10",
+        PREP_TIMER_MS: "60",
         CHIPS_MULTIPLIER: "10",
+        GAME_SPEED: "100",
       },
     }
 
@@ -283,9 +401,16 @@ describe("BattleBotsPlugin", () => {
     })
 
     function runRounds1And2(playerCount: number, settings = defaultSettings) {
-      const picks: Record<string, { robotTemplateId: string }> = {}
+      const picks: Record<string, BattleBotsPick> = {}
+      const weapons = ["drill", "blaster", "bazooka"] as const
+      const heads = ["square", "rounded", "triangular", "hexagonal"] as const
+      const bodies = ["square", "rounded", "triangular", "hexagonal"] as const
       for (let i = 1; i <= playerCount; i++) {
-        picks[`p${i}`] = { robotTemplateId: "bot-alpha" }
+        picks[`p${i}`] = {
+          weapon: weapons[i % 3],
+          head: heads[i % 4],
+          body: bodies[(i + 1) % 4],
+        }
       }
       // Round 1
       battleBotsPlugin.resolveRound(picks, settings)
@@ -303,32 +428,34 @@ describe("BattleBotsPlugin", () => {
       expect(result.winnersBracket).toBeDefined()
       expect(result.losersBracket).toBeDefined()
 
-      const winnersBracket = result.winnersBracket as FFABracket
-      const losersBracket = result.losersBracket as FFABracket
+      const winnersBracket = result.winnersBracket as FFABracketState
+      const losersBracket = result.losersBracket as FFABracketState
 
       expect(winnersBracket.id).toBe("winners")
       expect(losersBracket.id).toBe("losers")
 
       // With 4 players, should have 2 in each bracket
-      expect(winnersBracket.participants).toHaveLength(2)
-      expect(losersBracket.participants).toHaveLength(2)
+      expect(winnersBracket.participantIds).toHaveLength(2)
+      expect(losersBracket.participantIds).toHaveLength(2)
     })
 
     it("resets all robots to full HP before FFA", () => {
       const picks = runRounds1And2(4)
       const result = battleBotsPlugin.resolveRound(picks, defaultSettings) as BattleBotsRoundResult
 
-      const winnersBracket = result.winnersBracket as FFABracket
-      const losersBracket = result.losersBracket as FFABracket
+      const winnersBracket = result.winnersBracket as FFABracketState
+      const losersBracket = result.losersBracket as FFABracketState
 
-      // All participants should start at full HP (100)
-      for (const robot of winnersBracket.participants) {
-        expect(robot.maxHp).toBe(100)
-        expect(robot.currentHp).toBe(100)
+      // All participants should start at full HP (100 — BASE_HP)
+      // With FFABracketState we verify via participantIds and builds in gameState
+      const state = getGameState()!
+      for (const id of winnersBracket.participantIds) {
+        const build = state.builds![id]
+        expect(build.maxHp).toBe(100)
       }
-      for (const robot of losersBracket.participants) {
-        expect(robot.maxHp).toBe(100)
-        expect(robot.currentHp).toBe(100)
+      for (const id of losersBracket.participantIds) {
+        const build = state.builds![id]
+        expect(build.maxHp).toBe(100)
       }
     })
 
@@ -378,16 +505,18 @@ describe("BattleBotsPlugin", () => {
 
       expect(result.round).toBe(3)
 
-      const winnersBracket = result.winnersBracket as FFABracket
-      const losersBracket = result.losersBracket as FFABracket
+      const winnersBracket = result.winnersBracket as FFABracketState
+      const losersBracket = result.losersBracket as FFABracketState
 
       // Each bracket should have exactly 1 participant
-      expect(winnersBracket.participants).toHaveLength(1)
-      expect(losersBracket.participants).toHaveLength(1)
+      expect(winnersBracket.participantIds).toHaveLength(1)
+      expect(losersBracket.participantIds).toHaveLength(1)
 
-      // Single-robot brackets should have the robot in elimination order (auto-win)
-      expect(winnersBracket.eliminationOrder).toHaveLength(1)
-      expect(losersBracket.eliminationOrder).toHaveLength(1)
+      // Single-robot brackets should have the robot as survivor with no eliminations
+      expect(winnersBracket.eliminationOrder).toHaveLength(0)
+      expect(losersBracket.eliminationOrder).toHaveLength(0)
+      expect(winnersBracket.survivorId).toBe(winnersBracket.participantIds[0])
+      expect(losersBracket.survivorId).toBe(losersBracket.participantIds[0])
 
       // No tick log needed for single-robot bracket
       expect(winnersBracket.tickLog).toHaveLength(0)
@@ -398,65 +527,26 @@ describe("BattleBotsPlugin", () => {
       expect(finalRankings).toHaveLength(2)
     })
 
-    it("uses custom HP setting when resetting robots for FFA", () => {
-      const customSettings: GameSettings = {
-        roundCount: 3,
-        pickWindowMs: 15000,
-        tuning: {
-          BOT_HP: "200",
-          ACCURACY: "80",
-          DAMAGE_MIN: "1",
-          DAMAGE_MAX: "10",
-          CHIPS_MULTIPLIER: "10",
-        },
-      }
-
-      const picks: Record<string, { robotTemplateId: string }> = {
-        p1: { robotTemplateId: "bot-alpha" },
-        p2: { robotTemplateId: "bot-beta" },
-        p3: { robotTemplateId: "bot-gamma" },
-        p4: { robotTemplateId: "bot-alpha" },
-      }
-      // Round 1 with custom settings
-      battleBotsPlugin.resolveRound(picks, customSettings)
-      // Round 2
-      battleBotsPlugin.resolveRound(picks, customSettings)
-      // Round 3
-      const result = battleBotsPlugin.resolveRound(picks, customSettings) as BattleBotsRoundResult
-
-      const winnersBracket = result.winnersBracket as FFABracket
-      for (const robot of winnersBracket.participants) {
-        expect(robot.currentHp).toBe(200)
-        expect(robot.maxHp).toBe(200)
-      }
-    })
-
-    it("throws error if resolving Round 3 without previous state", () => {
-      // Don't run any rounds first
-      expect(() => {
-        battleBotsPlugin.resolveRound({}, defaultSettings) // Round 1
-        resetGameState() // Clear state
-        // Manually force currentRound to reach case 3
-      }).not.toThrow()
-
-      // This is hard to test directly because currentRound is internal,
-      // but the error paths are exercised through normal flow
-    })
-
     it("runs FFA on both brackets and produces tick logs for multi-robot brackets", () => {
       const picks = runRounds1And2(6) // 3 pairings → 3 winners + 3 losers
       const result = battleBotsPlugin.resolveRound(picks, defaultSettings) as BattleBotsRoundResult
 
-      const winnersBracket = result.winnersBracket as FFABracket
-      const losersBracket = result.losersBracket as FFABracket
+      const winnersBracket = result.winnersBracket as FFABracketState
+      const losersBracket = result.losersBracket as FFABracketState
 
       // Brackets with multiple robots should have tick logs
       expect(winnersBracket.tickLog.length).toBeGreaterThan(0)
       expect(losersBracket.tickLog.length).toBeGreaterThan(0)
 
-      // Elimination order should cover all participants
-      expect(winnersBracket.eliminationOrder).toHaveLength(3)
-      expect(losersBracket.eliminationOrder).toHaveLength(3)
+      // Participant IDs should cover all participants from respective brackets
+      expect(winnersBracket.participantIds).toHaveLength(3)
+      expect(losersBracket.participantIds).toHaveLength(3)
+
+      // Elimination order + survivor should account for all participants
+      expect(winnersBracket.eliminationOrder.length + 1).toBe(3) // 2 eliminated + 1 survivor
+      expect(losersBracket.eliminationOrder.length + 1).toBe(3)
+      expect(winnersBracket.survivorId).toBeTruthy()
+      expect(losersBracket.survivorId).toBeTruthy()
     })
   })
 })

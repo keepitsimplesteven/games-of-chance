@@ -6,7 +6,7 @@ import {
   getGameState,
 } from "./BattleBotsPlugin"
 import { BATTLE_BOTS } from "./constants"
-import type { BattlePairing } from "./types"
+import type { BattlePairing, BattleBotsPick } from "./types"
 
 const defaultSettings: GameSettings = {
   roundCount: 3,
@@ -19,10 +19,16 @@ const defaultSettings: GameSettings = {
   },
 }
 
+// Valid BattleBotsPick test fixtures
+const PICK_A: BattleBotsPick = { weapon: "drill", head: "square", body: "square" }
+const PICK_B: BattleBotsPick = { weapon: "blaster", head: "rounded", body: "rounded" }
+const PICK_C: BattleBotsPick = { weapon: "bazooka", head: "triangular", body: "triangular" }
+const PICK_D: BattleBotsPick = { weapon: "drill", head: "hexagonal", body: "hexagonal" }
+
 /**
  * Helper: runs Round 1 with the given picks so gameState is populated for Round 2.
  */
-function setupRound1(picks: Record<string, { robotTemplateId: string }>) {
+function setupRound1(picks: Record<string, BattleBotsPick>) {
   battleBotsPlugin.resolveRound(picks, defaultSettings)
 }
 
@@ -33,7 +39,7 @@ describe("BattleBotsPlugin resolveRound (Round 2 — 1v1 Battles)", () => {
 
   describe("resolveRound2 — basic behavior", () => {
     it("returns round: 2 in the result", () => {
-      setupRound1({ p1: { robotTemplateId: "bot-alpha" }, p2: { robotTemplateId: "bot-beta" } })
+      setupRound1({ p1: PICK_A, p2: PICK_B })
       const result = battleBotsPlugin.resolveRound({}, defaultSettings)
       expect(result.round).toBe(2)
     })
@@ -47,7 +53,7 @@ describe("BattleBotsPlugin resolveRound (Round 2 — 1v1 Battles)", () => {
         // The only way to get round 2 without state is if something bypasses round 1
         // Since the round counter auto-increments, we need to call resolve twice
         // First call will be round 1 (setting up state), but if we resetGameState between...
-        battleBotsPlugin.resolveRound({ p1: { robotTemplateId: "bot-alpha" }, p2: { robotTemplateId: "bot-beta" } }, defaultSettings)
+        battleBotsPlugin.resolveRound({ p1: PICK_A, p2: PICK_B }, defaultSettings)
         resetGameState() // Clear state but round counter stays at 1... actually resetGameState resets both
       }).not.toThrow()
 
@@ -57,7 +63,7 @@ describe("BattleBotsPlugin resolveRound (Round 2 — 1v1 Battles)", () => {
     })
 
     it("returns pairings in the result", () => {
-      setupRound1({ p1: { robotTemplateId: "bot-alpha" }, p2: { robotTemplateId: "bot-beta" } })
+      setupRound1({ p1: PICK_A, p2: PICK_B })
       const result = battleBotsPlugin.resolveRound({}, defaultSettings)
       expect(result.pairings).toBeDefined()
       const pairings = result.pairings as BattlePairing[]
@@ -67,7 +73,7 @@ describe("BattleBotsPlugin resolveRound (Round 2 — 1v1 Battles)", () => {
 
   describe("resolveRound2 — pairings creation", () => {
     it("creates correct number of pairings for 2 players", () => {
-      setupRound1({ p1: { robotTemplateId: "bot-alpha" }, p2: { robotTemplateId: "bot-beta" } })
+      setupRound1({ p1: PICK_A, p2: PICK_B })
       const result = battleBotsPlugin.resolveRound({}, defaultSettings)
       const pairings = result.pairings as BattlePairing[]
       expect(pairings).toHaveLength(1)
@@ -75,10 +81,10 @@ describe("BattleBotsPlugin resolveRound (Round 2 — 1v1 Battles)", () => {
 
     it("creates correct number of pairings for 4 players", () => {
       setupRound1({
-        p1: { robotTemplateId: "bot-alpha" },
-        p2: { robotTemplateId: "bot-beta" },
-        p3: { robotTemplateId: "bot-gamma" },
-        p4: { robotTemplateId: "bot-alpha" },
+        p1: PICK_A,
+        p2: PICK_B,
+        p3: PICK_C,
+        p4: PICK_D,
       })
       const result = battleBotsPlugin.resolveRound({}, defaultSettings)
       const pairings = result.pairings as BattlePairing[]
@@ -87,10 +93,10 @@ describe("BattleBotsPlugin resolveRound (Round 2 — 1v1 Battles)", () => {
 
     it("each pairing has two distinct player IDs", () => {
       setupRound1({
-        p1: { robotTemplateId: "bot-alpha" },
-        p2: { robotTemplateId: "bot-beta" },
-        p3: { robotTemplateId: "bot-gamma" },
-        p4: { robotTemplateId: "bot-alpha" },
+        p1: PICK_A,
+        p2: PICK_B,
+        p3: PICK_C,
+        p4: PICK_D,
       })
       const result = battleBotsPlugin.resolveRound({}, defaultSettings)
       const pairings = result.pairings as BattlePairing[]
@@ -101,10 +107,10 @@ describe("BattleBotsPlugin resolveRound (Round 2 — 1v1 Battles)", () => {
 
     it("every participant appears in exactly one pairing", () => {
       setupRound1({
-        p1: { robotTemplateId: "bot-alpha" },
-        p2: { robotTemplateId: "bot-beta" },
-        p3: { robotTemplateId: "bot-gamma" },
-        p4: { robotTemplateId: "bot-alpha" },
+        p1: PICK_A,
+        p2: PICK_B,
+        p3: PICK_C,
+        p4: PICK_D,
       })
       const state = getGameState()!
       const result = battleBotsPlugin.resolveRound({}, defaultSettings)
@@ -117,7 +123,7 @@ describe("BattleBotsPlugin resolveRound (Round 2 — 1v1 Battles)", () => {
 
   describe("resolveRound2 — battle resolution", () => {
     it("assigns a winner and loser for each pairing", () => {
-      setupRound1({ p1: { robotTemplateId: "bot-alpha" }, p2: { robotTemplateId: "bot-beta" } })
+      setupRound1({ p1: PICK_A, p2: PICK_B })
       const result = battleBotsPlugin.resolveRound({}, defaultSettings)
       const pairings = result.pairings as BattlePairing[]
 
@@ -129,7 +135,7 @@ describe("BattleBotsPlugin resolveRound (Round 2 — 1v1 Battles)", () => {
     })
 
     it("winner and loser are from the pairing's participants", () => {
-      setupRound1({ p1: { robotTemplateId: "bot-alpha" }, p2: { robotTemplateId: "bot-beta" } })
+      setupRound1({ p1: PICK_A, p2: PICK_B })
       const result = battleBotsPlugin.resolveRound({}, defaultSettings)
       const pairings = result.pairings as BattlePairing[]
 
@@ -141,16 +147,17 @@ describe("BattleBotsPlugin resolveRound (Round 2 — 1v1 Battles)", () => {
     })
 
     it("produces tick logs for each battle", () => {
-      setupRound1({ p1: { robotTemplateId: "bot-alpha" }, p2: { robotTemplateId: "bot-beta" } })
+      setupRound1({ p1: PICK_A, p2: PICK_B })
       const result = battleBotsPlugin.resolveRound({}, defaultSettings)
       const pairings = result.pairings as BattlePairing[]
 
       for (const pairing of pairings) {
         expect(pairing.tickLog.length).toBeGreaterThan(0)
-        // Each tick should have attacks
+        // Each tick should have a valid tick number
         for (const tick of pairing.tickLog) {
           expect(tick.tick).toBeGreaterThan(0)
-          expect(tick.attacks.length).toBeGreaterThan(0)
+          // Attacks array exists (may be empty on ticks where no robot is scheduled)
+          expect(Array.isArray(tick.attacks)).toBe(true)
         }
       }
     })
@@ -158,7 +165,7 @@ describe("BattleBotsPlugin resolveRound (Round 2 — 1v1 Battles)", () => {
 
   describe("resolveRound2 — game state update", () => {
     it("stores pairings in game state", () => {
-      setupRound1({ p1: { robotTemplateId: "bot-alpha" }, p2: { robotTemplateId: "bot-beta" } })
+      setupRound1({ p1: PICK_A, p2: PICK_B })
       battleBotsPlugin.resolveRound({}, defaultSettings)
 
       const state = getGameState()!
@@ -167,27 +174,27 @@ describe("BattleBotsPlugin resolveRound (Round 2 — 1v1 Battles)", () => {
       expect(state.pairings[0].loserId).not.toBeNull()
     })
 
-    it("does not mutate the original selectedRobots in game state", () => {
-      setupRound1({ p1: { robotTemplateId: "bot-alpha" }, p2: { robotTemplateId: "bot-beta" } })
+    it("does not mutate the original builds in game state", () => {
+      setupRound1({ p1: PICK_A, p2: PICK_B })
 
       // Capture original HP values before Round 2
       const state = getGameState()!
-      const originalHpP1 = state.selectedRobots["p1"].currentHp
-      const originalHpP2 = state.selectedRobots["p2"].currentHp
+      const originalHpP1 = state.builds!["p1"].currentHp
+      const originalHpP2 = state.builds!["p2"].currentHp
 
       battleBotsPlugin.resolveRound({}, defaultSettings)
 
-      // Original selectedRobots should still have full HP
+      // Original builds should still have full HP (battles use clones)
       const stateAfter = getGameState()!
-      expect(stateAfter.selectedRobots["p1"].currentHp).toBe(originalHpP1)
-      expect(stateAfter.selectedRobots["p2"].currentHp).toBe(originalHpP2)
+      expect(stateAfter.builds!["p1"].currentHp).toBe(originalHpP1)
+      expect(stateAfter.builds!["p2"].currentHp).toBe(originalHpP2)
     })
 
     it("preserves existing game state fields (participants, botPersonas, etc.)", () => {
       setupRound1({
-        p1: { robotTemplateId: "bot-alpha" },
-        p2: { robotTemplateId: "bot-beta" },
-        p3: { robotTemplateId: "bot-gamma" },
+        p1: PICK_A,
+        p2: PICK_B,
+        p3: PICK_C,
       })
 
       const stateBefore = getGameState()!
@@ -204,7 +211,7 @@ describe("BattleBotsPlugin resolveRound (Round 2 — 1v1 Battles)", () => {
 
   describe("resolveRound2 — with bot persona (odd players)", () => {
     it("includes bot persona in pairings", () => {
-      setupRound1({ p1: { robotTemplateId: "bot-alpha" } })
+      setupRound1({ p1: PICK_A })
       const state = getGameState()!
       const botId = state.botPersonas[0].id
 
@@ -219,7 +226,7 @@ describe("BattleBotsPlugin resolveRound (Round 2 — 1v1 Battles)", () => {
     })
 
     it("resolves battle between player and bot persona", () => {
-      setupRound1({ p1: { robotTemplateId: "bot-alpha" } })
+      setupRound1({ p1: PICK_A })
 
       const result = battleBotsPlugin.resolveRound({}, defaultSettings)
       const pairings = result.pairings as BattlePairing[]

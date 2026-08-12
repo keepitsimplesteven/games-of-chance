@@ -35,7 +35,7 @@ export function FFASidebar({ bracketName, robots }: FFASidebarProps) {
   const theme = useTheme()
 
   return (
-    <div className={`w-48 rounded-md p-3 ${theme.card}`}>
+    <div className={`w-full rounded-md p-3 ${theme.card}`}>
       <h3 className={`text-xs font-semibold uppercase tracking-wide mb-2 truncate ${theme.mutedText}`}>
         {bracketName}
       </h3>

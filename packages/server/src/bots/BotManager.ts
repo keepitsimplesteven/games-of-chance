@@ -1,7 +1,7 @@
 // packages/server/src/bots/BotManager.ts
 
 import type { Player, GameSettings } from "@games-of-chance/shared"
-import { getRobotTemplates } from "../games/battle-bots/BattleBotsPlugin"
+import { botPersonaSelectParts } from "../games/battle-bots/BotPersona"
 
 export interface BotPersona {
   id: string   // e.g., "bot:alpha"
@@ -107,9 +107,7 @@ export class BotManager {
           break
         }
         case "battle-bots": {
-          const templates = getRobotTemplates(settings)
-          const selected = templates[Math.floor(Math.random() * templates.length)]
-          picks[botId] = { robotTemplateId: selected.id }
+          picks[botId] = botPersonaSelectParts()
           break
         }
         case "big-wheel": {

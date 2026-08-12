@@ -4,7 +4,7 @@ import { CoinTossSplash } from "../../games/coin-toss/CoinTossSplash"
 import { BigWheelSplash } from "../../games/big-wheel/BigWheelSplash"
 import { PlaycallerSplash } from "../../games/playcaller/PlaycallerSplash"
 import { BattleBotsView } from "../../games/battle-bots/BattleBotsView"
-import { BattleBotsLeaderboard } from "../../games/battle-bots/BattleBotsLeaderboard"
+import { BattleBotsSplash } from "../../games/battle-bots/BattleBotsSplash"
 import { BigWheelContainer } from "../../games/big-wheel/BigWheelContainer"
 import { PlaycallerContainer } from "../../games/playcaller/PlaycallerContainer"
 import GameLeaderboard from "./GameLeaderboard"
@@ -51,6 +51,8 @@ export default function GameView() {
         return <BigWheelSplash />
       case "playcaller":
         return <PlaycallerSplash />
+      case "battle-bots":
+        return <BattleBotsSplash />
       default:
         return <GameSplashScreen />
     }
@@ -75,9 +77,7 @@ export default function GameView() {
   // During PICKING phase, show leaderboard (previous round's scores are already revealed)
   // Coin-toss: leaderboard is integrated into CoinTossContainer, skip generic one
   // Big-wheel: leaderboard is integrated into BigWheelContainer with spin order, skip generic one
-  // Battle-bots: uses BattleBotsLeaderboard (BaseLeaderboard wrapper), skip generic one
   const showLeaderboard = !isPlaycaller && gameType !== "coin-toss" && gameType !== "big-wheel" && gameType !== "battle-bots" && (phase === "PICKING" || roundAnimationDone)
-  const showBattleBotsLeaderboard = gameType === "battle-bots" && (phase === "PICKING" || roundAnimationDone)
 
   // Dynamic game container based on gameType
   const renderGameContainer = () => {
@@ -105,16 +105,17 @@ export default function GameView() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex h-full flex-col gap-2 overflow-hidden">
       {/* Phase indicator — shows current game phase */}
       <PhaseIndicator phase={phase} gameType={gameType} />
 
       {/* Game-specific UI (pick widget, animation, result) */}
-      {renderGameContainer()}
+      <div className="min-h-0 flex-1 overflow-hidden">
+        {renderGameContainer()}
+      </div>
 
       {/* Game leaderboard — hidden during RESOLVING to avoid spoiling the result */}
       {showLeaderboard && <GameLeaderboard />}
-      {showBattleBotsLeaderboard && <BattleBotsLeaderboard />}
 
       {/* Host round controls (Next Round / End Game) */}
       <RoundControls />
