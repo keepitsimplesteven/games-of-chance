@@ -30,6 +30,21 @@ export const PLAYCALLER = {
   SCORE_TABLE_MAX_ENTRIES: 10,
 } as const
 
+/** Timing constants for the coin toss ceremony phase */
+export const COIN_TOSS_CEREMONY = {
+  /** Per-matchup coin call timeout (ms) */
+  COIN_CALL_TIMEOUT_MS: 20_000,
+  /** Per-matchup side choice timeout (ms) */
+  SIDE_CHOICE_TIMEOUT_MS: 20_000,
+  /** Global phase timeout — safety net, must exceed individual timeouts (ms) */
+  PHASE_TIMEOUT_MS: 45_000,
+  /** Minimum hold time after all ceremonies complete before advancing (ms) */
+  RESULT_HOLD_MS: 2_000,
+  /** Bot action delay range (ms) */
+  BOT_DELAY_MIN_MS: 1_500,
+  BOT_DELAY_MAX_MS: 3_500,
+} as const
+
 export const PLAYCALLER_SETTINGS_SCHEMA: SettingsSchema = [
   {
     key: "SKIP_GAMEPLAY",

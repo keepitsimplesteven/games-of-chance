@@ -10,6 +10,7 @@ import { DriveView } from "./DriveView"
 import { DriveCompletionOverlay } from "./DriveCompletionOverlay"
 import { SpectatorGrid } from "./SpectatorGrid"
 import { SpectatorDriveView } from "./SpectatorDriveView"
+import { CoinTossCeremony } from "./CoinTossCeremony"
 import { MatchupIntro } from "../../components/game/MatchupIntro"
 import RoundControls from "../../components/game/RoundControls"
 import { getRoundName } from "./field-utils"
@@ -97,6 +98,15 @@ export function PlaycallerContainer() {
     }
     prevRoundIndexRef.current = bracket.currentRoundIndex
   }, [bracket.currentRoundIndex])
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // COIN_TOSS phase: render the coin toss ceremony container
+  // (placed AFTER all hooks to satisfy React's Rules of Hooks)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  if (phase === "COIN_TOSS") {
+    return <CoinTossCeremony />
+  }
 
   // Get current round's matchups for display
   const currentRound = bracket.rounds[bracket.currentRoundIndex]

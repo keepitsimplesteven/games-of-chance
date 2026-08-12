@@ -162,17 +162,32 @@ export function recordPlaySelection(
 
 /**
  * Initialize DriveState objects for all active matchups in the current bracket round.
- * Randomly assigns offense/defense for each matchup.
+ * When explicit assignments are provided (from coin toss ceremony), uses them to
+ * determine offense/defense. Otherwise falls back to random assignment.
  */
-export function initializeDrives(matchups: Matchup[]): Record<string, DriveState> {
+export function initializeDrives(
+  matchups: Matchup[],
+  assignments?: Record<string, { offense: string; defense: string }>
+): Record<string, DriveState> {
   const states: Record<string, DriveState> = {}
 
   for (const matchup of matchups) {
     const matchupId = matchup.matchupId
-    // Random offense/defense assignment via random seed values
-    const aIsOffense = Math.random() < 0.5
-    const seedA = aIsOffense ? 2 : 1
-    const seedB = aIsOffense ? 1 : 2
+    let seedA: number
+    let seedB: number
+
+    if (assignments && assignments[matchupId]) {
+      // Use explicit assignments: offense gets higher seed (2), defense gets lower seed (1)
+      const { offense } = assignments[matchupId]
+      const aIsOffense = matchup.playerA === offense
+      seedA = aIsOffense ? 2 : 1
+      seedB = aIsOffense ? 1 : 2
+    } else {
+      // Random offense/defense assignment via random seed values
+      const aIsOffense = Math.random() < 0.5
+      seedA = aIsOffense ? 2 : 1
+      seedB = aIsOffense ? 1 : 2
+    }
 
     states[matchupId] = createDriveState(matchup.playerA, matchup.playerB, seedA, seedB)
   }

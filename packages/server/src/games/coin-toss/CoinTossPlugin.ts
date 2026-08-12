@@ -9,6 +9,7 @@ import type {
   TossHistoryEntry,
   CoinTossGameState,
 } from "@games-of-chance/shared"
+import { flipCoin } from "@games-of-chance/shared"
 import type { GamePlugin } from "../GamePlugin"
 import { registry } from "../GameRegistry"
 import { COIN_TOSS, COIN_TOSS_SETTINGS_SCHEMA } from "./constants"
@@ -74,7 +75,7 @@ export const coinTossPlugin: GamePlugin<CoinTossPick, CoinTossResult> = {
   },
 
   resolveRound(_picks: Record<string, CoinTossPick>, _settings: GameSettings): CoinTossResult {
-    const outcome: CoinSide = Math.random() < 0.5 ? "HEADS" : "TAILS"
+    const outcome: CoinSide = flipCoin()
     return {
       outcome,
       flippedAt: Date.now(),

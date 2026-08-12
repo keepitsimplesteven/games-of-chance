@@ -32,14 +32,17 @@ import {
   resetBigWheelState,
 } from "./games/big-wheel/BigWheelPlugin"
 import { generateBracket, isComplete } from "./games/playcaller/BracketEngine"
-import { setPlaycallerState, resetPlaycallerState, getPlaycallerState, getSpectators, getActiveCompetitors, getDriveStates, initializeDrives, resetDriveStates } from "./games/playcaller/PlaycallerPlugin"
+import { setPlaycallerState, resetPlaycallerState, getPlaycallerState, getSpectators, getActiveCompetitors, getDriveStates, resetDriveStates } from "./games/playcaller/PlaycallerPlugin"
 import { PLAYCALLER } from "./games/playcaller/constants"
 import {
   handlePlaySelection as handlePlaySelectionFn,
+  handleCoinTossCall as handleCoinTossCallFn,
+  handleCoinTossChoice as handleCoinTossChoiceFn,
   beginPlaycallerDown as beginPlaycallerDownFn,
   schedulePlaycallerBotPicks as schedulePlaycallerBotPicksFn,
   resolvePlaycallerTimeout as resolvePlaycallerTimeoutFn,
   advancePlaycallerBracket as advancePlaycallerBracketFn,
+  getCeremonyStates,
   type PlaycallerRoomContext,
 } from "./games/playcaller/roomHandlers"
 import { determineSpinOrder } from "./games/big-wheel/spinOrder"
@@ -267,6 +270,12 @@ export class GameRoom extends Server {
         break
       case "PLAY_SELECTION":
         this.handlePlaySelection(sender, msg.payload)
+        break
+      case "COIN_TOSS_CALL":
+        this.handleCoinTossCall(sender, msg.payload)
+        break
+      case "COIN_TOSS_CHOICE":
+        this.handleCoinTossChoice(sender, msg.payload)
         break
       default:
         this.sendError(
@@ -542,8 +551,6 @@ export class GameRoom extends Server {
     ) {
       const bracket = getPlaycallerState()!
       if (!isComplete(bracket)) {
-        const currentRound = bracket.rounds[bracket.currentRoundIndex]
-        initializeDrives(currentRound.matchups)
         this.state.round.roundNumber++
         this.beginPlaycallerDown()
         return
@@ -1201,6 +1208,20 @@ export class GameRoom extends Server {
     handlePlaySelectionFn(this.getPlaycallerContext(), sender, payload)
   }
 
+  private handleCoinTossCall(
+    sender: Connection,
+    payload: { matchupId: string; side: string }
+  ) {
+    handleCoinTossCallFn(this.getPlaycallerContext(), sender, payload)
+  }
+
+  private handleCoinTossChoice(
+    sender: Connection,
+    payload: { matchupId: string; selection: string }
+  ) {
+    handleCoinTossChoiceFn(this.getPlaycallerContext(), sender, payload)
+  }
+
   private advancePlaycallerBracket() {
     advancePlaycallerBracketFn(this.getPlaycallerContext())
   }
@@ -1485,8 +1506,6 @@ export class GameRoom extends Server {
         this.autoEndGame()
         return
       }
-      const currentRound = bracket.rounds[bracket.currentRoundIndex]
-      initializeDrives(currentRound.matchups)
       this.state.round.roundNumber = roundNumber
       this.beginPlaycallerDown()
       return
@@ -2453,6 +2472,7 @@ export class GameRoom extends Server {
           spectators: getSpectators(),
           activeCompetitors: getActiveCompetitors(),
           driveStates: serializableDrives as any,
+          ceremonyStates: this.state.round.phase === "COIN_TOSS" ? getCeremonyStates() : null,
         }
       }
     }

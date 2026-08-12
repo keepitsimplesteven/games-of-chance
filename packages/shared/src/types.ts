@@ -2,6 +2,8 @@
 // All shared TypeScript types for the Games of Chance platform
 
 import type { CoinTossGameState } from "./games/coin-toss/types"
+import type { CoinSide } from "./games/coin-toss/types"
+import type { CoinTossCeremonyMatchupState, SideSelection } from "./games/coin-toss/ceremonyTypes"
 
 // ── Core Types ─────────────────────────────────────────────────────────────
 
@@ -98,7 +100,7 @@ export interface Player {
  * Valid room phases. NO BETWEEN_ROUNDS phase exists.
  * RESULT transitions directly to PICKING (next round) or LOBBY (game ended).
  */
-export type RoundPhase = "LOBBY" | "SPLASH" | "PICKING" | "RESOLVING" | "RESULT" | "END_GAME" | "END_TOURNAMENT"
+export type RoundPhase = "LOBBY" | "SPLASH" | "COIN_TOSS" | "PICKING" | "RESOLVING" | "RESULT" | "END_GAME" | "END_TOURNAMENT"
 
 export interface RoundState {
   phase: RoundPhase
@@ -280,6 +282,8 @@ export type ClientMessage =
   | { type: "RETURN_TO_LOBBY"; payload?: never }
   | { type: "VOTE_GAME"; payload: { gameType: GameType } }
   | { type: "PLAY_SELECTION"; payload: { matchupId: string; play: string } }
+  | { type: "COIN_TOSS_CALL"; payload: { matchupId: string; side: CoinSide } }
+  | { type: "COIN_TOSS_CHOICE"; payload: { matchupId: string; selection: SideSelection } }
 
 /** Server → Client messages */
 export type ServerMessage =
@@ -415,6 +419,8 @@ export interface PlaycallerGameState {
   activeCompetitors: string[]
   /** Phase 2: per-matchup drive states. Null when SKIP_GAMEPLAY is true. */
   driveStates?: Record<string, DriveState> | null
+  /** Coin toss ceremony states — present during COIN_TOSS phase */
+  ceremonyStates?: Record<string, CoinTossCeremonyMatchupState> | null
 }
 
 /** Match resolver function signature */
