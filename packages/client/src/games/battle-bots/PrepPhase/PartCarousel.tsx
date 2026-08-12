@@ -83,12 +83,13 @@ export function PartCarousel({ pickDeadlineMs }: PartCarouselProps) {
   const submitPick = useGameStore((s) => s.submitPick)
   const pickSubmitted = useGameStore((s) => s.pickSubmitted)
 
-  const [weaponIndex, setWeaponIndex] = useState(0)
-  const [headIndex, setHeadIndex] = useState(0)
-  const [bodyIndex, setBodyIndex] = useState(0)
-  const [colorIndex, setColorIndex] = useState(0)
+  const [weaponIndex, setWeaponIndex] = useState(() => Math.floor(Math.random() * WEAPONS.length))
+  const [headIndex, setHeadIndex] = useState(() => Math.floor(Math.random() * HEADS.length))
+  const [bodyIndex, setBodyIndex] = useState(() => Math.floor(Math.random() * BODIES.length))
+  const [colorIndex, setColorIndex] = useState(() => Math.floor(Math.random() * COLORS.length))
   const [locked, setLocked] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
 
   const selectedWeapon = WEAPONS[weaponIndex]
   const selectedHead = HEADS[headIndex]
@@ -134,6 +135,12 @@ export function PartCarousel({ pickDeadlineMs }: PartCarouselProps) {
 
   const handleLockIn = useCallback(() => {
     if (locked) return
+    setShowConfirmModal(true)
+  }, [locked])
+
+  const handleConfirmLockIn = useCallback(() => {
+    if (locked) return
+    setShowConfirmModal(false)
     setLocked(true)
     setError(null)
 
@@ -146,14 +153,24 @@ export function PartCarousel({ pickDeadlineMs }: PartCarouselProps) {
     }
   }, [locked, submitPick, selectedWeapon, selectedHead, selectedBody, selectedColor])
 
-  // ── Timer expiry: auto-submit current configuration ──
+  const handleCancelLockIn = useCallback(() => {
+    setShowConfirmModal(false)
+  }, [])
+
+  // ── Timer expiry: auto-submit current configuration (bypasses modal) ──
 
   useEffect(() => {
     if (secondsLeft <= 0 && !locked && !hasAutoSubmitted.current && pickDeadlineMs !== null) {
       hasAutoSubmitted.current = true
-      handleLockIn()
+      setShowConfirmModal(false)
+      setLocked(true)
+      try {
+        submitPick({ weapon: selectedWeapon, head: selectedHead, body: selectedBody, color: selectedColor })
+      } catch {
+        setLocked(false)
+      }
     }
-  }, [secondsLeft, locked, pickDeadlineMs, handleLockIn])
+  }, [secondsLeft, locked, pickDeadlineMs, submitPick, selectedWeapon, selectedHead, selectedBody, selectedColor])
 
   // ── Randomize handler ──
 
@@ -326,6 +343,37 @@ export function PartCarousel({ pickDeadlineMs }: PartCarouselProps) {
       <p className={`text-xs text-center ${theme.mutedText}`}>
         Choose your parts and lock in before time runs out!
       </p>
+
+      {/* Lock-in confirmation modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className={`flex w-full max-w-sm flex-col items-center gap-4 rounded-2xl px-6 py-6 shadow-lg ${theme.listItem}`}>
+            <span className="text-4xl" aria-hidden="true">🤖</span>
+            <h2 className={`text-lg font-bold text-center ${theme.titleText}`}>
+              Are you sure you want to LOCK IN?
+            </h2>
+            <p className={`text-sm text-center ${theme.mutedText}`}>
+              You cannot modify your robot once it's built.
+            </p>
+            <div className="flex w-full gap-3">
+              <button
+                type="button"
+                onClick={handleCancelLockIn}
+                className={`flex-1 min-h-[48px] rounded-md font-bold text-base ${theme.btnSecondary}`}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmLockIn}
+                className={`flex-1 min-h-[48px] rounded-md font-bold text-base ${theme.btnPrimary}`}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

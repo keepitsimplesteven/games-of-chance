@@ -4,6 +4,7 @@ import { CoinTossSplash } from "../../games/coin-toss/CoinTossSplash"
 import { BigWheelSplash } from "../../games/big-wheel/BigWheelSplash"
 import { PlaycallerSplash } from "../../games/playcaller/PlaycallerSplash"
 import { BattleBotsView } from "../../games/battle-bots/BattleBotsView"
+import { BattleBotsSplash } from "../../games/battle-bots/BattleBotsSplash"
 import { BigWheelContainer } from "../../games/big-wheel/BigWheelContainer"
 import { PlaycallerContainer } from "../../games/playcaller/PlaycallerContainer"
 import GameLeaderboard from "./GameLeaderboard"
@@ -50,6 +51,8 @@ export default function GameView() {
         return <BigWheelSplash />
       case "playcaller":
         return <PlaycallerSplash />
+      case "battle-bots":
+        return <BattleBotsSplash />
       default:
         return <GameSplashScreen />
     }
