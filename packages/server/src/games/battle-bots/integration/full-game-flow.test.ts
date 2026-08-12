@@ -2,11 +2,11 @@ import { describe, it, expect, beforeEach } from "vitest"
 import { battleBotsPlugin, resetGameState, getGameState } from "../BattleBotsPlugin"
 import type { BattleBotsRoundResult } from "../BattleBotsPlugin"
 import type { Player, GameSettings } from "@games-of-chance/shared"
-import type { BattlePairing, FFABracket, FinalRanking } from "../types"
+import type { BattlePairing, FFABracketState, FinalRanking, BattleBotsPick } from "../types"
 
 /**
  * Integration test: Full 3-round game flow with 4 players.
- * Validates: Requirements 12.1, 12.4
+ * Validates: Requirements 10.1, 10.2, 15.1, 15.4
  *
  * Verifies:
  * - Correct phase transitions: LOBBY → PICKING → RESULT → RESOLVING → RESULT → RESOLVING → RESULT
@@ -17,19 +17,17 @@ describe("Full 3-round game flow (4 players)", () => {
     roundCount: 3,
     pickWindowMs: 15000,
     tuning: {
-      BOT_HP: "100",
-      ACCURACY: "80",
-      DAMAGE_MIN: "1",
-      DAMAGE_MAX: "10",
+      PREP_TIMER_MS: "60",
       CHIPS_MULTIPLIER: "10",
+      GAME_SPEED: "100",
     },
   }
 
-  const picks = {
-    p1: { robotTemplateId: "bot-alpha" },
-    p2: { robotTemplateId: "bot-beta" },
-    p3: { robotTemplateId: "bot-gamma" },
-    p4: { robotTemplateId: "bot-alpha" },
+  const picks: Record<string, BattleBotsPick> = {
+    p1: { weapon: "drill", head: "square", body: "square" },
+    p2: { weapon: "blaster", head: "rounded", body: "hexagonal" },
+    p3: { weapon: "bazooka", head: "triangular", body: "rounded" },
+    p4: { weapon: "drill", head: "hexagonal", body: "triangular" },
   }
 
   const players: Player[] = [
@@ -37,14 +35,14 @@ describe("Full 3-round game flow (4 players)", () => {
     { id: "p2", name: "Bob", role: "player", connected: true, connectionId: "conn-2" },
     { id: "p3", name: "Charlie", role: "player", connected: true, connectionId: "conn-3" },
     { id: "p4", name: "Dave", role: "player", connected: true, connectionId: "conn-4" },
-  ]
+  ] as Player[]
 
   beforeEach(() => {
     resetGameState()
   })
 
   it("completes a full 3-round game with correct results at each stage", () => {
-    // ─── Round 1: Prep Phase (robot selection) ───────────────────────────────
+    // ─── Round 1: Prep Phase (robot building via part selection) ──────────────
     const round1Result = battleBotsPlugin.resolveRound(picks, defaultSettings) as BattleBotsRoundResult
 
     expect(round1Result.round).toBe(1)
@@ -54,19 +52,21 @@ describe("Full 3-round game flow (4 players)", () => {
     expect(stateAfterR1.participants).toHaveLength(4)
     expect(stateAfterR1.botPersonas).toHaveLength(0)
 
-    // Verify all 4 players have selected robots
-    expect(Object.keys(stateAfterR1.selectedRobots)).toHaveLength(4)
-    expect(stateAfterR1.selectedRobots["p1"]).toBeDefined()
-    expect(stateAfterR1.selectedRobots["p2"]).toBeDefined()
-    expect(stateAfterR1.selectedRobots["p3"]).toBeDefined()
-    expect(stateAfterR1.selectedRobots["p4"]).toBeDefined()
+    // Verify all 4 players have CombatRobot builds
+    expect(Object.keys(stateAfterR1.builds!)).toHaveLength(4)
+    expect(stateAfterR1.builds!["p1"]).toBeDefined()
+    expect(stateAfterR1.builds!["p2"]).toBeDefined()
+    expect(stateAfterR1.builds!["p3"]).toBeDefined()
+    expect(stateAfterR1.builds!["p4"]).toBeDefined()
 
-    // Verify each selected robot has a valid template from the generated options
-    const validTemplateIds = stateAfterR1.robotOptions["p1"].options.map((o) => o.id)
-    expect(validTemplateIds).toContain(stateAfterR1.selectedRobots["p1"].templateId)
-    expect(validTemplateIds).toContain(stateAfterR1.selectedRobots["p2"].templateId)
-    expect(validTemplateIds).toContain(stateAfterR1.selectedRobots["p3"].templateId)
-    expect(validTemplateIds).toContain(stateAfterR1.selectedRobots["p4"].templateId)
+    // Verify each build has correct star totals and valid stats
+    for (const id of ["p1", "p2", "p3", "p4"]) {
+      const build = stateAfterR1.builds![id]
+      expect(build.stars.damage + build.stars.accuracy + build.stars.speed).toBe(9)
+      expect(build.currentHp).toBe(100)
+      expect(build.maxHp).toBe(100)
+      expect(build.name.length).toBeGreaterThan(0)
+    }
 
     // ─── Round 1: scoreRound — empty deltas for prep phase ───────────────────
     const round1Score = battleBotsPlugin.scoreRound(picks, round1Result, players, defaultSettings)
@@ -84,11 +84,13 @@ describe("Full 3-round game flow (4 players)", () => {
     // Verify each pairing has a winner and loser
     for (const pairing of pairings) {
       expect(pairing.winnerId).not.toBeNull()
-      expect(pairing.loserId).not.toBeNull()
-      expect(pairing.winnerId).not.toBe(pairing.loserId)
-      // Verify winner and loser are from the pairing participants
+      // Derive loserId from winnerId (new model derives rather than stores separately)
+      const loserId = pairing.player1Id === pairing.winnerId
+        ? pairing.player2Id
+        : pairing.player1Id
+      expect(pairing.winnerId).not.toBe(loserId)
       expect([pairing.player1Id, pairing.player2Id]).toContain(pairing.winnerId)
-      expect([pairing.player1Id, pairing.player2Id]).toContain(pairing.loserId)
+      expect([pairing.player1Id, pairing.player2Id]).toContain(loserId)
     }
 
     // Verify all 4 players appeared exactly once across pairings
@@ -97,7 +99,9 @@ describe("Full 3-round game flow (4 players)", () => {
 
     // Collect winners and losers
     const winnerIds = pairings.map((p) => p.winnerId!)
-    const loserIds = pairings.map((p) => p.loserId!)
+    const loserIds = pairings.map((p) => {
+      return p.player1Id === p.winnerId ? p.player2Id : p.player1Id
+    })
     expect(winnerIds).toHaveLength(2)
     expect(loserIds).toHaveLength(2)
 
@@ -116,16 +120,16 @@ describe("Full 3-round game flow (4 players)", () => {
     expect(round3Result.round).toBe(3)
 
     // Verify brackets were created
-    const winnersBracket = round3Result.winnersBracket as FFABracket
-    const losersBracket = round3Result.losersBracket as FFABracket
+    const winnersBracket = round3Result.winnersBracket as FFABracketState
+    const losersBracket = round3Result.losersBracket as FFABracketState
     expect(winnersBracket).toBeDefined()
     expect(losersBracket).toBeDefined()
     expect(winnersBracket.id).toBe("winners")
     expect(losersBracket.id).toBe("losers")
 
     // Verify bracket sizes (2 winners, 2 losers)
-    expect(winnersBracket.participants).toHaveLength(2)
-    expect(losersBracket.participants).toHaveLength(2)
+    expect(winnersBracket.participantIds).toHaveLength(2)
+    expect(losersBracket.participantIds).toHaveLength(2)
 
     // Verify final rankings have 4 entries
     const finalRankings = round3Result.finalRankings as FinalRanking[]
@@ -137,37 +141,40 @@ describe("Full 3-round game flow (4 players)", () => {
       expect(ranking.rank).toBeLessThanOrEqual(4)
     }
 
-    // Verify winners bracket has ranks 1-2 and losers bracket has ranks 3-4
-    const winnersRanks = finalRankings
-      .filter((r) => r.bracket === "winners")
-      .map((r) => r.rank)
-    const losersRanks = finalRankings
-      .filter((r) => r.bracket === "losers")
-      .map((r) => r.rank)
-
-    expect(winnersRanks).toHaveLength(2)
-    expect(losersRanks).toHaveLength(2)
-
-    // Winners bracket should have better (lower) ranks than losers bracket
-    const maxWinnersRank = Math.max(...winnersRanks)
-    const minLosersRank = Math.min(...losersRanks)
-    expect(maxWinnersRank).toBeLessThanOrEqual(minLosersRank)
+    // Verify bracket labels are preserved (both winners and losers represented)
+    const winnersRankings = finalRankings.filter((r) => r.bracket === "winners")
+    const losersRankings = finalRankings.filter((r) => r.bracket === "losers")
+    expect(winnersRankings).toHaveLength(2)
+    expect(losersRankings).toHaveLength(2)
 
     // Verify all player IDs appear in final rankings
     const rankedPlayerIds = finalRankings.map((r) => r.playerId).sort()
     expect(rankedPlayerIds).toEqual(["p1", "p2", "p3", "p4"].sort())
 
-    // ─── Round 3: scoreRound — ranking-based points ──────────────────────────
+    // ─── Round 3: scoreRound — survival-tick-based points ───────────────────
     const round3Score = battleBotsPlugin.scoreRound(picks, round3Result, players, defaultSettings)
 
-    // Points = (totalParticipants(4) - rank) * 10
-    for (const ranking of finalRankings) {
-      const expectedPoints = (4 - ranking.rank) * 10
-      expect(round3Score.deltas[ranking.playerId]).toBe(expectedPoints)
+    // With survival-tick scoring:
+    // - Each bracket has 2 participants: 1 eliminated + 1 survivor
+    // - Survivors get 125 (100 + 25)
+    // - Eliminated players get ceil(eliminatedTick / (totalTicks * 1.1) * 100), max 91
+    // Since each bracket has only 1 elimination, that player is eliminated at totalTicks,
+    // so their score = ceil(totalTicks / (totalTicks * 1.1) * 100) = ceil(90.909) = 91
+    const allDeltas = Object.values(round3Score.deltas)
+    expect(allDeltas).toHaveLength(4)
+
+    // All deltas should be positive
+    for (const delta of allDeltas) {
+      expect(delta).toBeGreaterThan(0)
     }
 
+    // Survivors get 125, eliminated players get <= 91
+    const survivors = allDeltas.filter((d) => d === 125)
+    const eliminated = allDeltas.filter((d) => d <= 91)
+    expect(survivors).toHaveLength(2)  // one survivor per bracket
+    expect(eliminated).toHaveLength(2) // one eliminated per bracket
+
     // ─── computeGameLeaderboard after all rounds ─────────────────────────────
-    // Build accumulated game scores (round2 + round3)
     const gameScores: Record<string, number> = {}
     for (const id of ["p1", "p2", "p3", "p4"]) {
       gameScores[id] = (round2Score.deltas[id] ?? 0) + (round3Score.deltas[id] ?? 0)
@@ -183,16 +190,16 @@ describe("Full 3-round game flow (4 players)", () => {
       expect(leaderboard[i].rank).toBeLessThanOrEqual(leaderboard[i + 1].rank)
     }
 
-    // Verify leaderboard ranks match final rankings
+    // Verify leaderboard ranks match final rankings (both are sorted by score)
     for (const entry of leaderboard) {
       const matchingRanking = finalRankings.find((r) => r.playerId === entry.playerId)
       expect(matchingRanking).toBeDefined()
       expect(entry.rank).toBe(matchingRanking!.rank)
     }
 
-    // Verify score = totalParticipants(4) - rank
+    // Verify score = actual cumulative gameScores (Round 2 + Round 3)
     for (const entry of leaderboard) {
-      expect(entry.score).toBe(4 - entry.rank)
+      expect(entry.score).toBe(gameScores[entry.playerId])
     }
   })
 
@@ -223,13 +230,10 @@ describe("Full 3-round game flow (4 players)", () => {
   })
 
   it("verifies correct phase transition sequence via round results", () => {
-    // This test verifies the logical sequence of rounds that would
-    // correspond to LOBBY → PICKING → RESULT → RESOLVING → RESULT → RESOLVING → RESULT
-
-    // Round 1 (PICKING → RESULT): prep phase, robots selected
+    // Round 1 (PICKING → RESULT): prep phase, builds created
     const r1 = battleBotsPlugin.resolveRound(picks, defaultSettings) as BattleBotsRoundResult
     expect(r1.round).toBe(1)
-    expect(r1.selectedRobots).toBeDefined()
+    expect(r1.builds).toBeDefined()
 
     // Round 2 (RESOLVING → RESULT): battles run, winners/losers determined
     const r2 = battleBotsPlugin.resolveRound(picks, defaultSettings) as BattleBotsRoundResult

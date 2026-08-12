@@ -13,9 +13,6 @@ import type { BattleBotsPick } from "../types"
  *
  * Validates: Requirements 11.3, 11.4
  *
- * 11.3 — Bot personas shall be excluded from session scoring and the session leaderboard
- * 11.4 — Bot personas included in bracket placement but excluded from points awarded to human players
- *
  * Uses an odd player count (3 players → 1 bot persona added) and runs all 3 rounds,
  * verifying that bot persona IDs never appear in scoring outputs or leaderboard entries.
  */
@@ -25,10 +22,9 @@ function createSettings(): GameSettings {
     roundCount: 3,
     pickWindowMs: 15000,
     tuning: {
-      BOT_HP: "100",
-      ACCURACY: "80",
-      DAMAGE_MIN: "1",
-      DAMAGE_MAX: "10",
+      PREP_TIMER_MS: "60",
+      CHIPS_MULTIPLIER: "10",
+      GAME_SPEED: "100",
     },
   }
 }
@@ -54,12 +50,12 @@ describe("Integration: Bot persona scoring exclusion (3 players → 1 bot person
     resetGameState()
 
     const picks: Record<string, BattleBotsPick> = {
-      player1: { robotTemplateId: "bot-alpha" },
-      player2: { robotTemplateId: "bot-beta" },
-      player3: { robotTemplateId: "bot-gamma" },
+      player1: { weapon: "drill", head: "square", body: "square" },
+      player2: { weapon: "blaster", head: "rounded", body: "hexagonal" },
+      player3: { weapon: "bazooka", head: "triangular", body: "rounded" },
     }
 
-    // Round 1: Prep phase — selections finalized, bot persona created
+    // Round 1: Prep phase — builds finalized, bot persona created
     round1Result = battleBotsPlugin.resolveRound(picks, settings)
 
     // Round 2: 1v1 battles
@@ -162,7 +158,6 @@ describe("Integration: Bot persona scoring exclusion (3 players → 1 bot person
 
   describe("computeGameLeaderboard excludes bot persona", () => {
     it("has no bot_-prefixed IDs in leaderboard entries", () => {
-      // Build cumulative game scores from round 2 and round 3
       const round2Scores = battleBotsPlugin.scoreRound({}, round2Result, players, settings)
       const round3Scores = battleBotsPlugin.scoreRound({}, round3Result, players, settings)
 

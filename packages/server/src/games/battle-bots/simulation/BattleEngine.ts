@@ -1,203 +1,419 @@
-import type { RobotInstance, TickEvent, AttackResult } from "../types"
+import type { CombatRobot, TickEntry, AttackEvent } from "../types"
+import type { RobotInstance } from "../types"
+import { BATTLE_BOTS } from "../constants"
 
-// --- Result Types ---
+// ─── Result Types ─────────────────────────────────────────────────────────────
 
-export interface Battle1v1Result {
+export interface BattleResult {
   winnerId: string
-  loserId: string
-  tickLog: TickEvent[]
+  tickLog: TickEntry[]
 }
 
 export interface FFAResult {
-  /** Player IDs in elimination order: first eliminated → last standing */
-  eliminationOrder: string[]
-  tickLog: TickEvent[]
+  eliminationOrder: Array<{ ownerId: string; eliminatedOnTick: number }>
+  survivorId: string
+  tickLog: TickEntry[]
 }
 
-// --- Helpers ---
+// ─── RNG Helper ───────────────────────────────────────────────────────────────
 
 /**
- * Generate a random integer in the range [min, max] (inclusive).
+ * Generate a random integer in the range [min, max] (inclusive, uniform).
+ * Structured as a standalone function so an injectable RNG can replace Math.random later.
  */
-export function randomInt(min: number, max: number): number {
+function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min
 }
 
-// --- 1v1 Battle Simulation ---
+// ─── 1v1 Battle Simulation ───────────────────────────────────────────────────
 
 /**
- * Simulate a 1v1 battle between two robots.
- * Synchronous — processes all ticks until one (or both) robots reach 0 HP.
- * Robot1 always attacks first within each tick (deterministic attack order).
+ * Simulate a 1v1 battle using the snapshot model + guaranteed survivor rule.
+ *
+ * Algorithm per tick:
+ * 1. Capture snapshot: record each living robot's HP at tick start
+ * 2. Determine attackers: robots where tick % tickInterval === 0 and snapshot HP > 0
+ * 3. For each attacker: roll accuracy, if hit roll damage (1 to maxHit), record attack event
+ * 4. Sum damage per target from all attacks this tick
+ * 5. Apply damage to get tentative new HP values
+ * 6. Guaranteed Survivor Check: if ALL robots with snapshot HP > 0 would reach HP ≤ 0,
+ *    pick one at random and negate all damage to it for this tick
+ * 7. Finalize HP values, mark eliminations
+ * 8. If one robot remains or tick reaches TICK_LIMIT: end simulation
+ */
+export function simulate1v1(robot1: CombatRobot, robot2: CombatRobot): BattleResult {
+  const tickLog: TickEntry[] = []
+
+  // Work with mutable HP copies so we don't mutate the input objects
+  const hp: Record<string, number> = {
+    [robot1.ownerId]: robot1.currentHp,
+    [robot2.ownerId]: robot2.currentHp,
+  }
+
+  const robots = [robot1, robot2]
+
+  for (let tick = 1; tick <= BATTLE_BOTS.TICK_LIMIT; tick++) {
+    // Step 1: Capture HP snapshot at start of tick
+    const snapshot: Record<string, number> = {
+      [robot1.ownerId]: hp[robot1.ownerId],
+      [robot2.ownerId]: hp[robot2.ownerId],
+    }
+
+    // Determine which robots are alive (snapshot HP > 0)
+    const livingIds = robots
+      .filter((r) => snapshot[r.ownerId] > 0)
+      .map((r) => r.ownerId)
+
+    // If only one robot alive at start of tick, battle is over
+    if (livingIds.length <= 1) {
+      break
+    }
+
+    // Step 2: Determine attackers — scheduled this tick AND snapshot HP > 0
+    const attackers = robots.filter(
+      (r) => snapshot[r.ownerId] > 0 && tick % r.tickInterval === 0
+    )
+
+    // Step 3: Roll attacks, record events
+    const attacks: AttackEvent[] = []
+    const damageAccumulator: Record<string, number> = {
+      [robot1.ownerId]: 0,
+      [robot2.ownerId]: 0,
+    }
+
+    for (const attacker of attackers) {
+      // In 1v1, target is the sole opponent
+      const target = robots.find((r) => r.ownerId !== attacker.ownerId)!
+
+      // Roll accuracy (1-100 inclusive)
+      const accuracyRoll = randomInt(1, 100)
+      const hit = accuracyRoll <= attacker.accuracy
+
+      let damage = 0
+      if (hit) {
+        // Roll damage (1 to maxHit inclusive)
+        damage = randomInt(1, attacker.maxHit)
+      }
+
+      // Accumulate damage for target
+      damageAccumulator[target.ownerId] += damage
+
+      // Record the attack event (targetHpAfter will be finalized after GSR)
+      attacks.push({
+        attackerId: attacker.ownerId,
+        targetId: target.ownerId,
+        hit,
+        damage,
+        targetHpAfter: 0, // placeholder, finalized below
+      })
+    }
+
+    // Step 4-5: Calculate tentative HP after applying all damage
+    const tentativeHp: Record<string, number> = {}
+    for (const id of livingIds) {
+      tentativeHp[id] = Math.max(0, snapshot[id] - damageAccumulator[id])
+    }
+
+    // Step 6: Guaranteed Survivor Rule
+    // Check if ALL living robots would reach HP ≤ 0
+    const allWouldDie = livingIds.every((id) => tentativeHp[id] <= 0)
+
+    if (allWouldDie) {
+      // Pick one random robot to survive — negate all damage to it
+      const survivorIndex = randomInt(0, livingIds.length - 1)
+      const survivorId = livingIds[survivorIndex]
+      tentativeHp[survivorId] = snapshot[survivorId] // restore pre-tick HP
+
+      // Remove attack events targeting the survivor from damage
+      // (they still happened but damage is negated)
+      for (const attack of attacks) {
+        if (attack.targetId === survivorId) {
+          attack.damage = 0
+        }
+      }
+    }
+
+    // Step 7: Finalize HP values
+    for (const id of livingIds) {
+      hp[id] = tentativeHp[id]
+    }
+
+    // Update targetHpAfter in attack events
+    for (const attack of attacks) {
+      attack.targetHpAfter = hp[attack.targetId]
+    }
+
+    // Determine eliminations
+    const eliminations = livingIds.filter((id) => hp[id] <= 0)
+
+    tickLog.push({
+      tick,
+      attacks,
+      eliminations,
+    })
+
+    // Step 8: Check termination — if one robot remains, end
+    const remainingAlive = robots.filter((r) => hp[r.ownerId] > 0)
+    if (remainingAlive.length <= 1) {
+      break
+    }
+  }
+
+  // Determine winner
+  const winnerId = determineWinner(robots, hp)
+
+  return { winnerId, tickLog }
+}
+
+/**
+ * Determine the winner at end of simulation.
+ * If one robot is alive, it wins.
+ * If timeout (1000 ticks), highest HP wins.
+ * If HP is tied at timeout, pick randomly.
+ */
+function determineWinner(
+  robots: CombatRobot[],
+  hp: Record<string, number>
+): string {
+  const alive = robots.filter((r) => hp[r.ownerId] > 0)
+
+  if (alive.length === 1) {
+    return alive[0].ownerId
+  }
+
+  // Timeout case — highest HP wins
+  if (alive.length > 1) {
+    const sorted = [...alive].sort((a, b) => hp[b.ownerId] - hp[a.ownerId])
+    // If tied HP, pick randomly among the tied robots
+    const maxHp = hp[sorted[0].ownerId]
+    const tied = sorted.filter((r) => hp[r.ownerId] === maxHp)
+    if (tied.length === 1) {
+      return tied[0].ownerId
+    }
+    return tied[randomInt(0, tied.length - 1)].ownerId
+  }
+
+  // Should not happen due to GSR, but fallback
+  return robots[randomInt(0, robots.length - 1)].ownerId
+}
+
+// ─── FFA Battle Simulation ───────────────────────────────────────────────────
+
+/**
+ * Simulate a Free-For-All battle using the snapshot model + guaranteed survivor rule.
+ *
+ * Algorithm per tick:
+ * 1. Capture snapshot: record each living robot's HP at tick start
+ * 2. Determine attackers: robots where tick % tickInterval === 0 and snapshot HP > 0
+ * 3. For each attacker: select random living target (not self, snapshot HP > 0),
+ *    roll accuracy, if hit roll damage (1 to maxHit), record attack event
+ * 4. Sum damage per target from all attacks this tick
+ * 5. Apply damage to get tentative new HP values
+ * 6. Guaranteed Survivor Check: if ALL robots with snapshot HP > 0 would reach HP ≤ 0,
+ *    pick one at random and negate all damage to it for this tick
+ * 7. Finalize HP values, mark eliminations, record in eliminationOrder
+ * 8. If one robot remains or tick reaches TICK_LIMIT: end simulation
+ */
+export function simulateFFA(robots: CombatRobot[]): FFAResult
+export function simulateFFA(robots: RobotInstance[]): LegacyFFAResult
+export function simulateFFA(robots: CombatRobot[] | RobotInstance[]): FFAResult | LegacyFFAResult {
+  // Detect if input is CombatRobot[] (new system) or RobotInstance[] (legacy)
+  const isNewFormat = robots.length > 0 && 'tickInterval' in robots[0] && 'maxHit' in robots[0]
+
+  if (isNewFormat) {
+    // New API path — return structured eliminationOrder
+    return simulateFFAInternal(robots as CombatRobot[])
+  }
+
+  // Legacy path — convert and return flat string eliminationOrder
+  const combatRobots: CombatRobot[] = (robots as RobotInstance[]).map(robotInstanceToCombatRobot)
+  const result = simulateFFAInternal(combatRobots)
+
+  // Convert to legacy format: eliminationOrder as flat string array with survivor at end
+  const eliminatedIds = result.eliminationOrder.map((e) => e.ownerId)
+  const legacyEliminationOrder = [...eliminatedIds, result.survivorId]
+
+  return {
+    eliminationOrder: legacyEliminationOrder,
+    survivorId: result.survivorId,
+    tickLog: result.tickLog,
+  } as LegacyFFAResult
+}
+
+/** Legacy-compatible FFA result with flat string eliminationOrder */
+export interface LegacyFFAResult {
+  eliminationOrder: string[]
+  survivorId: string
+  tickLog: TickEntry[]
+}
+
+function simulateFFAInternal(robots: CombatRobot[]): FFAResult {
+  const tickLog: TickEntry[] = []
+  const eliminationOrder: Array<{ ownerId: string; eliminatedOnTick: number }> = []
+
+  // Work with mutable HP copies so we don't mutate the input objects
+  const hp: Record<string, number> = {}
+  for (const robot of robots) {
+    hp[robot.ownerId] = robot.currentHp
+  }
+
+  for (let tick = 1; tick <= BATTLE_BOTS.TICK_LIMIT; tick++) {
+    // Step 1: Capture HP snapshot at start of tick
+    const snapshot: Record<string, number> = {}
+    for (const robot of robots) {
+      snapshot[robot.ownerId] = hp[robot.ownerId]
+    }
+
+    // Determine which robots are alive (snapshot HP > 0)
+    const livingIds = robots
+      .filter((r) => snapshot[r.ownerId] > 0)
+      .map((r) => r.ownerId)
+
+    // If only one robot alive at start of tick, battle is over
+    if (livingIds.length <= 1) {
+      break
+    }
+
+    // Step 2: Determine attackers — scheduled this tick AND snapshot HP > 0
+    const attackers = robots.filter(
+      (r) => snapshot[r.ownerId] > 0 && tick % r.tickInterval === 0
+    )
+
+    // Step 3: Roll attacks with random target selection, record events
+    const attacks: AttackEvent[] = []
+    const damageAccumulator: Record<string, number> = {}
+    for (const id of livingIds) {
+      damageAccumulator[id] = 0
+    }
+
+    for (const attacker of attackers) {
+      // FFA target selection: random living target excluding self
+      const possibleTargets = livingIds.filter((id) => id !== attacker.ownerId)
+
+      // Should not happen (living count > 1 guarantees at least 1 target), but guard
+      if (possibleTargets.length === 0) continue
+
+      const targetId = possibleTargets[randomInt(0, possibleTargets.length - 1)]
+
+      // Roll accuracy (1-100 inclusive)
+      const accuracyRoll = randomInt(1, 100)
+      const hit = accuracyRoll <= attacker.accuracy
+
+      let damage = 0
+      if (hit) {
+        // Roll damage (1 to maxHit inclusive)
+        damage = randomInt(1, attacker.maxHit)
+      }
+
+      // Accumulate damage for target
+      damageAccumulator[targetId] += damage
+
+      // Record the attack event (targetHpAfter will be finalized after GSR)
+      attacks.push({
+        attackerId: attacker.ownerId,
+        targetId,
+        hit,
+        damage,
+        targetHpAfter: 0, // placeholder, finalized below
+      })
+    }
+
+    // Step 4-5: Calculate tentative HP after applying all damage
+    const tentativeHp: Record<string, number> = {}
+    for (const id of livingIds) {
+      tentativeHp[id] = Math.max(0, snapshot[id] - damageAccumulator[id])
+    }
+
+    // Step 6: Guaranteed Survivor Rule
+    // Check if ALL living robots would reach HP ≤ 0
+    const allWouldDie = livingIds.every((id) => tentativeHp[id] <= 0)
+
+    if (allWouldDie) {
+      // Pick one random robot to survive — negate all damage to it
+      const survivorIndex = randomInt(0, livingIds.length - 1)
+      const survivorId = livingIds[survivorIndex]
+      tentativeHp[survivorId] = snapshot[survivorId] // restore pre-tick HP
+
+      // Remove damage from attacks targeting the survivor
+      for (const attack of attacks) {
+        if (attack.targetId === survivorId) {
+          attack.damage = 0
+        }
+      }
+    }
+
+    // Step 7: Finalize HP values
+    for (const id of livingIds) {
+      hp[id] = tentativeHp[id]
+    }
+
+    // Update targetHpAfter in attack events
+    for (const attack of attacks) {
+      attack.targetHpAfter = hp[attack.targetId]
+    }
+
+    // Determine eliminations
+    const eliminations = livingIds.filter((id) => hp[id] <= 0)
+
+    // Record eliminations with tick number
+    for (const eliminatedId of eliminations) {
+      eliminationOrder.push({ ownerId: eliminatedId, eliminatedOnTick: tick })
+    }
+
+    tickLog.push({
+      tick,
+      attacks,
+      eliminations,
+    })
+
+    // Step 8: Check termination — if one robot remains, end
+    const remainingAlive = robots.filter((r) => hp[r.ownerId] > 0)
+    if (remainingAlive.length <= 1) {
+      break
+    }
+  }
+
+  // Determine survivor
+  const survivorId = determineWinner(robots, hp)
+
+  return { eliminationOrder, survivorId, tickLog }
+}
+
+
+// ─── Legacy Adapter ───────────────────────────────────────────────────────────
+
+/**
+ * Adapts a legacy RobotInstance to a CombatRobot for use with the new engine.
+ * Used by pre-overhaul code (BattleBotsPlugin, old prop tests) until task 4 migration.
+ */
+function robotInstanceToCombatRobot(robot: RobotInstance): CombatRobot {
+  return {
+    ownerId: robot.ownerId,
+    name: robot.templateId ?? "Robot",
+    maxHit: robot.damageMax,
+    accuracy: robot.accuracy,
+    tickInterval: 1, // Legacy robots attack every tick
+    currentHp: robot.currentHp,
+    maxHp: robot.maxHp,
+    stars: { damage: 3, accuracy: 3, speed: 3 },
+    visual: {},
+  }
+}
+
+/**
+ * Legacy wrapper: accepts old RobotInstance objects, converts to CombatRobot,
+ * and runs the new simulate1v1 engine.
  */
 export function simulateBattle1v1(
   robot1: RobotInstance,
   robot2: RobotInstance
-): Battle1v1Result {
-  const tickLog: TickEvent[] = []
-  let tick = 0
-
-  while (robot1.currentHp > 0 && robot2.currentHp > 0) {
-    tick++
-    const attacks: AttackResult[] = []
-
-    // Robot 1 attacks Robot 2
-    const roll1 = randomInt(1, 100)
-    if (roll1 <= robot1.accuracy) {
-      const damage1 = randomInt(robot1.damageMin, robot1.damageMax)
-      robot2.currentHp = Math.max(0, robot2.currentHp - damage1)
-      attacks.push({
-        attackerId: robot1.ownerId,
-        targetId: robot2.ownerId,
-        hit: true,
-        damage: damage1,
-        targetHpAfter: robot2.currentHp,
-      })
-    } else {
-      attacks.push({
-        attackerId: robot1.ownerId,
-        targetId: robot2.ownerId,
-        hit: false,
-        damage: 0,
-        targetHpAfter: robot2.currentHp,
-      })
-    }
-
-    // Robot 2 attacks Robot 1
-    const roll2 = randomInt(1, 100)
-    if (roll2 <= robot2.accuracy) {
-      const damage2 = randomInt(robot2.damageMin, robot2.damageMax)
-      robot1.currentHp = Math.max(0, robot1.currentHp - damage2)
-      attacks.push({
-        attackerId: robot2.ownerId,
-        targetId: robot1.ownerId,
-        hit: true,
-        damage: damage2,
-        targetHpAfter: robot1.currentHp,
-      })
-    } else {
-      attacks.push({
-        attackerId: robot2.ownerId,
-        targetId: robot1.ownerId,
-        hit: false,
-        damage: 0,
-        targetHpAfter: robot1.currentHp,
-      })
-    }
-
-    tickLog.push({ tick, attacks })
-  }
-
-  // Determine winner
-  if (robot1.currentHp <= 0 && robot2.currentHp <= 0) {
-    // Simultaneous KO — run tiebreaker
-    const winnerId = resolveTiebreaker(robot1, robot2)
-    const loserId = winnerId === robot1.ownerId ? robot2.ownerId : robot1.ownerId
-    return { winnerId, loserId, tickLog }
-  } else if (robot2.currentHp <= 0) {
-    return { winnerId: robot1.ownerId, loserId: robot2.ownerId, tickLog }
-  } else {
-    return { winnerId: robot2.ownerId, loserId: robot1.ownerId, tickLog }
-  }
-}
-
-/**
- * Resolve a simultaneous KO tiebreaker.
- * Up to 3 additional attack rolls. If still tied, 50/50 coin flip.
- */
-function resolveTiebreaker(robot1: RobotInstance, robot2: RobotInstance): string {
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const roll1 = randomInt(1, 100)
-    const hit1 = roll1 <= robot1.accuracy
-    const damage1 = hit1 ? randomInt(robot1.damageMin, robot1.damageMax) : 0
-
-    const roll2 = randomInt(1, 100)
-    const hit2 = roll2 <= robot2.accuracy
-    const damage2 = hit2 ? randomInt(robot2.damageMin, robot2.damageMax) : 0
-
-    // If one hit and the other missed, the hitter wins
-    if (hit1 && !hit2) return robot1.ownerId
-    if (hit2 && !hit1) return robot2.ownerId
-
-    // If both hit, higher damage wins
-    if (hit1 && hit2) {
-      if (damage1 > damage2) return robot1.ownerId
-      if (damage2 > damage1) return robot2.ownerId
-      // Equal damage — continue to next attempt
-    }
-    // Both missed — continue to next attempt
-  }
-
-  // After 3 failed tiebreaker rolls, 50/50 coin flip
-  const coinFlip = randomInt(1, 2)
-  return coinFlip === 1 ? robot1.ownerId : robot2.ownerId
-}
-
-// --- FFA Battle Simulation ---
-
-/**
- * Simulate a free-for-all battle among multiple robots.
- * Synchronous — processes all ticks until only one robot remains.
- *
- * Key rules:
- * - Each tick: every living robot picks a random living target and attacks
- * - All attacks resolve before removing eliminated robots (overkill within a tick is valid)
- * - Eliminated robots are removed from the target pool for the next tick
- * - Tracks elimination order; last standing is the final survivor
- */
-export function simulateFFA(participants: RobotInstance[]): FFAResult {
-  const tickLog: TickEvent[] = []
-  const eliminationOrder: string[] = []
-  let tick = 0
-  let living = participants.filter((r) => r.currentHp > 0)
-
-  while (living.length > 1) {
-    tick++
-    const attacks: AttackResult[] = []
-
-    // Each living robot selects a random target and attacks
-    for (const robot of living) {
-      const targets = living.filter((r) => r.ownerId !== robot.ownerId)
-      if (targets.length === 0) continue
-
-      const target = targets[randomInt(0, targets.length - 1)]
-
-      const roll = randomInt(1, 100)
-      if (roll <= robot.accuracy) {
-        const damage = randomInt(robot.damageMin, robot.damageMax)
-        target.currentHp = Math.max(0, target.currentHp - damage)
-        attacks.push({
-          attackerId: robot.ownerId,
-          targetId: target.ownerId,
-          hit: true,
-          damage,
-          targetHpAfter: target.currentHp,
-        })
-      } else {
-        attacks.push({
-          attackerId: robot.ownerId,
-          targetId: target.ownerId,
-          hit: false,
-          damage: 0,
-          targetHpAfter: target.currentHp,
-        })
-      }
-    }
-
-    // AFTER all attacks resolve, remove eliminated robots
-    const newlyEliminated = living.filter((r) => r.currentHp <= 0)
-    for (const eliminated of newlyEliminated) {
-      eliminationOrder.push(eliminated.ownerId)
-    }
-    living = living.filter((r) => r.currentHp > 0)
-
-    tickLog.push({ tick, attacks })
-  }
-
-  // Last robot standing — append to elimination order last (highest rank)
-  if (living.length === 1) {
-    eliminationOrder.push(living[0].ownerId)
-  }
-
-  return { eliminationOrder, tickLog }
+): BattleResult & { loserId: string } {
+  const combatRobot1 = robotInstanceToCombatRobot(robot1)
+  const combatRobot2 = robotInstanceToCombatRobot(robot2)
+  const result = simulate1v1(combatRobot1, combatRobot2)
+  const loserId =
+    result.winnerId === combatRobot1.ownerId
+      ? combatRobot2.ownerId
+      : combatRobot1.ownerId
+  return { ...result, loserId }
 }

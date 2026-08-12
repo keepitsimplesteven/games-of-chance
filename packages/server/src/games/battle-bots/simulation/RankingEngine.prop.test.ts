@@ -1,70 +1,45 @@
 /**
- * Feature: battle-bots, Properties for ranking engine
+ * Feature: battle-bots-combat-overhaul, Properties for ranking engine
  *
+ * - Property 14: FFA Ranking Correctness — survivor rank 1, later elimination = higher rank, same-tick = same rank
+ * - Property 15: Bracket Position Mapping — winners ranks ≤ N/2, losers ranks > N/2
  * - Property: Ranking Completeness — finalRankings.length = participants.length
  * - Property: Ranking Bounds — all ranks between 1 and participants.length inclusive
  * - Property: Bracket Partition — winners + losers participants = total participants
  *
- * **Validates: Requirements 8.1, 8.2, 8.3, 8.4**
+ * **Validates: Requirements 17.1, 17.2, 17.3, 17.4, 17.5**
  */
 import { describe, it, expect } from "vitest"
 import * as fc from "fast-check"
 import { computeFinalRankings, type ParticipantInfo } from "./RankingEngine"
-import type { FFABracket, RobotInstance, TickEvent } from "../types"
+import type { FFABracketState } from "../types"
 
 // ── Arbitraries ────────────────────────────────────────────────────────────
 
-/** Generate a unique list of player IDs of a given size */
-function uniquePlayerIds(count: number): fc.Arbitrary<string[]> {
-  return fc.uniqueArray(
-    fc.string({ minLength: 1, maxLength: 12 }).filter((s) => s.trim().length > 0),
-    { minLength: count, maxLength: count }
-  )
-}
-
-/** Create a RobotInstance for a given owner */
-function makeRobot(ownerId: string): RobotInstance {
-  return {
-    templateId: "bot-alpha",
-    ownerId,
-    currentHp: 0,
-    maxHp: 100,
-    accuracy: 80,
-    damageMin: 1,
-    damageMax: 10,
-  }
-}
-
 /**
- * Build a valid FFABracket from a list of player IDs with a plausible tick log.
- * The eliminationOrder contains all players — last entry is the last standing.
- * The tick log records one elimination per tick to keep things simple and valid.
+ * Build a valid FFABracketState from a list of player IDs.
+ * The eliminationOrder contains all players except the survivor (last one).
+ * Each eliminated player gets a unique or shared tick number.
  */
-function buildBracket(id: string, playerIds: string[]): FFABracket {
-  const participants = playerIds.map(makeRobot)
-  // eliminationOrder: first eliminated first, last standing is last
-  const eliminationOrder = [...playerIds]
-  const tickLog: TickEvent[] = []
+function buildBracket(id: string, playerIds: string[]): FFABracketState {
+  const survivorId = playerIds[playerIds.length - 1]
+  const eliminationOrder: Array<{ ownerId: string; eliminatedOnTick: number }> = []
 
-  // Generate a tick log where each player is eliminated one tick at a time
+  // Eliminate one player per tick (sequential eliminations, no ties)
   for (let i = 0; i < playerIds.length - 1; i++) {
-    const eliminatedId = eliminationOrder[i]
-    const attackerId = eliminationOrder[playerIds.length - 1] // last standing attacks
-    tickLog.push({
-      tick: i + 1,
-      attacks: [
-        {
-          attackerId,
-          targetId: eliminatedId,
-          hit: true,
-          damage: 100,
-          targetHpAfter: 0,
-        },
-      ],
+    eliminationOrder.push({
+      ownerId: playerIds[i],
+      eliminatedOnTick: i + 1,
     })
   }
 
-  return { id, participants, eliminationOrder, tickLog }
+  return {
+    id,
+    participantIds: playerIds,
+    eliminationOrder,
+    survivorId,
+    tickLog: [],
+  }
 }
 
 /**
@@ -75,35 +50,31 @@ function buildBracketWithTies(
   id: string,
   playerIds: string[],
   groupSizes: number[]
-): FFABracket {
-  const participants = playerIds.map(makeRobot)
-  const eliminationOrder = [...playerIds]
-  const tickLog: TickEvent[] = []
+): FFABracketState {
+  const survivorId = playerIds[playerIds.length - 1]
+  const eliminationOrder: Array<{ ownerId: string; eliminatedOnTick: number }> = []
 
   let playerIndex = 0
   let tick = 0
-  const survivorId = eliminationOrder[playerIds.length - 1]
 
   for (const groupSize of groupSizes) {
     tick++
-    const attacks: TickEvent["attacks"] = []
     for (let j = 0; j < groupSize && playerIndex < playerIds.length - 1; j++) {
-      const eliminatedId = eliminationOrder[playerIndex]
-      attacks.push({
-        attackerId: survivorId,
-        targetId: eliminatedId,
-        hit: true,
-        damage: 100,
-        targetHpAfter: 0,
+      eliminationOrder.push({
+        ownerId: playerIds[playerIndex],
+        eliminatedOnTick: tick,
       })
       playerIndex++
     }
-    if (attacks.length > 0) {
-      tickLog.push({ tick, attacks })
-    }
   }
 
-  return { id, participants, eliminationOrder, tickLog }
+  return {
+    id,
+    participantIds: playerIds,
+    eliminationOrder,
+    survivorId,
+    tickLog: [],
+  }
 }
 
 /** Build a participantInfo map from player IDs */
@@ -132,19 +103,16 @@ const bracketSplitArb = fc
 
 // ── Properties ─────────────────────────────────────────────────────────────
 
-describe("Feature: battle-bots, Property-based tests for ranking engine", () => {
+describe("Feature: battle-bots-combat-overhaul, Property-based tests for ranking engine", () => {
   /**
    * Property: Ranking Completeness
    * finalRankings.length = participants.length (total from both brackets)
    *
-   * **Validates: Requirements 8.1, 8.2, 8.3**
+   * **Validates: Requirements 17.4, 17.5**
    */
   it("Ranking Completeness — finalRankings.length equals total participants", () => {
     fc.assert(
       fc.property(bracketSplitArb, ([total, winnersCount]) => {
-        const losersCount = total - winnersCount
-
-        // Generate unique player IDs for all participants
         const allIds: string[] = []
         for (let i = 0; i < total; i++) {
           allIds.push(`player_${i}`)
@@ -173,7 +141,7 @@ describe("Feature: battle-bots, Property-based tests for ranking engine", () => 
    * Property: Ranking Bounds
    * All ranks are between 1 and participants.length inclusive
    *
-   * **Validates: Requirements 8.1, 8.2, 8.3**
+   * **Validates: Requirements 17.4, 17.5**
    */
   it("Ranking Bounds — all ranks between 1 and participants.length inclusive", () => {
     fc.assert(
@@ -209,7 +177,7 @@ describe("Feature: battle-bots, Property-based tests for ranking engine", () => 
    * Property: Bracket Partition
    * winners + losers participants = total participants
    *
-   * **Validates: Requirements 8.1, 8.3, 8.4**
+   * **Validates: Requirements 17.4, 17.5**
    */
   it("Bracket Partition — winners + losers participants in rankings equals total", () => {
     fc.assert(
@@ -241,6 +209,159 @@ describe("Feature: battle-bots, Property-based tests for ranking engine", () => 
         expect(losersRankings.length).toBe(losersCount)
         expect(winnersRankings.length + losersRankings.length).toBe(total)
       }),
+      { numRuns: 100 }
+    )
+  })
+
+  /**
+   * Property 15: Score-based Ranking
+   * When gameScores are provided, players are ranked by score descending.
+   * A player with a higher score always has a rank ≤ any player with a lower score.
+   *
+   * **Validates: Requirements 17.4 (score-based ranking after bugfix)**
+   */
+  it("Property 15: Score-based Ranking — higher score = better (lower) rank", () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 4, max: 20 }).filter((n) => n % 2 === 0),
+        (total) => {
+          const winnersCount = total / 2
+
+          const allIds: string[] = []
+          for (let i = 0; i < total; i++) {
+            allIds.push(`player_${i}`)
+          }
+
+          const winnersIds = allIds.slice(0, winnersCount)
+          const losersIds = allIds.slice(winnersCount)
+
+          const winnersBracket = buildBracket("winners", winnersIds)
+          const losersBracket = buildBracket("losers", losersIds)
+          const participantInfo = buildParticipantInfo(allIds)
+
+          // Generate distinct scores for each player
+          const gameScores: Record<string, number> = {}
+          for (let i = 0; i < total; i++) {
+            gameScores[allIds[i]] = (i + 1) * 10 // 10, 20, 30, ...
+          }
+
+          const rankings = computeFinalRankings(
+            winnersBracket,
+            losersBracket,
+            participantInfo,
+            gameScores
+          )
+
+          // For any two players: higher score → lower (better) rank number
+          for (let i = 0; i < rankings.length; i++) {
+            for (let j = i + 1; j < rankings.length; j++) {
+              if (rankings[i].score > rankings[j].score) {
+                expect(rankings[i].rank).toBeLessThan(rankings[j].rank)
+              } else if (rankings[i].score < rankings[j].score) {
+                expect(rankings[i].rank).toBeGreaterThan(rankings[j].rank)
+              } else {
+                expect(rankings[i].rank).toBe(rankings[j].rank)
+              }
+            }
+          }
+        }
+      ),
+      { numRuns: 100 }
+    )
+  })
+
+  /**
+   * Property 14: FFA Ranking Correctness
+   * When gameScores reflect survival-tick-based scoring, survivors get highest scores
+   * and are ranked first; later elimination = higher score = better rank.
+   *
+   * **Validates: Requirements 17.1, 17.2, 17.3**
+   */
+  it("Property 14: FFA Ranking Correctness — survivor rank 1, later elim = higher rank, same tick = same rank", () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 4, max: 12 }).chain((total) => {
+          const winnersCount = Math.ceil(total / 2)
+          const losersCount = total - winnersCount
+          // Generate group sizes for tied eliminations
+          return fc.tuple(
+            fc.constant(total),
+            fc.constant(winnersCount),
+            fc.constant(losersCount),
+            // group sizes for winners (sum must equal winnersCount - 1 for eliminated players)
+            fc.array(fc.integer({ min: 1, max: 3 }), { minLength: 1, maxLength: winnersCount - 1 }),
+            // group sizes for losers
+            fc.array(fc.integer({ min: 1, max: 3 }), { minLength: 1, maxLength: losersCount - 1 })
+          )
+        }),
+        ([total, winnersCount, losersCount, winnersGroups, losersGroups]) => {
+          const allIds: string[] = []
+          for (let i = 0; i < total; i++) {
+            allIds.push(`player_${i}`)
+          }
+
+          const winnersIds = allIds.slice(0, winnersCount)
+          const losersIds = allIds.slice(winnersCount)
+
+          const winnersBracket = buildBracketWithTies("winners", winnersIds, winnersGroups)
+          const losersBracket = buildBracketWithTies("losers", losersIds, losersGroups)
+          const participantInfo = buildParticipantInfo(allIds)
+
+          // Simulate realistic scores:
+          // Winners bracket: winner of Round 2 gets WIN_BONUS (25) + survival score
+          // Losers bracket: loser of Round 2 gets 0 + survival score
+          // Survivor gets 125, eliminated get ceil(eliminatedTick / (totalTicks * 1.1) * 100)
+          const gameScores: Record<string, number> = {}
+
+          // Winners bracket scoring
+          const winnersTotalTicks = winnersBracket.eliminationOrder.length > 0
+            ? winnersBracket.eliminationOrder[winnersBracket.eliminationOrder.length - 1].eliminatedOnTick
+            : 0
+          for (const elim of winnersBracket.eliminationOrder) {
+            const survivalScore = Math.ceil((elim.eliminatedOnTick / (winnersTotalTicks * 1.1)) * 100)
+            gameScores[elim.ownerId] = 25 + survivalScore // WIN_BONUS + survival
+          }
+          if (winnersBracket.survivorId) {
+            gameScores[winnersBracket.survivorId] = 25 + 125 // WIN_BONUS + SURVIVOR_POINTS + WIN_BONUS
+          }
+
+          // Losers bracket scoring
+          const losersTotalTicks = losersBracket.eliminationOrder.length > 0
+            ? losersBracket.eliminationOrder[losersBracket.eliminationOrder.length - 1].eliminatedOnTick
+            : 0
+          for (const elim of losersBracket.eliminationOrder) {
+            const survivalScore = Math.ceil((elim.eliminatedOnTick / (losersTotalTicks * 1.1)) * 100)
+            gameScores[elim.ownerId] = survivalScore // 0 (Round 2 loser) + survival
+          }
+          if (losersBracket.survivorId) {
+            gameScores[losersBracket.survivorId] = 125 // 0 + SURVIVOR_POINTS + WIN_BONUS
+          }
+
+          const rankings = computeFinalRankings(
+            winnersBracket,
+            losersBracket,
+            participantInfo,
+            gameScores
+          )
+
+          // Winners bracket survivor (25+125=150) should be rank 1
+          const survivorRanking = rankings.find((r) => r.playerId === winnersBracket.survivorId)
+          expect(survivorRanking?.rank).toBe(1)
+
+          // Higher scores should have lower (better) rank
+          for (let i = 0; i < rankings.length; i++) {
+            for (let j = i + 1; j < rankings.length; j++) {
+              if (rankings[i].score > rankings[j].score) {
+                expect(rankings[i].rank).toBeLessThanOrEqual(rankings[j].rank)
+              } else if (rankings[i].score < rankings[j].score) {
+                expect(rankings[i].rank).toBeGreaterThanOrEqual(rankings[j].rank)
+              } else {
+                expect(rankings[i].rank).toBe(rankings[j].rank)
+              }
+            }
+          }
+        }
+      ),
       { numRuns: 100 }
     )
   })

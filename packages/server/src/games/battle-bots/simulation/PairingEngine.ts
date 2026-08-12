@@ -1,4 +1,4 @@
-import type { BattlePairing, RobotInstance } from "../types"
+import type { BattlePairing } from "../types"
 
 /**
  * Fisher-Yates (Knuth) shuffle — shuffles array in place and returns it.
@@ -13,18 +13,16 @@ function fisherYatesShuffle<T>(array: T[]): T[] {
 }
 
 /**
- * Creates random 1v1 pairings from a list of participants.
+ * Creates random 1v1 pairings from a list of participant IDs.
  *
  * Shuffles participant IDs using Fisher-Yates, then pairs them sequentially.
  * Assumes an even number of participants (bot persona creation handles odd counts upstream).
  *
  * @param participants - Array of player/bot persona IDs to pair
- * @param selectedRobots - Map of participant ID → their selected RobotInstance
  * @returns Array of BattlePairing objects ready for battle simulation
  */
 export function createPairings(
-  participants: string[],
-  selectedRobots: Record<string, RobotInstance>
+  participants: string[]
 ): BattlePairing[] {
   const shuffled = fisherYatesShuffle(participants)
   const pairings: BattlePairing[] = []
@@ -37,10 +35,7 @@ export function createPairings(
       id: crypto.randomUUID(),
       player1Id,
       player2Id,
-      robot1: selectedRobots[player1Id],
-      robot2: selectedRobots[player2Id],
       winnerId: null,
-      loserId: null,
       tickLog: [],
     }
 

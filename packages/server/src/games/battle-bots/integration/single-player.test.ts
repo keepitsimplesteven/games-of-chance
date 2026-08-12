@@ -6,18 +6,16 @@ import {
   getGameState,
 } from "../BattleBotsPlugin"
 import type { BattleBotsRoundResult } from "../BattleBotsPlugin"
-import type { FFABracket, FinalRanking } from "../types"
+import type { FFABracketState, FinalRanking, BattleBotsPick } from "../types"
 import { BATTLE_BOTS } from "../constants"
 
 const defaultSettings: GameSettings = {
   roundCount: 3,
   pickWindowMs: BATTLE_BOTS.PICK_WINDOW_MS,
   tuning: {
-    BOT_HP: String(BATTLE_BOTS.BOT_HP),
-    ACCURACY: String(BATTLE_BOTS.ACCURACY),
-    DAMAGE_MIN: String(BATTLE_BOTS.DAMAGE_MIN),
-    DAMAGE_MAX: String(BATTLE_BOTS.DAMAGE_MAX),
-    CHIPS_MULTIPLIER: String(BATTLE_BOTS.CHIPS_MULTIPLIER),
+    PREP_TIMER_MS: "60",
+    CHIPS_MULTIPLIER: "10",
+    GAME_SPEED: "100",
   },
 }
 
@@ -27,18 +25,19 @@ describe("Integration: Single player game", () => {
   })
 
   it("creates a bot persona for the solo player", () => {
-    // Round 1: single player picks a robot
-    const picks = { p1: { robotTemplateId: "bot-alpha" } }
+    // Round 1: single player picks parts
+    const picks: Record<string, BattleBotsPick> = {
+      p1: { weapon: "drill", head: "square", body: "square" },
+    }
     const result = battleBotsPlugin.resolveRound(picks, defaultSettings) as BattleBotsRoundResult
 
     expect(result.round).toBe(1)
 
     const state = getGameState()!
-    // Requirement 3.5: Bot persona created for solo player
+    // Bot persona created for solo player
     expect(state.botPersonas).toHaveLength(1)
     expect(state.botPersonas[0].id).toMatch(/^bot_/)
     expect(state.botPersonas[0].isBot).toBe(true)
-    // Requirement 11.1: Bot persona has distinguishable name
     expect(state.botPersonas[0].name).toMatch(/^MechBot-\d+$/)
     // 2 total participants: player + bot persona
     expect(state.participants).toHaveLength(2)
@@ -47,7 +46,9 @@ describe("Integration: Single player game", () => {
   })
 
   it("pairs the player with the bot persona in Round 2 (1v1)", () => {
-    const picks = { p1: { robotTemplateId: "bot-alpha" } }
+    const picks: Record<string, BattleBotsPick> = {
+      p1: { weapon: "drill", head: "square", body: "square" },
+    }
     // Round 1
     battleBotsPlugin.resolveRound(picks, defaultSettings)
     // Round 2
@@ -68,12 +69,13 @@ describe("Integration: Single player game", () => {
     // Battle should have resolved with a winner and loser
     expect(pairing.winnerId).not.toBeNull()
     expect(pairing.loserId).not.toBeNull()
-    // Requirement 11.2: Bot persona participates identically (same stats, same tick resolution)
     expect(pairing.tickLog.length).toBeGreaterThan(0)
   })
 
-  it("gives the human player rank 1 in final rankings", () => {
-    const picks = { p1: { robotTemplateId: "bot-alpha" } }
+  it("gives the human player rank 1 or 2 in final rankings", () => {
+    const picks: Record<string, BattleBotsPick> = {
+      p1: { weapon: "drill", head: "square", body: "square" },
+    }
     // Round 1
     battleBotsPlugin.resolveRound(picks, defaultSettings)
     // Round 2
@@ -91,55 +93,47 @@ describe("Integration: Single player game", () => {
     expect(finalRankings).toHaveLength(2)
 
     // Winners bracket has 1 robot (the Round 2 winner) — auto-win
-    const winnersBracket = result.winnersBracket as FFABracket
-    expect(winnersBracket.participants).toHaveLength(1)
+    const winnersBracket = result.winnersBracket as FFABracketState
+    expect(winnersBracket.participantIds).toHaveLength(1)
     expect(winnersBracket.tickLog).toHaveLength(0) // single robot = no FFA needed
 
     // Losers bracket has 1 robot (the Round 2 loser) — auto-win
-    const losersBracket = result.losersBracket as FFABracket
-    expect(losersBracket.participants).toHaveLength(1)
+    const losersBracket = result.losersBracket as FFABracketState
+    expect(losersBracket.participantIds).toHaveLength(1)
     expect(losersBracket.tickLog).toHaveLength(0)
 
     // The human player's ranking
     const humanRanking = finalRankings.find((r) => r.playerId === "p1")!
     expect(humanRanking).toBeDefined()
+    expect(humanRanking.rank).toBeGreaterThanOrEqual(1)
+    expect(humanRanking.rank).toBeLessThanOrEqual(2)
 
     // The bot persona's ranking
     const botRanking = finalRankings.find((r) => r.playerId === botId)!
     expect(botRanking).toBeDefined()
     expect(botRanking.isBot).toBe(true)
 
-    // Human should always rank better than the bot.
-    // If p1 won the 1v1, they're in winners bracket → rank 1.
-    // If somehow the bot won the 1v1, bot is in winners bracket (rank 1) and p1 is in losers (rank 2).
-    // Either way, the human's rank should be <= 2.
-    // In the single-player design note: "Player always wins 1v1... auto-1st place"
-    // But since battles are RNG-based, the bot CAN win the 1v1.
-    // However the human player should still get a valid rank.
-    expect(humanRanking.rank).toBeGreaterThanOrEqual(1)
-    expect(humanRanking.rank).toBeLessThanOrEqual(2)
-
-    // The winner of 1v1 is in winners bracket (rank 1), loser in losers bracket (rank 2)
+    // The winner of 1v1 is in winners bracket, loser in losers bracket
     const winnerId = state.pairings[0].winnerId!
     const winnerRanking = finalRankings.find((r) => r.playerId === winnerId)!
-    expect(winnerRanking.rank).toBe(1)
     expect(winnerRanking.bracket).toBe("winners")
 
     const loserId = state.pairings[0].loserId!
     const loserRanking = finalRankings.find((r) => r.playerId === loserId)!
-    expect(loserRanking.rank).toBe(2)
     expect(loserRanking.bracket).toBe("losers")
   })
 
   it("completes full 3-round lifecycle with correct state transitions", () => {
-    const picks = { p1: { robotTemplateId: "bot-alpha" } }
+    const picks: Record<string, BattleBotsPick> = {
+      p1: { weapon: "drill", head: "square", body: "square" },
+    }
 
     // Round 1: Prep Phase
     const round1Result = battleBotsPlugin.resolveRound(picks, defaultSettings) as BattleBotsRoundResult
     expect(round1Result.round).toBe(1)
     const state = getGameState()!
-    expect(state.selectedRobots["p1"]).toBeDefined()
-    expect(state.selectedRobots[state.botPersonas[0].id]).toBeDefined()
+    expect(state.builds!["p1"]).toBeDefined()
+    expect(state.builds![state.botPersonas[0].id]).toBeDefined()
 
     // Round 2: 1v1 Battles
     const round2Result = battleBotsPlugin.resolveRound(picks, defaultSettings) as BattleBotsRoundResult

@@ -4,18 +4,17 @@ import {
   battleBotsPlugin,
   resetGameState,
   getGameState,
-  getRobotTemplates,
 } from "./BattleBotsPlugin"
 import { BATTLE_BOTS } from "./constants"
+import type { BattleBotsPick, CombatRobot } from "./types"
 
 const defaultSettings: GameSettings = {
   roundCount: 3,
   pickWindowMs: BATTLE_BOTS.PICK_WINDOW_MS,
   tuning: {
-    BOT_HP: BATTLE_BOTS.BOT_HP,
-    ACCURACY: BATTLE_BOTS.ACCURACY,
-    DAMAGE_MIN: BATTLE_BOTS.DAMAGE_MIN,
-    DAMAGE_MAX: BATTLE_BOTS.DAMAGE_MAX,
+    PREP_TIMER_MS: "60",
+    CHIPS_MULTIPLIER: "10",
+    GAME_SPEED: "100",
   },
 }
 
@@ -24,44 +23,10 @@ describe("BattleBotsPlugin resolveRound (Round 1 — Prep Phase)", () => {
     resetGameState()
   })
 
-  describe("getRobotTemplates", () => {
-    it("returns 3 robot templates with settings-derived stats", () => {
-      const templates = getRobotTemplates(defaultSettings)
-      expect(templates).toHaveLength(3)
-      for (const t of templates) {
-        expect(t.hp).toBe(BATTLE_BOTS.BOT_HP)
-        expect(t.accuracy).toBe(BATTLE_BOTS.ACCURACY)
-        expect(t.damageMin).toBe(BATTLE_BOTS.DAMAGE_MIN)
-        expect(t.damageMax).toBe(BATTLE_BOTS.DAMAGE_MAX)
-      }
-    })
-
-    it("uses custom settings when provided", () => {
-      const customSettings: GameSettings = {
-        roundCount: 3,
-        pickWindowMs: 60_000,
-        tuning: { BOT_HP: 200, ACCURACY: 50, DAMAGE_MIN: 5, DAMAGE_MAX: 20 },
-      }
-      const templates = getRobotTemplates(customSettings)
-      expect(templates[0].hp).toBe(200)
-      expect(templates[0].accuracy).toBe(50)
-      expect(templates[0].damageMin).toBe(5)
-      expect(templates[0].damageMax).toBe(20)
-    })
-
-    it("returns templates with unique IDs and visualIds", () => {
-      const templates = getRobotTemplates(defaultSettings)
-      const ids = templates.map((t) => t.id)
-      const visualIds = templates.map((t) => t.visualId)
-      expect(new Set(ids).size).toBe(3)
-      expect(new Set(visualIds).size).toBe(3)
-    })
-  })
-
   describe("resolveRound1 — basic behavior", () => {
     it("returns round: 1 in the result", () => {
       const result = battleBotsPlugin.resolveRound(
-        { p1: { robotTemplateId: "bot-alpha" }, p2: { robotTemplateId: "bot-beta" } },
+        { p1: { weapon: "drill", head: "square", body: "square" }, p2: { weapon: "blaster", head: "rounded", body: "hexagonal" } },
         defaultSettings
       )
       expect(result.round).toBe(1)
@@ -69,7 +34,7 @@ describe("BattleBotsPlugin resolveRound (Round 1 — Prep Phase)", () => {
 
     it("stores game state after resolution", () => {
       battleBotsPlugin.resolveRound(
-        { p1: { robotTemplateId: "bot-alpha" }, p2: { robotTemplateId: "bot-beta" } },
+        { p1: { weapon: "drill", head: "square", body: "square" }, p2: { weapon: "blaster", head: "rounded", body: "hexagonal" } },
         defaultSettings
       )
       const state = getGameState()
@@ -78,94 +43,104 @@ describe("BattleBotsPlugin resolveRound (Round 1 — Prep Phase)", () => {
       expect(state!.participants).toContain("p2")
     })
 
-    it("generates robotOptions for all participants", () => {
+    it("stores builds for all participants", () => {
       battleBotsPlugin.resolveRound(
-        { p1: { robotTemplateId: "bot-alpha" }, p2: { robotTemplateId: "bot-beta" } },
+        { p1: { weapon: "drill", head: "square", body: "square" }, p2: { weapon: "blaster", head: "rounded", body: "hexagonal" } },
         defaultSettings
       )
       const state = getGameState()!
-      expect(state.robotOptions["p1"].options).toHaveLength(3)
-      expect(state.robotOptions["p2"].options).toHaveLength(3)
+      expect(state.builds).toBeDefined()
+      expect(state.builds!["p1"]).toBeDefined()
+      expect(state.builds!["p2"]).toBeDefined()
     })
   })
 
-  describe("resolveRound1 — player picks", () => {
-    it("uses player's valid pick when submitted", () => {
-      // First generate templates to get valid IDs
-      const templates = getRobotTemplates(defaultSettings)
-      const id0 = templates[0].id
-      const id1 = templates[1].id
+  describe("resolveRound1 — CombatRobot creation", () => {
+    it("creates CombatRobot with correct star distribution from parts", () => {
       battleBotsPlugin.resolveRound(
-        { p1: { robotTemplateId: id0 }, p2: { robotTemplateId: id1 } },
+        { p1: { weapon: "drill", head: "square", body: "square" }, p2: { weapon: "blaster", head: "rounded", body: "hexagonal" } },
         defaultSettings
       )
       const state = getGameState()!
-      // Since IDs are dynamic per call, selectedRobots should match one of the generated options
-      const validIds = state.robotOptions["p1"].options.map((o) => o.id)
-      expect(validIds).toContain(state.selectedRobots["p1"].templateId)
-      expect(validIds).toContain(state.selectedRobots["p2"].templateId)
+      const robot = state.builds!["p1"]
+
+      // drill (1d, 0a, 2s) + square head (1d, 1a, 1s) + square body (1d, 1a, 1s) = 3d, 2a, 4s
+      expect(robot.stars.damage).toBe(3)
+      expect(robot.stars.accuracy).toBe(2)
+      expect(robot.stars.speed).toBe(4)
+      expect(robot.stars.damage + robot.stars.accuracy + robot.stars.speed).toBe(9)
     })
 
-    it("randomly assigns a robot when player pick is missing (empty object)", () => {
-      const picks = { p1: { robotTemplateId: "" }, p2: { robotTemplateId: "any-valid" } }
-      battleBotsPlugin.resolveRound(picks, defaultSettings)
-      const state = getGameState()!
-      // p1 should have been randomly assigned one of the 3 templates
-      const validIds = state.robotOptions["p1"].options.map((o) => o.id)
-      expect(validIds).toContain(state.selectedRobots["p1"].templateId)
-    })
-
-    it("randomly assigns a robot when player pick references an invalid template", () => {
-      const picks = { p1: { robotTemplateId: "non-existent" }, p2: { robotTemplateId: "also-invalid" } }
-      battleBotsPlugin.resolveRound(picks, defaultSettings)
-      const state = getGameState()!
-      // Both have invalid picks → random assignment from generated options
-      const validIds = state.robotOptions["p1"].options.map((o) => o.id)
-      expect(validIds).toContain(state.selectedRobots["p1"].templateId)
-      expect(validIds).toContain(state.selectedRobots["p2"].templateId)
-    })
-  })
-
-  describe("resolveRound1 — RobotInstance creation", () => {
-    it("creates RobotInstances with correct stats from template", () => {
+    it("creates CombatRobot with correct visual config", () => {
       battleBotsPlugin.resolveRound(
-        { p1: { robotTemplateId: "bot-alpha" }, p2: { robotTemplateId: "bot-beta" } },
+        { p1: { weapon: "bazooka", head: "hexagonal", body: "rounded" }, p2: { weapon: "blaster", head: "triangular", body: "triangular" } },
         defaultSettings
       )
       const state = getGameState()!
-      const robot = state.selectedRobots["p1"]
-      expect(robot.ownerId).toBe("p1")
-      expect(robot.currentHp).toBe(BATTLE_BOTS.BOT_HP)
-      expect(robot.maxHp).toBe(BATTLE_BOTS.BOT_HP)
-      expect(robot.accuracy).toBe(BATTLE_BOTS.ACCURACY)
-      expect(robot.damageMin).toBe(BATTLE_BOTS.DAMAGE_MIN)
-      expect(robot.damageMax).toBe(BATTLE_BOTS.DAMAGE_MAX)
+      const robot = state.builds!["p1"]
+
+      expect(robot.visual.weapon).toBe("bazooka")
+      expect(robot.visual.head).toBe("hexagonal")
+      expect(robot.visual.body).toBe("rounded")
     })
 
-    it("creates RobotInstances with custom settings values", () => {
-      const customSettings: GameSettings = {
-        roundCount: 3,
-        pickWindowMs: 60_000,
-        tuning: { BOT_HP: 150, ACCURACY: 60, DAMAGE_MIN: 3, DAMAGE_MAX: 15 },
+    it("creates CombatRobot with BASE_HP as currentHp and maxHp", () => {
+      battleBotsPlugin.resolveRound(
+        { p1: { weapon: "drill", head: "square", body: "square" }, p2: { weapon: "blaster", head: "rounded", body: "hexagonal" } },
+        defaultSettings
+      )
+      const state = getGameState()!
+      const robot = state.builds!["p1"]
+
+      expect(robot.currentHp).toBe(100)
+      expect(robot.maxHp).toBe(100)
+    })
+
+    it("derives combat stats (maxHit, accuracy, tickInterval) from stars", () => {
+      battleBotsPlugin.resolveRound(
+        { p1: { weapon: "drill", head: "square", body: "square" }, p2: { weapon: "blaster", head: "rounded", body: "hexagonal" } },
+        defaultSettings
+      )
+      const state = getGameState()!
+      const robot = state.builds!["p1"]
+
+      // All derived stats should be positive integers
+      expect(robot.maxHit).toBeGreaterThanOrEqual(1)
+      expect(Number.isInteger(robot.maxHit)).toBe(true)
+      expect(robot.accuracy).toBeGreaterThanOrEqual(1)
+      expect(robot.accuracy).toBeLessThanOrEqual(90)
+      expect(Number.isInteger(robot.accuracy)).toBe(true)
+      expect(robot.tickInterval).toBeGreaterThanOrEqual(1)
+      expect(Number.isInteger(robot.tickInterval)).toBe(true)
+    })
+
+    it("assigns unique robot names to all participants", () => {
+      battleBotsPlugin.resolveRound(
+        {
+          p1: { weapon: "drill", head: "square", body: "square" },
+          p2: { weapon: "blaster", head: "rounded", body: "hexagonal" },
+          p3: { weapon: "bazooka", head: "triangular", body: "rounded" },
+          p4: { weapon: "drill", head: "hexagonal", body: "triangular" },
+        },
+        defaultSettings
+      )
+      const state = getGameState()!
+      const names = Object.values(state.builds!).map((b) => b.name)
+      expect(new Set(names).size).toBe(names.length)
+      for (const name of names) {
+        expect(name.length).toBeGreaterThan(0)
       }
-      battleBotsPlugin.resolveRound(
-        { p1: { robotTemplateId: "bot-alpha" }, p2: { robotTemplateId: "bot-beta" } },
-        customSettings
-      )
-      const state = getGameState()!
-      const robot = state.selectedRobots["p1"]
-      expect(robot.currentHp).toBe(150)
-      expect(robot.maxHp).toBe(150)
-      expect(robot.accuracy).toBe(60)
-      expect(robot.damageMin).toBe(3)
-      expect(robot.damageMax).toBe(15)
     })
   })
 
   describe("resolveRound1 — bot persona handling", () => {
     it("creates a bot persona when player count is odd", () => {
       battleBotsPlugin.resolveRound(
-        { p1: { robotTemplateId: "bot-alpha" }, p2: { robotTemplateId: "bot-beta" }, p3: { robotTemplateId: "bot-gamma" } },
+        {
+          p1: { weapon: "drill", head: "square", body: "square" },
+          p2: { weapon: "blaster", head: "rounded", body: "hexagonal" },
+          p3: { weapon: "bazooka", head: "triangular", body: "rounded" },
+        },
         defaultSettings
       )
       const state = getGameState()!
@@ -176,7 +151,7 @@ describe("BattleBotsPlugin resolveRound (Round 1 — Prep Phase)", () => {
 
     it("creates a bot persona when only 1 player", () => {
       battleBotsPlugin.resolveRound(
-        { p1: { robotTemplateId: "bot-alpha" } },
+        { p1: { weapon: "drill", head: "square", body: "square" } },
         defaultSettings
       )
       const state = getGameState()!
@@ -186,7 +161,7 @@ describe("BattleBotsPlugin resolveRound (Round 1 — Prep Phase)", () => {
 
     it("does not create a bot persona for even player count >= 2", () => {
       battleBotsPlugin.resolveRound(
-        { p1: { robotTemplateId: "bot-alpha" }, p2: { robotTemplateId: "bot-beta" } },
+        { p1: { weapon: "drill", head: "square", body: "square" }, p2: { weapon: "blaster", head: "rounded", body: "hexagonal" } },
         defaultSettings
       )
       const state = getGameState()!
@@ -194,40 +169,40 @@ describe("BattleBotsPlugin resolveRound (Round 1 — Prep Phase)", () => {
       expect(state.participants.length).toBe(2)
     })
 
-    it("assigns robot options and selection to bot persona", () => {
+    it("assigns a valid CombatRobot build to bot persona", () => {
       battleBotsPlugin.resolveRound(
-        { p1: { robotTemplateId: "any-pick" } },
+        { p1: { weapon: "drill", head: "square", body: "square" } },
         defaultSettings
       )
       const state = getGameState()!
       const botId = state.botPersonas[0].id
-      // Bot should have options
-      expect(state.robotOptions[botId]).toBeDefined()
-      expect(state.robotOptions[botId].options).toHaveLength(3)
-      // Bot should have a selected robot
-      expect(state.selectedRobots[botId]).toBeDefined()
-      const validIds = state.robotOptions[botId].options.map((o) => o.id)
-      expect(validIds).toContain(state.selectedRobots[botId].templateId)
+
+      expect(state.builds![botId]).toBeDefined()
+      const botRobot = state.builds![botId]
+      expect(botRobot.ownerId).toBe(botId)
+      expect(botRobot.name.length).toBeGreaterThan(0)
+      expect(botRobot.stars.damage + botRobot.stars.accuracy + botRobot.stars.speed).toBe(9)
+      expect(botRobot.currentHp).toBe(100)
+      expect(botRobot.maxHp).toBe(100)
     })
   })
 
   describe("resolveRound1 — result shape", () => {
-    it("includes participants, botPersonas, robotOptions, selectedRobots in result", () => {
+    it("includes participants, botPersonas, and builds in result", () => {
       const result = battleBotsPlugin.resolveRound(
-        { p1: { robotTemplateId: "bot-alpha" }, p2: { robotTemplateId: "bot-beta" } },
+        { p1: { weapon: "drill", head: "square", body: "square" }, p2: { weapon: "blaster", head: "rounded", body: "hexagonal" } },
         defaultSettings
       )
       expect(result).toHaveProperty("participants")
       expect(result).toHaveProperty("botPersonas")
-      expect(result).toHaveProperty("robotOptions")
-      expect(result).toHaveProperty("selectedRobots")
+      expect(result).toHaveProperty("builds")
     })
   })
 
   describe("resetGameState", () => {
     it("clears game state and round counter", () => {
       battleBotsPlugin.resolveRound(
-        { p1: { robotTemplateId: "bot-alpha" }, p2: { robotTemplateId: "bot-beta" } },
+        { p1: { weapon: "drill", head: "square", body: "square" }, p2: { weapon: "blaster", head: "rounded", body: "hexagonal" } },
         defaultSettings
       )
       expect(getGameState()).not.toBeNull()
@@ -237,7 +212,7 @@ describe("BattleBotsPlugin resolveRound (Round 1 — Prep Phase)", () => {
 
       // After reset, the next resolveRound should be round 1 again
       const result = battleBotsPlugin.resolveRound(
-        { p1: { robotTemplateId: "bot-alpha" }, p2: { robotTemplateId: "bot-beta" } },
+        { p1: { weapon: "drill", head: "square", body: "square" }, p2: { weapon: "blaster", head: "rounded", body: "hexagonal" } },
         defaultSettings
       )
       expect(result.round).toBe(1)

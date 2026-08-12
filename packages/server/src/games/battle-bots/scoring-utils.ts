@@ -1,4 +1,5 @@
 import type { GameLeaderboardEntry } from "@games-of-chance/shared"
+import { PENALTY_MULTIPLIER, SURVIVOR_POINTS, WIN_BONUS } from "./scoring-constants"
 
 /**
  * Filters bot persona IDs from score deltas.
@@ -26,4 +27,29 @@ export function filterBotPersonasFromLeaderboard(
   botPersonaIds: Set<string>
 ): GameLeaderboardEntry[] {
   return leaderboard.filter((entry) => !botPersonaIds.has(entry.playerId))
+}
+
+/**
+ * Computes survival points for an eliminated FFA player.
+ * Formula: ceil(eliminatedTick / (totalTicks * PENALTY_MULTIPLIER) * SURVIVOR_POINTS)
+ *
+ * @param eliminatedTick - The tick on which the player was eliminated
+ * @param totalTicks - The tick on which the final elimination occurred (declaring the survivor)
+ * @returns Survival points (integer, max 91 with default constants)
+ */
+export function computeEliminatedSurvivalPoints(
+  eliminatedTick: number,
+  totalTicks: number
+): number {
+  return Math.ceil((eliminatedTick / (totalTicks * PENALTY_MULTIPLIER)) * SURVIVOR_POINTS)
+}
+
+/**
+ * Computes the total score for the FFA survivor.
+ * Flat SURVIVOR_POINTS + WIN_BONUS.
+ *
+ * @returns Total survivor score (125 with default constants)
+ */
+export function computeSurvivorScore(): number {
+  return SURVIVOR_POINTS + WIN_BONUS
 }

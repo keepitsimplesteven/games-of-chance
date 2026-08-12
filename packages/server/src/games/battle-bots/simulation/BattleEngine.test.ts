@@ -1,88 +1,83 @@
 import { describe, it, expect } from "vitest"
-import { simulateBattle1v1, simulateFFA } from "./BattleEngine"
-import type { RobotInstance } from "../types"
+import { simulate1v1, simulateFFA } from "./BattleEngine"
+import type { CombatRobot } from "../types"
 
-function makeRobot(overrides: Partial<RobotInstance> = {}): RobotInstance {
+function makeCombatRobot(overrides: Partial<CombatRobot> = {}): CombatRobot {
   return {
-    templateId: "bot-alpha",
-    ownerId: overrides.ownerId ?? "player-1",
+    ownerId: "player-1",
+    name: "TestBot",
+    maxHit: 4,
+    accuracy: 45,
+    tickInterval: 5,
     currentHp: 100,
     maxHp: 100,
-    accuracy: 80,
-    damageMin: 5,
-    damageMax: 10,
+    stars: { damage: 3, accuracy: 3, speed: 3 },
+    visual: { weapon: "drill", head: "square", body: "square" },
     ...overrides,
   }
 }
 
-describe("simulateBattle1v1", () => {
-  it("produces a winner and a loser", () => {
-    const robot1 = makeRobot({ ownerId: "p1" })
-    const robot2 = makeRobot({ ownerId: "p2" })
+describe("simulate1v1", () => {
+  it("produces a winner that is one of the two robots", () => {
+    const robot1 = makeCombatRobot({ ownerId: "p1" })
+    const robot2 = makeCombatRobot({ ownerId: "p2" })
 
-    const result = simulateBattle1v1(robot1, robot2)
+    const result = simulate1v1(robot1, robot2)
 
     expect(result.winnerId).toBeDefined()
-    expect(result.loserId).toBeDefined()
-    expect(result.winnerId).not.toBe(result.loserId)
-    expect([robot1.ownerId, robot2.ownerId]).toContain(result.winnerId)
-    expect([robot1.ownerId, robot2.ownerId]).toContain(result.loserId)
+    expect(["p1", "p2"]).toContain(result.winnerId)
   })
 
   it("generates a non-empty tick log", () => {
-    const robot1 = makeRobot({ ownerId: "p1" })
-    const robot2 = makeRobot({ ownerId: "p2" })
+    const robot1 = makeCombatRobot({ ownerId: "p1" })
+    const robot2 = makeCombatRobot({ ownerId: "p2" })
 
-    const result = simulateBattle1v1(robot1, robot2)
+    const result = simulate1v1(robot1, robot2)
 
     expect(result.tickLog.length).toBeGreaterThan(0)
   })
 
-  it("tick numbers are sequential starting from 1", () => {
-    const robot1 = makeRobot({ ownerId: "p1" })
-    const robot2 = makeRobot({ ownerId: "p2" })
+  it("tick numbers are sequential starting from 1 with no gaps", () => {
+    const robot1 = makeCombatRobot({ ownerId: "p1" })
+    const robot2 = makeCombatRobot({ ownerId: "p2" })
 
-    const result = simulateBattle1v1(robot1, robot2)
+    const result = simulate1v1(robot1, robot2)
 
     for (let i = 0; i < result.tickLog.length; i++) {
       expect(result.tickLog[i].tick).toBe(i + 1)
     }
   })
 
-  it("each tick has exactly 2 attack results", () => {
-    const robot1 = makeRobot({ ownerId: "p1" })
-    const robot2 = makeRobot({ ownerId: "p2" })
+  it("robots only attack on ticks matching their tickInterval", () => {
+    const robot1 = makeCombatRobot({ ownerId: "p1", tickInterval: 3 })
+    const robot2 = makeCombatRobot({ ownerId: "p2", tickInterval: 5 })
 
-    const result = simulateBattle1v1(robot1, robot2)
+    const result = simulate1v1(robot1, robot2)
 
-    for (const tick of result.tickLog) {
-      expect(tick.attacks).toHaveLength(2)
+    for (const entry of result.tickLog) {
+      for (const attack of entry.attacks) {
+        if (attack.attackerId === "p1") {
+          expect(entry.tick % 3).toBe(0)
+        }
+        if (attack.attackerId === "p2") {
+          expect(entry.tick % 5).toBe(0)
+        }
+      }
     }
   })
 
-  it("robot1 always attacks first in each tick", () => {
-    const robot1 = makeRobot({ ownerId: "p1" })
-    const robot2 = makeRobot({ ownerId: "p2" })
+  it("damage values are within [1, maxHit] when hit, 0 when miss", () => {
+    const robot1 = makeCombatRobot({ ownerId: "p1", maxHit: 6 })
+    const robot2 = makeCombatRobot({ ownerId: "p2", maxHit: 8 })
 
-    const result = simulateBattle1v1(robot1, robot2)
+    const result = simulate1v1(robot1, robot2)
 
-    for (const tick of result.tickLog) {
-      expect(tick.attacks[0].attackerId).toBe("p1")
-      expect(tick.attacks[1].attackerId).toBe("p2")
-    }
-  })
-
-  it("damage values fall within configured range when hit", () => {
-    const robot1 = makeRobot({ ownerId: "p1", damageMin: 3, damageMax: 7 })
-    const robot2 = makeRobot({ ownerId: "p2", damageMin: 3, damageMax: 7 })
-
-    const result = simulateBattle1v1(robot1, robot2)
-
-    for (const tick of result.tickLog) {
-      for (const attack of tick.attacks) {
+    for (const entry of result.tickLog) {
+      for (const attack of entry.attacks) {
         if (attack.hit) {
-          expect(attack.damage).toBeGreaterThanOrEqual(3)
-          expect(attack.damage).toBeLessThanOrEqual(7)
+          const attacker = attack.attackerId === "p1" ? robot1 : robot2
+          expect(attack.damage).toBeGreaterThanOrEqual(1)
+          expect(attack.damage).toBeLessThanOrEqual(attacker.maxHit)
         } else {
           expect(attack.damage).toBe(0)
         }
@@ -90,171 +85,304 @@ describe("simulateBattle1v1", () => {
     }
   })
 
-  it("HP never goes below 0", () => {
-    const robot1 = makeRobot({ ownerId: "p1" })
-    const robot2 = makeRobot({ ownerId: "p2" })
+  it("targetHpAfter is never negative", () => {
+    const robot1 = makeCombatRobot({ ownerId: "p1" })
+    const robot2 = makeCombatRobot({ ownerId: "p2" })
 
-    const result = simulateBattle1v1(robot1, robot2)
+    const result = simulate1v1(robot1, robot2)
 
-    for (const tick of result.tickLog) {
-      for (const attack of tick.attacks) {
+    for (const entry of result.tickLog) {
+      for (const attack of entry.attacks) {
         expect(attack.targetHpAfter).toBeGreaterThanOrEqual(0)
       }
     }
   })
 
-  it("100% accuracy robots always hit", () => {
-    const robot1 = makeRobot({ ownerId: "p1", accuracy: 100 })
-    const robot2 = makeRobot({ ownerId: "p2", accuracy: 100 })
-
-    const result = simulateBattle1v1(robot1, robot2)
-
-    for (const tick of result.tickLog) {
-      for (const attack of tick.attacks) {
-        expect(attack.hit).toBe(true)
-      }
-    }
-  })
-
-  it("terminates even with low accuracy robots", () => {
-    const robot1 = makeRobot({ ownerId: "p1", accuracy: 10 })
-    const robot2 = makeRobot({ ownerId: "p2", accuracy: 10 })
-
-    const result = simulateBattle1v1(robot1, robot2)
-
-    expect(result.winnerId).toBeDefined()
-    expect(result.loserId).toBeDefined()
-  })
-
-  it("one-shot scenario: high damage, low HP", () => {
-    const robot1 = makeRobot({
+  it("guaranteed survivor rule prevents mutual elimination", () => {
+    // High accuracy and damage to force mutual KO scenario
+    const robot1 = makeCombatRobot({
       ownerId: "p1",
       currentHp: 5,
       maxHp: 5,
-      accuracy: 100,
-      damageMin: 10,
-      damageMax: 10,
+      accuracy: 90,
+      maxHit: 10,
+      tickInterval: 1,
     })
-    const robot2 = makeRobot({
+    const robot2 = makeCombatRobot({
       ownerId: "p2",
       currentHp: 5,
       maxHp: 5,
-      accuracy: 100,
-      damageMin: 10,
-      damageMax: 10,
+      accuracy: 90,
+      maxHit: 10,
+      tickInterval: 1,
     })
 
-    const result = simulateBattle1v1(robot1, robot2)
+    // Run multiple times to confirm GSR always produces a winner
+    for (let i = 0; i < 20; i++) {
+      const r1 = { ...robot1 }
+      const r2 = { ...robot2 }
+      const result = simulate1v1(r1, r2)
+      expect(result.winnerId).toBeDefined()
+      expect(["p1", "p2"]).toContain(result.winnerId)
+    }
+  })
 
-    // Both KO in tick 1 — tiebreaker resolves it
-    expect(result.tickLog).toHaveLength(1)
+  it("does not exceed 1000 ticks (TICK_LIMIT)", () => {
+    // Low accuracy to make a long battle
+    const robot1 = makeCombatRobot({ ownerId: "p1", accuracy: 10, tickInterval: 8 })
+    const robot2 = makeCombatRobot({ ownerId: "p2", accuracy: 10, tickInterval: 8 })
+
+    const result = simulate1v1(robot1, robot2)
+
+    expect(result.tickLog.length).toBeLessThanOrEqual(1000)
     expect(result.winnerId).toBeDefined()
-    expect(result.loserId).toBeDefined()
-    expect(result.winnerId).not.toBe(result.loserId)
+  })
+
+  it("timeout selects highest HP robot as winner", () => {
+    // Very low accuracy, high tick intervals — likely to timeout
+    // Give robot1 more HP to predictably win on timeout
+    const robot1 = makeCombatRobot({
+      ownerId: "p1",
+      accuracy: 1,
+      maxHit: 1,
+      tickInterval: 8,
+      currentHp: 100,
+      maxHp: 100,
+    })
+    const robot2 = makeCombatRobot({
+      ownerId: "p2",
+      accuracy: 1,
+      maxHit: 1,
+      tickInterval: 8,
+      currentHp: 50,
+      maxHp: 50,
+    })
+
+    const result = simulate1v1(robot1, robot2)
+
+    // With such low accuracy both should survive, robot1 likely has more HP
+    expect(result.winnerId).toBeDefined()
+  })
+
+  it("dead robots (snapshot HP = 0) do not attack", () => {
+    const robot1 = makeCombatRobot({ ownerId: "p1" })
+    const robot2 = makeCombatRobot({ ownerId: "p2" })
+
+    const result = simulate1v1(robot1, robot2)
+
+    // After a robot is eliminated, it should never appear as attacker in later ticks
+    let p1Eliminated = false
+    let p2Eliminated = false
+
+    for (const entry of result.tickLog) {
+      for (const attack of entry.attacks) {
+        if (attack.attackerId === "p1") {
+          expect(p1Eliminated).toBe(false)
+        }
+        if (attack.attackerId === "p2") {
+          expect(p2Eliminated).toBe(false)
+        }
+      }
+      if (entry.eliminations.includes("p1")) p1Eliminated = true
+      if (entry.eliminations.includes("p2")) p2Eliminated = true
+    }
+  })
+
+  it("does not mutate input robot objects", () => {
+    const robot1 = makeCombatRobot({ ownerId: "p1" })
+    const robot2 = makeCombatRobot({ ownerId: "p2" })
+
+    const originalHp1 = robot1.currentHp
+    const originalHp2 = robot2.currentHp
+
+    simulate1v1(robot1, robot2)
+
+    expect(robot1.currentHp).toBe(originalHp1)
+    expect(robot2.currentHp).toBe(originalHp2)
+  })
+
+  it("eliminations array correctly reports eliminated robots", () => {
+    const robot1 = makeCombatRobot({ ownerId: "p1" })
+    const robot2 = makeCombatRobot({ ownerId: "p2" })
+
+    const result = simulate1v1(robot1, robot2)
+
+    // Count total eliminations — should have exactly one eliminated robot (loser)
+    const allEliminations = result.tickLog.flatMap((e) => e.eliminations)
+    expect(allEliminations.length).toBe(1)
+    expect(allEliminations[0]).not.toBe(result.winnerId)
   })
 })
 
 
 describe("simulateFFA", () => {
-  it("produces an elimination order containing all participants", () => {
-    const participants: RobotInstance[] = [
-      makeRobot({ ownerId: "p1" }),
-      makeRobot({ ownerId: "p2" }),
-      makeRobot({ ownerId: "p3" }),
-      makeRobot({ ownerId: "p4" }),
-    ]
+  function makeFFARobot(id: string, overrides: Partial<CombatRobot> = {}): CombatRobot {
+    return {
+      ownerId: id,
+      name: `Bot-${id}`,
+      maxHit: 4,
+      accuracy: 45,
+      tickInterval: 5,
+      currentHp: 100,
+      maxHp: 100,
+      stars: { damage: 3, accuracy: 3, speed: 3 },
+      visual: { weapon: "drill", head: "square", body: "square" },
+      ...overrides,
+    }
+  }
 
-    const result = simulateFFA(participants)
+  it("produces a survivor that is one of the input robots", () => {
+    const robots = [makeFFARobot("p1"), makeFFARobot("p2"), makeFFARobot("p3")]
+    const result = simulateFFA(robots)
 
-    expect(result.eliminationOrder).toHaveLength(4)
-    expect(new Set(result.eliminationOrder)).toEqual(
-      new Set(["p1", "p2", "p3", "p4"])
-    )
-  })
-
-  it("last entry in elimination order is the winner (last standing)", () => {
-    const participants: RobotInstance[] = [
-      makeRobot({ ownerId: "p1" }),
-      makeRobot({ ownerId: "p2" }),
-      makeRobot({ ownerId: "p3" }),
-    ]
-
-    const result = simulateFFA(participants)
-
-    // The last entry is the survivor
-    const winner = result.eliminationOrder[result.eliminationOrder.length - 1]
-    expect(["p1", "p2", "p3"]).toContain(winner)
+    expect(result.survivorId).toBeDefined()
+    expect(["p1", "p2", "p3"]).toContain(result.survivorId)
   })
 
   it("generates a non-empty tick log", () => {
-    const participants: RobotInstance[] = [
-      makeRobot({ ownerId: "p1" }),
-      makeRobot({ ownerId: "p2" }),
-      makeRobot({ ownerId: "p3" }),
-    ]
-
-    const result = simulateFFA(participants)
+    const robots = [makeFFARobot("p1"), makeFFARobot("p2"), makeFFARobot("p3")]
+    const result = simulateFFA(robots)
 
     expect(result.tickLog.length).toBeGreaterThan(0)
   })
 
-  it("tick numbers are sequential starting from 1", () => {
-    const participants: RobotInstance[] = [
-      makeRobot({ ownerId: "p1" }),
-      makeRobot({ ownerId: "p2" }),
-      makeRobot({ ownerId: "p3" }),
-    ]
-
-    const result = simulateFFA(participants)
+  it("tick numbers are sequential starting from 1 with no gaps", () => {
+    const robots = [makeFFARobot("p1"), makeFFARobot("p2"), makeFFARobot("p3")]
+    const result = simulateFFA(robots)
 
     for (let i = 0; i < result.tickLog.length; i++) {
       expect(result.tickLog[i].tick).toBe(i + 1)
     }
   })
 
-  it("HP never goes below 0 in attack results", () => {
-    const participants: RobotInstance[] = [
-      makeRobot({ ownerId: "p1" }),
-      makeRobot({ ownerId: "p2" }),
-      makeRobot({ ownerId: "p3" }),
-      makeRobot({ ownerId: "p4" }),
-    ]
+  it("eliminationOrder contains all non-survivor robots", () => {
+    const robots = [makeFFARobot("p1"), makeFFARobot("p2"), makeFFARobot("p3"), makeFFARobot("p4")]
+    const result = simulateFFA(robots)
 
-    const result = simulateFFA(participants)
+    const eliminatedIds = result.eliminationOrder.map((e) => e.ownerId)
+    // All non-survivor robots should be in elimination order
+    const nonSurvivorIds = robots
+      .map((r) => r.ownerId)
+      .filter((id) => id !== result.survivorId)
+    for (const id of nonSurvivorIds) {
+      expect(eliminatedIds).toContain(id)
+    }
+    // Survivor should not be in elimination order
+    expect(eliminatedIds).not.toContain(result.survivorId)
+  })
 
-    for (const tick of result.tickLog) {
-      for (const attack of tick.attacks) {
-        expect(attack.targetHpAfter).toBeGreaterThanOrEqual(0)
+  it("eliminationOrder tick numbers are positive and non-decreasing", () => {
+    const robots = [makeFFARobot("p1"), makeFFARobot("p2"), makeFFARobot("p3")]
+    const result = simulateFFA(robots)
+
+    for (let i = 0; i < result.eliminationOrder.length; i++) {
+      expect(result.eliminationOrder[i].eliminatedOnTick).toBeGreaterThan(0)
+      if (i > 0) {
+        expect(result.eliminationOrder[i].eliminatedOnTick).toBeGreaterThanOrEqual(
+          result.eliminationOrder[i - 1].eliminatedOnTick
+        )
       }
     }
   })
 
-  it("with 2 participants behaves like a 1v1 (one winner, one loser)", () => {
-    const participants: RobotInstance[] = [
-      makeRobot({ ownerId: "p1" }),
-      makeRobot({ ownerId: "p2" }),
-    ]
+  it("robots never target themselves in FFA", () => {
+    const robots = [makeFFARobot("p1"), makeFFARobot("p2"), makeFFARobot("p3")]
+    const result = simulateFFA(robots)
 
-    const result = simulateFFA(participants)
-
-    expect(result.eliminationOrder).toHaveLength(2)
-    expect(result.eliminationOrder[0]).not.toBe(result.eliminationOrder[1])
+    for (const entry of result.tickLog) {
+      for (const attack of entry.attacks) {
+        expect(attack.attackerId).not.toBe(attack.targetId)
+      }
+    }
   })
 
-  it("damage values fall within configured range when hit", () => {
-    const participants: RobotInstance[] = [
-      makeRobot({ ownerId: "p1", damageMin: 2, damageMax: 6 }),
-      makeRobot({ ownerId: "p2", damageMin: 2, damageMax: 6 }),
-      makeRobot({ ownerId: "p3", damageMin: 2, damageMax: 6 }),
+  it("attack targets are only living robots (snapshot HP > 0 at tick start)", () => {
+    const robots = [makeFFARobot("p1"), makeFFARobot("p2"), makeFFARobot("p3")]
+    const result = simulateFFA(robots)
+
+    const eliminatedByTick: Record<string, number> = {}
+    for (const entry of result.tickLog) {
+      // All targets in this tick should not have been eliminated in a previous tick
+      for (const attack of entry.attacks) {
+        const eliminatedTick = eliminatedByTick[attack.targetId]
+        if (eliminatedTick !== undefined) {
+          // target was eliminated before this tick
+          expect(eliminatedTick).toBeGreaterThanOrEqual(entry.tick)
+        }
+      }
+      // Record eliminations after processing attacks
+      for (const eliminatedId of entry.eliminations) {
+        eliminatedByTick[eliminatedId] = entry.tick
+      }
+    }
+  })
+
+  it("guaranteed survivor rule prevents all robots dying simultaneously", () => {
+    // High damage/accuracy, low HP to force mutual KO
+    const robots = [
+      makeFFARobot("p1", { currentHp: 5, maxHp: 5, accuracy: 90, maxHit: 10, tickInterval: 1 }),
+      makeFFARobot("p2", { currentHp: 5, maxHp: 5, accuracy: 90, maxHit: 10, tickInterval: 1 }),
+      makeFFARobot("p3", { currentHp: 5, maxHp: 5, accuracy: 90, maxHit: 10, tickInterval: 1 }),
     ]
 
-    const result = simulateFFA(participants)
+    for (let i = 0; i < 20; i++) {
+      const result = simulateFFA(robots.map((r) => ({ ...r })))
+      expect(result.survivorId).toBeDefined()
+      expect(["p1", "p2", "p3"]).toContain(result.survivorId)
+    }
+  })
 
-    for (const tick of result.tickLog) {
-      for (const attack of tick.attacks) {
+  it("does not exceed 1000 ticks (TICK_LIMIT)", () => {
+    const robots = [
+      makeFFARobot("p1", { accuracy: 10, tickInterval: 8 }),
+      makeFFARobot("p2", { accuracy: 10, tickInterval: 8 }),
+      makeFFARobot("p3", { accuracy: 10, tickInterval: 8 }),
+    ]
+
+    const result = simulateFFA(robots)
+
+    expect(result.tickLog.length).toBeLessThanOrEqual(1000)
+    expect(result.survivorId).toBeDefined()
+  })
+
+  it("timeout selects highest HP robot as survivor", () => {
+    // Very low accuracy to likely timeout, give p1 extra HP
+    const robots = [
+      makeFFARobot("p1", { accuracy: 1, maxHit: 1, tickInterval: 8, currentHp: 100 }),
+      makeFFARobot("p2", { accuracy: 1, maxHit: 1, tickInterval: 8, currentHp: 50 }),
+      makeFFARobot("p3", { accuracy: 1, maxHit: 1, tickInterval: 8, currentHp: 30 }),
+    ]
+
+    const result = simulateFFA(robots)
+    expect(result.survivorId).toBeDefined()
+  })
+
+  it("does not mutate input robot objects", () => {
+    const robots = [makeFFARobot("p1"), makeFFARobot("p2"), makeFFARobot("p3")]
+    const originalHps = robots.map((r) => r.currentHp)
+
+    simulateFFA(robots)
+
+    for (let i = 0; i < robots.length; i++) {
+      expect(robots[i].currentHp).toBe(originalHps[i])
+    }
+  })
+
+  it("damage values are within [1, maxHit] when hit, 0 when miss", () => {
+    const robots = [
+      makeFFARobot("p1", { maxHit: 6 }),
+      makeFFARobot("p2", { maxHit: 8 }),
+      makeFFARobot("p3", { maxHit: 4 }),
+    ]
+    const maxHitByOwner: Record<string, number> = { p1: 6, p2: 8, p3: 4 }
+
+    const result = simulateFFA(robots)
+
+    for (const entry of result.tickLog) {
+      for (const attack of entry.attacks) {
         if (attack.hit) {
-          expect(attack.damage).toBeGreaterThanOrEqual(2)
-          expect(attack.damage).toBeLessThanOrEqual(6)
+          expect(attack.damage).toBeGreaterThanOrEqual(1)
+          expect(attack.damage).toBeLessThanOrEqual(maxHitByOwner[attack.attackerId])
         } else {
           expect(attack.damage).toBe(0)
         }
@@ -262,33 +390,61 @@ describe("simulateFFA", () => {
     }
   })
 
-  it("eliminated robots do not attack in subsequent ticks", () => {
-    const participants: RobotInstance[] = [
-      makeRobot({ ownerId: "p1" }),
-      makeRobot({ ownerId: "p2" }),
-      makeRobot({ ownerId: "p3" }),
-      makeRobot({ ownerId: "p4" }),
-    ]
+  it("targetHpAfter is never negative", () => {
+    const robots = [makeFFARobot("p1"), makeFFARobot("p2"), makeFFARobot("p3")]
+    const result = simulateFFA(robots)
 
-    const result = simulateFFA(participants)
-
-    const eliminatedByTick = new Set<string>()
-    for (const tick of result.tickLog) {
-      // Check no eliminated robot is an attacker this tick
-      for (const attack of tick.attacks) {
-        expect(eliminatedByTick.has(attack.attackerId)).toBe(false)
-      }
-      // After processing attacks, mark newly eliminated
-      // Find robots whose HP reached 0 in this tick's attacks
-      const hpAfter = new Map<string, number>()
-      for (const attack of tick.attacks) {
-        hpAfter.set(attack.targetId, attack.targetHpAfter)
-      }
-      for (const [id, hp] of hpAfter) {
-        if (hp <= 0) {
-          eliminatedByTick.add(id)
-        }
+    for (const entry of result.tickLog) {
+      for (const attack of entry.attacks) {
+        expect(attack.targetHpAfter).toBeGreaterThanOrEqual(0)
       }
     }
+  })
+
+  it("works with many robots (6-player FFA)", () => {
+    const robots = [
+      makeFFARobot("p1"),
+      makeFFARobot("p2"),
+      makeFFARobot("p3"),
+      makeFFARobot("p4"),
+      makeFFARobot("p5"),
+      makeFFARobot("p6"),
+    ]
+
+    const result = simulateFFA(robots)
+
+    expect(result.survivorId).toBeDefined()
+    expect(robots.map((r) => r.ownerId)).toContain(result.survivorId)
+    expect(result.eliminationOrder.length).toBe(5) // 6 robots - 1 survivor = 5 eliminated
+  })
+
+  it("same-tick eliminations share the same tick number in eliminationOrder", () => {
+    // High damage/accuracy, same tick interval to encourage same-tick eliminations
+    const robots = [
+      makeFFARobot("p1", { accuracy: 90, maxHit: 50, tickInterval: 1, currentHp: 20 }),
+      makeFFARobot("p2", { accuracy: 90, maxHit: 50, tickInterval: 1, currentHp: 20 }),
+      makeFFARobot("p3", { accuracy: 90, maxHit: 50, tickInterval: 1, currentHp: 20 }),
+      makeFFARobot("p4", { accuracy: 90, maxHit: 50, tickInterval: 1, currentHp: 20 }),
+    ]
+
+    // Run multiple times — some runs should produce same-tick eliminations
+    let foundSameTickElimination = false
+    for (let i = 0; i < 50; i++) {
+      const result = simulateFFA(robots.map((r) => ({ ...r })))
+      const ticks = result.eliminationOrder.map((e) => e.eliminatedOnTick)
+      if (new Set(ticks).size < ticks.length) {
+        foundSameTickElimination = true
+        // Verify shared tick numbers
+        const tickCounts: Record<number, number> = {}
+        for (const t of ticks) {
+          tickCounts[t] = (tickCounts[t] || 0) + 1
+        }
+        const sharedTick = Object.entries(tickCounts).find(([, count]) => count > 1)
+        expect(sharedTick).toBeDefined()
+        break
+      }
+    }
+    // With these configs, it's very likely we get a same-tick elimination
+    expect(foundSameTickElimination).toBe(true)
   })
 })

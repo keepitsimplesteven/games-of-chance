@@ -1,42 +1,21 @@
 import { describe, it, expect } from "vitest"
 import { computeFinalRankings, type ParticipantInfo } from "./RankingEngine"
-import type { FFABracket, RobotInstance } from "../types"
+import type { FFABracketState } from "../types"
 
-/** Helper to create a minimal robot instance */
-function makeRobot(ownerId: string): RobotInstance {
-  return {
-    templateId: "bot-alpha",
-    ownerId,
-    currentHp: 0,
-    maxHp: 100,
-    accuracy: 80,
-    damageMin: 1,
-    damageMax: 10,
-  }
-}
-
-/** Helper to create a bracket with specified elimination order and tick log */
+/** Helper to create a bracket with specified elimination order and survivor */
 function makeBracket(
   id: string,
   participantIds: string[],
-  eliminationOrder: string[],
-  tickLog: { tick: number; eliminatedIds: string[] }[] = []
-): FFABracket {
-  const participants = participantIds.map(makeRobot)
-
-  // Build tick log with attacks that eliminate the specified players at the given tick
-  const fullTickLog = tickLog.map((entry) => ({
-    tick: entry.tick,
-    attacks: entry.eliminatedIds.map((targetId) => ({
-      attackerId: "attacker",
-      targetId,
-      hit: true,
-      damage: 100,
-      targetHpAfter: 0,
-    })),
-  }))
-
-  return { id, participants, eliminationOrder, tickLog: fullTickLog }
+  eliminationOrder: Array<{ ownerId: string; eliminatedOnTick: number }>,
+  survivorId: string | null
+): FFABracketState {
+  return {
+    id,
+    participantIds,
+    eliminationOrder,
+    survivorId,
+    tickLog: [], // tick log not needed for ranking (eliminatedOnTick is in eliminationOrder)
+  }
 }
 
 function makeParticipantInfo(
@@ -53,123 +32,148 @@ function makeParticipantInfo(
 }
 
 describe("RankingEngine - computeFinalRankings", () => {
-  it("assigns rank 1 to last standing in winners bracket", () => {
-    // 3 players in winners: eliminated in order [A, B, C] → C is last = rank 1
+  it("assigns rank 1 to player with highest cumulative score", () => {
+    // 3 players in winners: A eliminated tick 3, B eliminated tick 5, C survives
     const winners = makeBracket(
       "winners",
       ["A", "B", "C"],
-      ["A", "B", "C"],
       [
-        { tick: 3, eliminatedIds: ["A"] },
-        { tick: 5, eliminatedIds: ["B"] },
-        // C is last standing, appended last to elimination order
-      ]
+        { ownerId: "A", eliminatedOnTick: 3 },
+        { ownerId: "B", eliminatedOnTick: 5 },
+      ],
+      "C"
     )
-    const losers = makeBracket("losers", ["D", "E", "F"], ["D", "E", "F"], [
-      { tick: 2, eliminatedIds: ["D"] },
-      { tick: 4, eliminatedIds: ["E"] },
-    ])
+    const losers = makeBracket(
+      "losers",
+      ["D", "E", "F"],
+      [
+        { ownerId: "D", eliminatedOnTick: 2 },
+        { ownerId: "E", eliminatedOnTick: 4 },
+      ],
+      "F"
+    )
 
     const info = makeParticipantInfo(["A", "B", "C", "D", "E", "F"])
-    const rankings = computeFinalRankings(winners, losers, info)
+    // C has highest score (150), should get rank 1
+    const gameScores: Record<string, number> = {
+      A: 30, B: 80, C: 150, D: 20, E: 60, F: 125,
+    }
+    const rankings = computeFinalRankings(winners, losers, info, gameScores)
 
     const cRanking = rankings.find((r) => r.playerId === "C")
     expect(cRanking?.rank).toBe(1)
     expect(cRanking?.bracket).toBe("winners")
+    expect(cRanking?.score).toBe(150)
   })
 
-  it("ranks winners bracket by reverse elimination order", () => {
-    // eliminationOrder: [A, B, C] → C=1st, B=2nd, A=3rd
+  it("ranks players by cumulative score descending regardless of bracket", () => {
+    // A eliminated tick 2, B eliminated tick 4, C survives in winners
+    // D is alone in losers
     const winners = makeBracket(
       "winners",
-      ["A", "B", "C"],
       ["A", "B", "C"],
       [
-        { tick: 2, eliminatedIds: ["A"] },
-        { tick: 4, eliminatedIds: ["B"] },
-      ]
+        { ownerId: "A", eliminatedOnTick: 2 },
+        { ownerId: "B", eliminatedOnTick: 4 },
+      ],
+      "C"
     )
-    const losers = makeBracket("losers", ["D"], ["D"], [])
+    const losers = makeBracket("losers", ["D"], [], "D")
 
     const info = makeParticipantInfo(["A", "B", "C", "D"])
-    const rankings = computeFinalRankings(winners, losers, info)
+    // D (losers bracket) has higher score than B (winners bracket)
+    const gameScores: Record<string, number> = { A: 10, B: 50, C: 150, D: 125 }
+    const rankings = computeFinalRankings(winners, losers, info, gameScores)
 
-    expect(rankings.find((r) => r.playerId === "C")?.rank).toBe(1)
-    expect(rankings.find((r) => r.playerId === "B")?.rank).toBe(2)
-    expect(rankings.find((r) => r.playerId === "A")?.rank).toBe(3)
+    expect(rankings.find((r) => r.playerId === "C")?.rank).toBe(1) // 150
+    expect(rankings.find((r) => r.playerId === "D")?.rank).toBe(2) // 125 (losers bracket)
+    expect(rankings.find((r) => r.playerId === "B")?.rank).toBe(3) // 50
+    expect(rankings.find((r) => r.playerId === "A")?.rank).toBe(4) // 10
   })
 
-  it("starts losers bracket ranking after winners count", () => {
-    // 2 winners, 2 losers → losers start at rank 3
+  it("losers bracket player can outrank winners bracket player by score", () => {
+    // 2 winners, 2 losers
     const winners = makeBracket(
       "winners",
       ["A", "B"],
-      ["A", "B"],
-      [{ tick: 3, eliminatedIds: ["A"] }]
+      [{ ownerId: "A", eliminatedOnTick: 3 }],
+      "B"
     )
     const losers = makeBracket(
       "losers",
       ["C", "D"],
-      ["C", "D"],
-      [{ tick: 2, eliminatedIds: ["C"] }]
+      [{ ownerId: "C", eliminatedOnTick: 2 }],
+      "D"
     )
 
     const info = makeParticipantInfo(["A", "B", "C", "D"])
-    const rankings = computeFinalRankings(winners, losers, info)
+    // D (losers survivor) has higher score than A (winners eliminated)
+    const gameScores: Record<string, number> = { A: 30, B: 150, C: 10, D: 125 }
+    const rankings = computeFinalRankings(winners, losers, info, gameScores)
 
-    // Winners: B=1, A=2; Losers: D=3, C=4
-    expect(rankings.find((r) => r.playerId === "D")?.rank).toBe(3)
+    // B=1 (150), D=2 (125, losers!), A=3 (30), C=4 (10)
+    expect(rankings.find((r) => r.playerId === "B")?.rank).toBe(1)
+    expect(rankings.find((r) => r.playerId === "D")?.rank).toBe(2)
     expect(rankings.find((r) => r.playerId === "D")?.bracket).toBe("losers")
+    expect(rankings.find((r) => r.playerId === "A")?.rank).toBe(3)
     expect(rankings.find((r) => r.playerId === "C")?.rank).toBe(4)
     expect(rankings.find((r) => r.playerId === "C")?.bracket).toBe("losers")
   })
 
-  it("assigns same rank to robots eliminated on the same tick", () => {
-    // 4 players in winners: A and B eliminated on tick 3, C eliminated on tick 5, D last standing
+  it("assigns same rank to players with the same cumulative score", () => {
+    // 4 players in winners, 1 in losers
     const winners = makeBracket(
       "winners",
-      ["A", "B", "C", "D"],
       ["A", "B", "C", "D"],
       [
-        { tick: 3, eliminatedIds: ["A", "B"] },
-        { tick: 5, eliminatedIds: ["C"] },
-      ]
+        { ownerId: "A", eliminatedOnTick: 3 },
+        { ownerId: "B", eliminatedOnTick: 3 },
+        { ownerId: "C", eliminatedOnTick: 5 },
+      ],
+      "D"
     )
-    const losers = makeBracket("losers", ["E"], ["E"], [])
+    const losers = makeBracket("losers", ["E"], [], "E")
 
     const info = makeParticipantInfo(["A", "B", "C", "D", "E"])
-    const rankings = computeFinalRankings(winners, losers, info)
+    // A and B have the same score → tied rank
+    const gameScores: Record<string, number> = { A: 30, B: 30, C: 80, D: 150, E: 125 }
+    const rankings = computeFinalRankings(winners, losers, info, gameScores)
 
-    // D=1st, C=2nd, A and B tied → both get rank 3 (not 3 and 4)
-    expect(rankings.find((r) => r.playerId === "D")?.rank).toBe(1)
-    expect(rankings.find((r) => r.playerId === "C")?.rank).toBe(2)
-    expect(rankings.find((r) => r.playerId === "A")?.rank).toBe(3)
-    expect(rankings.find((r) => r.playerId === "B")?.rank).toBe(3)
+    expect(rankings.find((r) => r.playerId === "D")?.rank).toBe(1)  // 150
+    expect(rankings.find((r) => r.playerId === "E")?.rank).toBe(2)  // 125
+    expect(rankings.find((r) => r.playerId === "C")?.rank).toBe(3)  // 80
+    expect(rankings.find((r) => r.playerId === "A")?.rank).toBe(4)  // 30 (tied)
+    expect(rankings.find((r) => r.playerId === "B")?.rank).toBe(4)  // 30 (tied)
   })
 
-  it("handles ties in losers bracket", () => {
-    // 2 winners, 3 losers with E and F eliminated same tick
+  it("handles ties across brackets", () => {
+    // 2 winners, 3 losers: some with same scores across brackets
     const winners = makeBracket(
       "winners",
       ["A", "B"],
-      ["A", "B"],
-      [{ tick: 2, eliminatedIds: ["A"] }]
+      [{ ownerId: "A", eliminatedOnTick: 2 }],
+      "B"
     )
     const losers = makeBracket(
       "losers",
       ["C", "D", "E"],
-      ["C", "D", "E"],
       [
-        { tick: 1, eliminatedIds: ["C", "D"] },
-        // E is last standing
-      ]
+        { ownerId: "C", eliminatedOnTick: 1 },
+        { ownerId: "D", eliminatedOnTick: 1 },
+      ],
+      "E"
     )
 
     const info = makeParticipantInfo(["A", "B", "C", "D", "E"])
-    const rankings = computeFinalRankings(winners, losers, info)
+    // E and A have same score, C and D have same score
+    const gameScores: Record<string, number> = { A: 50, B: 150, C: 10, D: 10, E: 50 }
+    const rankings = computeFinalRankings(winners, losers, info, gameScores)
 
-    // Losers start at rank 3. E=3, C and D tied at rank 4
-    expect(rankings.find((r) => r.playerId === "E")?.rank).toBe(3)
+    expect(rankings.find((r) => r.playerId === "B")?.rank).toBe(1)  // 150
+    // A and E tied at 50
+    expect(rankings.find((r) => r.playerId === "A")?.rank).toBe(2)
+    expect(rankings.find((r) => r.playerId === "E")?.rank).toBe(2)
+    // C and D tied at 10
     expect(rankings.find((r) => r.playerId === "C")?.rank).toBe(4)
     expect(rankings.find((r) => r.playerId === "D")?.rank).toBe(4)
   })
@@ -178,10 +182,10 @@ describe("RankingEngine - computeFinalRankings", () => {
     const winners = makeBracket(
       "winners",
       ["player1", "bot_1"],
-      ["bot_1", "player1"],
-      [{ tick: 2, eliminatedIds: ["bot_1"] }]
+      [{ ownerId: "bot_1", eliminatedOnTick: 2 }],
+      "player1"
     )
-    const losers = makeBracket("losers", ["player2"], ["player2"], [])
+    const losers = makeBracket("losers", ["player2"], [], "player2")
 
     const info = new Map<string, ParticipantInfo>([
       ["player1", { name: "Alice", isBot: false }],
@@ -189,7 +193,8 @@ describe("RankingEngine - computeFinalRankings", () => {
       ["player2", { name: "Bob", isBot: false }],
     ])
 
-    const rankings = computeFinalRankings(winners, losers, info)
+    const gameScores: Record<string, number> = { player1: 150, bot_1: 50, player2: 125 }
+    const rankings = computeFinalRankings(winners, losers, info, gameScores)
 
     const aliceRanking = rankings.find((r) => r.playerId === "player1")
     expect(aliceRanking?.playerName).toBe("Alice")
@@ -200,43 +205,101 @@ describe("RankingEngine - computeFinalRankings", () => {
     expect(botRanking?.isBot).toBe(true)
   })
 
-  it("handles single player in each bracket", () => {
+  it("handles single player in each bracket ranked by score", () => {
     // 1 winner, 1 loser (minimum game)
-    const winners = makeBracket("winners", ["A"], ["A"], [])
-    const losers = makeBracket("losers", ["B"], ["B"], [])
+    const winners = makeBracket("winners", ["A"], [], "A")
+    const losers = makeBracket("losers", ["B"], [], "B")
 
     const info = makeParticipantInfo(["A", "B"])
-    const rankings = computeFinalRankings(winners, losers, info)
+    // Winner got 25 (Round 2) + 125 (survivor) = 150
+    // Loser got 0 (Round 2) + 125 (survivor in losers) = 125
+    const gameScores: Record<string, number> = { A: 150, B: 125 }
+    const rankings = computeFinalRankings(winners, losers, info, gameScores)
 
     expect(rankings.find((r) => r.playerId === "A")?.rank).toBe(1)
+    expect(rankings.find((r) => r.playerId === "A")?.score).toBe(150)
     expect(rankings.find((r) => r.playerId === "B")?.rank).toBe(2)
+    expect(rankings.find((r) => r.playerId === "B")?.score).toBe(125)
   })
 
   it("returns all participants in final rankings", () => {
     const winners = makeBracket(
       "winners",
       ["A", "B", "C"],
-      ["A", "B", "C"],
       [
-        { tick: 1, eliminatedIds: ["A"] },
-        { tick: 3, eliminatedIds: ["B"] },
-      ]
+        { ownerId: "A", eliminatedOnTick: 1 },
+        { ownerId: "B", eliminatedOnTick: 3 },
+      ],
+      "C"
     )
     const losers = makeBracket(
       "losers",
       ["D", "E", "F"],
-      ["D", "E", "F"],
       [
-        { tick: 1, eliminatedIds: ["D"] },
-        { tick: 2, eliminatedIds: ["E"] },
-      ]
+        { ownerId: "D", eliminatedOnTick: 1 },
+        { ownerId: "E", eliminatedOnTick: 2 },
+      ],
+      "F"
     )
 
     const info = makeParticipantInfo(["A", "B", "C", "D", "E", "F"])
-    const rankings = computeFinalRankings(winners, losers, info)
+    const gameScores: Record<string, number> = { A: 10, B: 50, C: 150, D: 5, E: 40, F: 125 }
+    const rankings = computeFinalRankings(winners, losers, info, gameScores)
 
     expect(rankings).toHaveLength(6)
     const playerIds = rankings.map((r) => r.playerId).sort()
     expect(playerIds).toEqual(["A", "B", "C", "D", "E", "F"])
+  })
+
+  it("preserves bracket indicator regardless of rank", () => {
+    // Verify that bracket labels are maintained even when losers outrank winners
+    const winners = makeBracket(
+      "winners",
+      ["A", "B", "C"],
+      [
+        { ownerId: "A", eliminatedOnTick: 1 },
+        { ownerId: "B", eliminatedOnTick: 3 },
+      ],
+      "C"
+    )
+    const losers = makeBracket(
+      "losers",
+      ["D", "E", "F"],
+      [
+        { ownerId: "D", eliminatedOnTick: 1 },
+        { ownerId: "E", eliminatedOnTick: 2 },
+      ],
+      "F"
+    )
+
+    const info = makeParticipantInfo(["A", "B", "C", "D", "E", "F"])
+    // F (losers survivor) outranks A and B (winners eliminated)
+    const gameScores: Record<string, number> = { A: 10, B: 50, C: 150, D: 5, E: 40, F: 125 }
+    const rankings = computeFinalRankings(winners, losers, info, gameScores)
+
+    // F is rank 2 but still labeled as losers bracket
+    const fRanking = rankings.find((r) => r.playerId === "F")
+    expect(fRanking?.rank).toBe(2)
+    expect(fRanking?.bracket).toBe("losers")
+
+    // All winners bracket players still labeled as winners
+    for (const id of ["A", "B", "C"]) {
+      expect(rankings.find((r) => r.playerId === id)?.bracket).toBe("winners")
+    }
+  })
+
+  it("defaults to score 0 when gameScores not provided", () => {
+    // When no gameScores provided, all scores are 0 and all get rank 1 (tied)
+    const winners = makeBracket("winners", ["A"], [], "A")
+    const losers = makeBracket("losers", ["B"], [], "B")
+
+    const info = makeParticipantInfo(["A", "B"])
+    const rankings = computeFinalRankings(winners, losers, info)
+
+    // Both have score 0, both get rank 1
+    expect(rankings.find((r) => r.playerId === "A")?.score).toBe(0)
+    expect(rankings.find((r) => r.playerId === "B")?.score).toBe(0)
+    expect(rankings.find((r) => r.playerId === "A")?.rank).toBe(1)
+    expect(rankings.find((r) => r.playerId === "B")?.rank).toBe(1)
   })
 })

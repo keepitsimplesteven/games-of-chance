@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { ensureEvenParticipants, botPersonaSelectRobot } from "./BotPersona"
+import { ensureEvenParticipants, botPersonaSelectRobot, botPersonaSelectParts } from "./BotPersona"
 import type { RobotTemplate } from "./types"
 
 describe("ensureEvenParticipants", () => {
@@ -94,5 +94,52 @@ describe("botPersonaSelectRobot", () => {
     ]
     const result = botPersonaSelectRobot(singleOption)
     expect(result).toBe("bot-alpha")
+  })
+})
+
+
+describe("botPersonaSelectParts", () => {
+  const VALID_WEAPONS = ["drill", "blaster", "bazooka"]
+  const VALID_HEADS = ["square", "rounded", "triangular", "hexagonal"]
+  const VALID_BODIES = ["square", "rounded", "triangular", "hexagonal"]
+
+  it("returns a valid BattleBotsPick with weapon, head, and body", () => {
+    const result = botPersonaSelectParts()
+    expect(VALID_WEAPONS).toContain(result.weapon)
+    expect(VALID_HEADS).toContain(result.head)
+    expect(VALID_BODIES).toContain(result.body)
+  })
+
+  it("always returns valid parts across multiple calls", () => {
+    for (let i = 0; i < 100; i++) {
+      const result = botPersonaSelectParts()
+      expect(VALID_WEAPONS).toContain(result.weapon)
+      expect(VALID_HEADS).toContain(result.head)
+      expect(VALID_BODIES).toContain(result.body)
+    }
+  })
+
+  it("selects from all available weapons (uniform distribution)", () => {
+    const selectedWeapons = new Set<string>()
+    for (let i = 0; i < 100; i++) {
+      selectedWeapons.add(botPersonaSelectParts().weapon)
+    }
+    expect(selectedWeapons.size).toBe(3)
+  })
+
+  it("selects from all available heads (uniform distribution)", () => {
+    const selectedHeads = new Set<string>()
+    for (let i = 0; i < 200; i++) {
+      selectedHeads.add(botPersonaSelectParts().head)
+    }
+    expect(selectedHeads.size).toBe(4)
+  })
+
+  it("selects from all available bodies (uniform distribution)", () => {
+    const selectedBodies = new Set<string>()
+    for (let i = 0; i < 200; i++) {
+      selectedBodies.add(botPersonaSelectParts().body)
+    }
+    expect(selectedBodies.size).toBe(4)
   })
 })

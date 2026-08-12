@@ -6,14 +6,14 @@ This plan replaces the existing flat-stat combat system with a composable part-b
 
 ## Tasks
 
-- [ ] 1. Set up shared types, constants, and core data modules
-  - [ ] 1.1 Create updated types file with all new interfaces
+- [x] 1. Set up shared types, constants, and core data modules
+  - [x] 1.1 Create updated types file with all new interfaces
     - Create/replace `packages/server/src/games/battle-bots/types.ts` with `BattleBotsPick`, `CombatRobot`, `TickEntry`, `AttackEvent`, `TickLogPayload`, `BattleBotsGameState`, `BattlePairing`, `FFABracketState` interfaces
     - Add `WeaponType`, `HeadType`, `BodyType` union types
     - Add `RobotVisual` interface for visual config
     - _Requirements: 1.1, 14.1, 14.2_
 
-  - [ ] 1.2 Create PartDefinitions module
+  - [x] 1.2 Create PartDefinitions module
     - Create `packages/server/src/games/battle-bots/PartDefinitions.ts`
     - Implement `StarContribution` and `PartDefinition` interfaces
     - Define `WEAPON_PARTS`, `HEAD_PARTS`, `BODY_PARTS` constant records with exact star mappings from design
@@ -21,14 +21,14 @@ This plan replaces the existing flat-stat combat system with a composable part-b
     - Implement `validateBuild(weapon, head, body)` function that checks sum=9 and each stat in [1,7]
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 2.1–2.11_
 
-  - [ ] 1.3 Create ModifierTable module
+  - [x] 1.3 Create ModifierTable module
     - Create `packages/server/src/games/battle-bots/ModifierTable.ts`
     - Define `ModifierEntry` interface and `MODIFIER_TABLE` record for star counts 1–7
     - Define `BASE_HP`, `BASE_MAX_HIT`, `BASE_ACCURACY` constants
     - Implement `deriveCombatStats(stars)` function: maxHit (floor, min 1), accuracy (floor, cap 90), tickInterval, hp
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 12.1, 12.2, 12.4, 12.5_
 
-  - [ ] 1.4 Update constants and settings schema
+  - [x] 1.4 Update constants and settings schema
     - Update `packages/server/src/games/battle-bots/constants.ts` to remove old settings (BOT_HP, DAMAGE_MIN, DAMAGE_MAX, ACCURACY)
     - Add `TICK_LIMIT: 1000` and `VS_SCREEN_DURATION_MS: 4000` constants
     - Update `BATTLE_BOTS_SETTINGS_SCHEMA` to contain exactly 3 fields: PREP_TIMER_MS, CHIPS_MULTIPLIER, GAME_SPEED
@@ -50,15 +50,15 @@ This plan replaces the existing flat-stat combat system with a composable part-b
     - Verify settings schema has exactly 3 fields and old fields are removed
     - _Requirements: 2.1–2.11, 3.1, 3.2, 11.1–11.6_
 
-- [ ] 2. Implement BattleEngine simulation
-  - [ ] 2.1 Create BattleEngine with simulate1v1
+- [x] 2. Implement BattleEngine simulation
+  - [x] 2.1 Create BattleEngine with simulate1v1
     - Create `packages/server/src/games/battle-bots/simulation/BattleEngine.ts`
     - Implement the tick-based simulation loop: snapshot HP → determine attackers → roll accuracy/damage → sum damage → guaranteed survivor check → finalize HP → check termination
     - Implement `simulate1v1(robot1, robot2): BattleResult`
     - Handle 1000-tick timeout (highest HP wins)
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 6.1, 6.2, 6.3, 6.4, 6.5, 7.1_
 
-  - [ ] 2.2 Add simulateFFA to BattleEngine
+  - [x] 2.2 Add simulateFFA to BattleEngine
     - Implement `simulateFFA(robots: CombatRobot[]): FFAResult`
     - Random target selection per attacker (uniform from living opponents, excluding self)
     - Same snapshot model and guaranteed survivor rule as 1v1
@@ -95,11 +95,11 @@ This plan replaces the existing flat-stat combat system with a composable part-b
     - Test FFA with 3+ robots eliminating each other
     - _Requirements: 4.7, 6.1, 6.4, 8.5_
 
-- [ ] 3. Checkpoint - Ensure all tests pass
+- [x] 3. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 4. Update BattleBotsPlugin server logic
-  - [ ] 4.1 Update BattleBotsPlugin prep phase handling
+- [x] 4. Update BattleBotsPlugin server logic
+  - [x] 4.1 Update BattleBotsPlugin prep phase handling
     - Modify `validatePick` to accept `{ weapon, head, body }` structure
     - Update pick handling to call `validateBuild()`, assign robot name via existing name generator, compute stars, derive combat stats
     - Update auto-lock on timer expiry to select random parts server-side
@@ -107,7 +107,7 @@ This plan replaces the existing flat-stat combat system with a composable part-b
     - Store builds as `CombatRobot` instances in game state
     - _Requirements: 9.6, 10.1, 10.2, 10.3, 10.4, 10.5, 15.1, 15.2, 15.3, 15.4_
 
-  - [ ] 4.2 Update BattleBotsPlugin resolve round logic
+  - [x] 4.2 Update BattleBotsPlugin resolve round logic
     - Update Round 2 resolution to construct CombatRobots and call `simulate1v1()`
     - Store tick log in `BattlePairing` state
     - Broadcast complete `TickLogPayload` (robots metadata + tickLog + gameSpeed) to clients at RESOLVING phase start
@@ -115,7 +115,7 @@ This plan replaces the existing flat-stat combat system with a composable part-b
     - Handle reconnect: re-send TickLog + current tick index
     - _Requirements: 7.1, 7.2, 7.3, 7.6, 7.7, 17.4_
 
-  - [ ] 4.3 Update FFA ranking integration
+  - [x] 4.3 Update FFA ranking integration
     - Ensure `simulateFFA` results feed into existing `RankingEngine.ts` correctly
     - Winners bracket ranks map to positions 1–N/2, losers bracket to N/2+1–N
     - **Property 15: Bracket Position Mapping** validation
@@ -132,11 +132,11 @@ This plan replaces the existing flat-stat combat system with a composable part-b
     - Test TickLogPayload structure on broadcast
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 15.1, 15.3_
 
-- [ ] 5. Checkpoint - Ensure all server tests pass
+- [x] 5. Checkpoint - Ensure all server tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 6. Implement client-side prep phase UI
-  - [ ] 6.1 Create PartCarousel component
+- [x] 6. Implement client-side prep phase UI
+  - [x] 6.1 Create PartCarousel component
     - Create `packages/client/src/games/battle-bots/PrepPhase/PartCarousel.tsx`
     - Implement three carousel rows (weapon, head, body) with left/right arrow navigation
     - Implement wrap-around (last→first, first→last)
@@ -144,13 +144,13 @@ This plan replaces the existing flat-stat combat system with a composable part-b
     - Show weapon name using existing chip UI style; head/body shown as visual changes only
     - _Requirements: 9.1, 9.2, 9.4_
 
-  - [ ] 6.2 Add star display and robot preview to PartCarousel
+  - [x] 6.2 Add star display and robot preview to PartCarousel
     - Create `packages/client/src/games/battle-bots/PrepPhase/StarDisplay.tsx` showing ⚔️ Damage, 🎯 Accuracy, ⚡ Speed totals
     - Create `packages/client/src/games/battle-bots/PrepPhase/RobotPreview.tsx` using existing RobotParts/CompositeRobot components
     - Update preview and star totals within 100ms on any part change
     - _Requirements: 9.3_
 
-  - [ ] 6.3 Implement Lock In, Randomize, and timer
+  - [x] 6.3 Implement Lock In, Randomize, and timer
     - Add "Randomize" button: selects random option per slot, updates preview without server submission
     - Add "Lock In" button: submits `{ weapon, head, body }` to server, disables all controls
     - Handle lock-in failure: re-enable controls, show error toast
@@ -168,8 +168,8 @@ This plan replaces the existing flat-stat combat system with a composable part-b
     - Test auto-submit on timer expiry
     - _Requirements: 9.1, 9.2, 9.5, 9.6, 9.8_
 
-- [ ] 7. Implement client-side battle replay
-  - [ ] 7.1 Create ReplayController
+- [x] 7. Implement client-side battle replay
+  - [x] 7.1 Create ReplayController
     - Create `packages/client/src/games/battle-bots/BattlePhase/ReplayController.ts`
     - Implement `start(tickLog, gameSpeed)`, `getCurrentState()`, `onTick(callback)`, `jumpToTick(index)`
     - Use `setInterval` at gameSpeed ms to advance through ticks
@@ -177,7 +177,7 @@ This plan replaces the existing flat-stat combat system with a composable part-b
     - Handle reconnect resume via `jumpToTick`
     - _Requirements: 7.3, 7.6_
 
-  - [ ] 7.2 Create VsScreen component
+  - [x] 7.2 Create VsScreen component
     - Create `packages/client/src/games/battle-bots/BattlePhase/VsScreen.tsx`
     - Display each robot's composed SVG, name, owner name, and star values
     - Highlight current player's robot with callout box outline
@@ -185,7 +185,7 @@ This plan replaces the existing flat-stat combat system with a composable part-b
     - Auto-transition to replay after ~4 seconds (VS_SCREEN_DURATION_MS)
     - _Requirements: 16.1, 16.2, 16.3, 16.4, 16.5, 16.6_
 
-  - [ ] 7.3 Update BattleArena for replay-driven rendering
+  - [x] 7.3 Update BattleArena for replay-driven rendering
     - Update existing `BattleArena` component to accept `TickLogPayload` data
     - Render composed robot SVGs using existing RobotParts system
     - Show HP bars updating per tick from ReplayController
@@ -195,7 +195,7 @@ This plan replaces the existing flat-stat combat system with a composable part-b
     - Display end-of-battle state with winner after final tick
     - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.6, 7.5_
 
-  - [ ] 7.4 Create FFAArena component
+  - [x] 7.4 Create FFAArena component
     - Create `packages/client/src/games/battle-bots/FFAPhase/FFAArena.tsx`
     - Same tick-event-driven rendering as BattleArena but for multiple robots
     - Use ReplayController for FFA tick playback
@@ -208,15 +208,15 @@ This plan replaces the existing flat-stat combat system with a composable part-b
     - Test isComplete after final tick
     - _Requirements: 7.3, 7.6_
 
-- [ ] 8. Wire everything together and integration
-  - [ ] 8.1 Connect BattleBotsView to new components
+- [x] 8. Wire everything together and integration
+  - [x] 8.1 Connect BattleBotsView to new components
     - Update `BattleBotsView.tsx` to route to `PartCarousel` during PICKING phase (Round 1)
     - Route to `VsScreen` → `BattleArena` during RESOLVING phase (Round 2)
     - Route to `VsScreen` → `FFAArena` during RESOLVING phase (Round 3)
     - Pass `TickLogPayload` from server broadcast to replay components
     - _Requirements: 7.2, 7.3, 13.6, 16.1_
 
-  - [ ] 8.2 Handle reconnect and edge cases
+  - [x] 8.2 Handle reconnect and edge cases
     - On reconnect during RESOLVING, receive re-sent TickLog + tick index
     - Resume replay from correct position via `jumpToTick`
     - Handle corrupt/missing TickLog with fallback "battle complete" state
@@ -229,7 +229,7 @@ This plan replaces the existing flat-stat combat system with a composable part-b
     - Test broadcast determinism (identical TickLog to all clients)
     - _Requirements: 7.1, 7.2, 7.6, 7.7_
 
-- [ ] 9. Final checkpoint - Ensure all tests pass
+- [x] 9. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

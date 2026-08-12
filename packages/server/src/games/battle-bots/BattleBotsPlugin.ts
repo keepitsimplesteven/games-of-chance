@@ -8,22 +8,26 @@ import type { GamePlugin } from "../GamePlugin"
 import type {
   BattleBotsPick,
   BattleBotsGameState,
-  BattlePairing,
-  FFABracket,
-  FinalRanking,
-  RobotTemplate,
-  RobotInstance,
-  RobotOptions,
+  FFABracketState,
   RobotVisual,
+  CombatRobot,
+  TickLogPayload,
+  WeaponType,
+  HeadType,
+  BodyType,
 } from "./types"
 import { BATTLE_BOTS, BATTLE_BOTS_SETTINGS_SCHEMA } from "./constants"
-import { ensureEvenParticipants, botPersonaSelectRobot } from "./BotPersona"
+import { ensureEvenParticipants, botPersonaSelectParts } from "./BotPersona"
 import { createPairings } from "./simulation/PairingEngine"
-import { simulateBattle1v1, simulateFFA } from "./simulation/BattleEngine"
+import { simulate1v1, simulateFFA } from "./simulation/BattleEngine"
+import type { BattleResult, FFAResult } from "./simulation/BattleEngine"
 import { computeFinalRankings } from "./simulation/RankingEngine"
 import type { ParticipantInfo } from "./simulation/RankingEngine"
-import { filterBotPersonasFromLeaderboard, filterBotPersonasFromDeltas } from "./scoring-utils"
+import { filterBotPersonasFromLeaderboard, filterBotPersonasFromDeltas, computeEliminatedSurvivalPoints, computeSurvivorScore } from "./scoring-utils"
+import { WIN_BONUS } from "./scoring-constants"
 import { generateUniqueNames } from "./robotNames"
+import { validateBuild, computeStars } from "./PartDefinitions"
+import { deriveCombatStats } from "./ModifierTable"
 
 /**
  * Result type for each round of the Battle Bots game.
@@ -33,6 +37,24 @@ export interface BattleBotsRoundResult {
   round: number
   [key: string]: unknown
 }
+
+// ── Valid part options for validation ──────────────────────────────────────
+
+const VALID_WEAPONS: WeaponType[] = ["drill", "blaster", "bazooka"]
+const VALID_HEADS: HeadType[] = ["square", "rounded", "triangular", "hexagonal"]
+const VALID_BODIES: BodyType[] = ["square", "rounded", "triangular", "hexagonal"]
+
+/** Color palette available for robot customization */
+const ROBOT_COLORS = [
+  "#e53935", // red
+  "#1e88e5", // blue
+  "#43a047", // green
+  "#fb8c00", // orange
+  "#8e24aa", // purple
+  "#00acc1", // cyan
+  "#f4511e", // deep orange
+  "#7cb342", // light green
+]
 
 // ── Module-level game state ────────────────────────────────────────────────
 
@@ -60,68 +82,43 @@ export function getGameState(): BattleBotsGameState | null {
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 /**
- * Generates the robot template collection from active game settings.
- * Each robot gets one of 3 weapon types (drill, blaster, bazooka),
- * a random head, random body, random name, and random color from the theme palette.
+ * Selects random parts (one weapon, one head, one body) with uniform probability.
+ * Used as the server-side fallback when a player doesn't lock in before timer expiry.
+ * (Req 10.3: Timer expiry → select random option from each part category server-side)
  */
-export function getRobotTemplates(settings: GameSettings): RobotTemplate[] {
-  const hp = Number(settings.tuning.BOT_HP) || BATTLE_BOTS.BOT_HP
-  const accuracy = Number(settings.tuning.ACCURACY) || BATTLE_BOTS.ACCURACY
-  const damageMin = Number(settings.tuning.DAMAGE_MIN) || BATTLE_BOTS.DAMAGE_MIN
-  const damageMax = Number(settings.tuning.DAMAGE_MAX) || BATTLE_BOTS.DAMAGE_MAX
-
-  const headTypes: RobotVisual["headType"][] = ["square", "rounded", "triangular", "hexagonal"]
-  const bodyTypes: RobotVisual["bodyType"][] = ["square", "rounded", "triangular", "hexagonal"]
-  const weaponTypes: RobotVisual["weaponType"][] = ["drill", "blaster", "bazooka"]
-
-  // Theme palette colors (retro-casino inspired)
-  const colorPalette = [
-    "#cc3333", // red chip
-    "#2255aa", // blue chip
-    "#228b22", // green
-    "#f5c542", // gold
-    "#8b4513", // brown
-    "#6a0dad", // purple
-    "#cc6633", // orange
-    "#2ea8a8", // teal
-  ]
-
-  const pickRandom = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]
-  const names = generateUniqueNames(3)
-
-  return weaponTypes.map((weapon, i) => {
-    const visual: RobotVisual = {
-      headType: pickRandom(headTypes),
-      bodyType: pickRandom(bodyTypes),
-      weaponType: weapon,
-      color: pickRandom(colorPalette),
-    }
-
-    return {
-      id: `bot-${weapon}-${Date.now()}-${i}`,
-      name: names[i],
-      hp,
-      accuracy,
-      damageMin,
-      damageMax,
-      visualId: `robot-${i + 1}`,
-      visual,
-    }
-  })
+function selectRandomParts(): BattleBotsPick {
+  return {
+    weapon: VALID_WEAPONS[Math.floor(Math.random() * VALID_WEAPONS.length)],
+    head: VALID_HEADS[Math.floor(Math.random() * VALID_HEADS.length)],
+    body: VALID_BODIES[Math.floor(Math.random() * VALID_BODIES.length)],
+    color: ROBOT_COLORS[Math.floor(Math.random() * ROBOT_COLORS.length)],
+  }
 }
 
 /**
- * Creates a RobotInstance from a selected template, assigned to a specific owner.
+ * Constructs a CombatRobot from a validated build pick, owner ID, and name.
  */
-function createRobotInstance(template: RobotTemplate, ownerId: string): RobotInstance {
+function buildCombatRobot(pick: BattleBotsPick, ownerId: string, name: string): CombatRobot {
+  const stars = computeStars(pick.weapon, pick.head, pick.body)
+  const stats = deriveCombatStats(stars)
+
+  const visual: RobotVisual = {
+    weapon: pick.weapon,
+    head: pick.head,
+    body: pick.body,
+    color: pick.color ?? ROBOT_COLORS[Math.floor(Math.random() * ROBOT_COLORS.length)],
+  }
+
   return {
-    templateId: template.id,
     ownerId,
-    currentHp: template.hp,
-    maxHp: template.hp,
-    accuracy: template.accuracy,
-    damageMin: template.damageMin,
-    damageMax: template.damageMax,
+    name,
+    maxHit: stats.maxHit,
+    accuracy: stats.accuracy,
+    tickInterval: stats.tickInterval,
+    currentHp: stats.hp,
+    maxHp: stats.hp,
+    stars,
+    visual,
   }
 }
 
@@ -130,14 +127,16 @@ function createRobotInstance(template: RobotTemplate, ownerId: string): RobotIns
 /**
  * Resolves Round 1 (Prep Phase):
  * 1. Determine participants (players + bot persona if needed)
- * 2. Generate 3 robot options per participant
- * 3. Finalize selections: use player's pick or randomly assign one of their options
- * 4. Create RobotInstance for each participant
- * 5. Store everything in gameState
+ * 2. For each participant: use submitted pick or generate random parts
+ * 3. Validate build, compute stars, derive combat stats
+ * 4. Assign robot name via existing name generator
+ * 5. Construct CombatRobot instances and store in gameState.builds
+ *
+ * Requirements: 9.6, 10.1, 10.2, 10.3, 10.4, 10.5, 15.1, 15.2, 15.3, 15.4
  */
 function resolveRound1(
   picks: Record<string, BattleBotsPick>,
-  settings: GameSettings
+  _settings: GameSettings
 ): BattleBotsRoundResult {
   // Get player IDs from picks (everyone who joined the game round)
   const playerIds = Object.keys(picks)
@@ -147,51 +146,51 @@ function resolveRound1(
   const botPersonaIds = botPersonas.map((b) => b.id)
   const participants = [...playerIds, ...botPersonaIds]
 
-  // Generate robot templates from settings
-  const templates = getRobotTemplates(settings)
+  // Generate unique names for all participants (Req 15.1, 15.3)
+  const names = generateUniqueNames(participants.length)
 
-  // Generate 3 robot options per participant
-  const robotOptions: Record<string, RobotOptions> = {}
-  for (const participantId of participants) {
-    robotOptions[participantId] = {
-      playerId: participantId,
-      options: [...templates], // All 3 options (V1: same stats, different visuals)
-    }
-  }
+  // Build CombatRobot for each participant
+  const builds: Record<string, CombatRobot> = {}
 
-  // Finalize robot selections
-  const selectedRobots: Record<string, RobotInstance> = {}
+  for (let i = 0; i < participants.length; i++) {
+    const participantId = participants[i]
+    let pick: BattleBotsPick
 
-  for (const participantId of participants) {
-    const options = robotOptions[participantId].options
-    let selectedTemplate: RobotTemplate
-
-    // Check if this is a bot persona — auto-select
     if (botPersonaIds.includes(participantId)) {
-      const selectedId = botPersonaSelectRobot(options)
-      selectedTemplate = options.find((t) => t.id === selectedId) ?? options[0]
-    }
-    // Check if player submitted a valid pick
-    else if (picks[participantId]?.robotTemplateId) {
-      const pickedId = picks[participantId].robotTemplateId
-      const found = options.find((t) => t.id === pickedId)
-      // Use picked template if valid, otherwise random assign
-      selectedTemplate = found ?? options[Math.floor(Math.random() * options.length)]
-    }
-    // Player didn't pick — randomly assign
-    else {
-      selectedTemplate = options[Math.floor(Math.random() * options.length)]
+      // Bot persona: select parts with uniform probability (Req 10.4)
+      pick = botPersonaSelectParts()
+    } else {
+      const submitted = picks[participantId]
+      if (
+        submitted &&
+        typeof submitted.weapon === "string" && VALID_WEAPONS.includes(submitted.weapon) &&
+        typeof submitted.head === "string" && VALID_HEADS.includes(submitted.head) &&
+        typeof submitted.body === "string" && VALID_BODIES.includes(submitted.body)
+      ) {
+        // Player submitted a valid pick (Req 10.2: only final locked-in build transmitted)
+        pick = submitted
+      } else {
+        // Player didn't pick or submitted invalid data — select random parts server-side (Req 10.3)
+        pick = selectRandomParts()
+      }
     }
 
-    selectedRobots[participantId] = createRobotInstance(selectedTemplate, participantId)
+    // Validate the build (should always pass for valid parts, guards against corruption)
+    const validation = validateBuild(pick.weapon, pick.head, pick.body)
+    if (!validation.valid) {
+      // Fallback: generate random parts if somehow invalid
+      pick = selectRandomParts()
+    }
+
+    // Construct CombatRobot with name, stars, and derived combat stats
+    builds[participantId] = buildCombatRobot(pick, participantId, names[i])
   }
 
   // Store in module-level game state for use in subsequent rounds
   gameState = {
     participants,
     botPersonas,
-    robotOptions,
-    selectedRobots,
+    builds,
     pairings: [],
     winnersBracket: null,
     losersBracket: null,
@@ -202,8 +201,7 @@ function resolveRound1(
     round: 1,
     participants,
     botPersonas,
-    robotOptions,
-    selectedRobots,
+    builds,
   }
 }
 
@@ -211,31 +209,57 @@ function resolveRound1(
 
 /**
  * Resolves Round 2 (1v1 Battles):
- * 1. Create random pairings from participants using PairingEngine
- * 2. Clone robot instances to avoid mutating the originals
- * 3. Run all 1v1 battles via BattleEngine
- * 4. Categorize winners and losers for bracket assignment in Round 3
+ * 1. Create random pairings from participant IDs using PairingEngine
+ * 2. For each pairing: call simulate1v1() with CombatRobot builds directly
+ * 3. Store tick log and winner in BattlePairing state
+ * 4. Produce TickLogPayload per pairing for client broadcast
  * 5. Store pairings in gameState
+ *
+ * Requirements: 7.1, 7.2, 7.3, 7.6, 7.7
  */
 function resolveRound2(
   _picks: Record<string, BattleBotsPick>,
-  _settings: GameSettings
+  settings: GameSettings
 ): BattleBotsRoundResult {
   if (!gameState) throw new Error("Cannot resolve Round 2 without Round 1 state")
+  if (!gameState.builds) throw new Error("Cannot resolve Round 2 without builds")
 
-  // Create pairings from participants using their selected robots
-  const pairings = createPairings(gameState.participants, gameState.selectedRobots)
+  const gameSpeed = Number(settings.tuning.GAME_SPEED) || 100
 
-  // Run all 1v1 battles
+  // Create pairings from participant IDs (no longer needs robot instances)
+  const pairings = createPairings(gameState.participants)
+
+  // Collect TickLogPayloads for client broadcast
+  const tickLogPayloads: TickLogPayload[] = []
+
+  // Run all 1v1 battles using the new BattleEngine directly with CombatRobot
   for (const pairing of pairings) {
-    // Clone robots so we don't mutate the original selectedRobots
-    const robot1: RobotInstance = { ...pairing.robot1 }
-    const robot2: RobotInstance = { ...pairing.robot2 }
+    const robot1 = { ...gameState.builds[pairing.player1Id] }
+    const robot2 = { ...gameState.builds[pairing.player2Id] }
 
-    const result = simulateBattle1v1(robot1, robot2)
+    const result: BattleResult = simulate1v1(robot1, robot2)
+
+    // Store results in pairing state
     pairing.winnerId = result.winnerId
-    pairing.loserId = result.loserId
+    pairing.loserId = pairing.player1Id === result.winnerId
+      ? pairing.player2Id
+      : pairing.player1Id
     pairing.tickLog = result.tickLog
+
+    // Build TickLogPayload for this pairing (Req 7.1, 7.2)
+    const payload: TickLogPayload = {
+      battleId: pairing.id,
+      robots: [robot1, robot2].map((r) => ({
+        ownerId: r.ownerId,
+        name: r.name,
+        stars: r.stars,
+        visual: r.visual,
+        maxHp: r.maxHp,
+      })),
+      tickLog: result.tickLog,
+      gameSpeed,
+    }
+    tickLogPayloads.push(payload)
   }
 
   // Store pairings in game state for bracket creation in Round 3
@@ -244,6 +268,7 @@ function resolveRound2(
   return {
     round: 2,
     pairings,
+    tickLogPayloads,
   }
 }
 
@@ -251,11 +276,14 @@ function resolveRound2(
 
 /**
  * Resolves Round 3 (Free-For-All):
- * 1. Create winners and losers FFA brackets from Round 2 results
- * 2. Reset all robots to full HP for fairness
- * 3. Run both FFA brackets via BattleEngine
- * 4. Call RankingEngine to compute final rankings from elimination order
- * 5. Store brackets and rankings in gameState
+ * 1. Create winners and losers brackets from Round 2 results
+ * 2. Construct CombatRobot arrays with HP reset to maxHp
+ * 3. Call simulateFFA() from BattleEngine for each bracket
+ * 4. Store results using FFABracketState
+ * 5. Call RankingEngine to compute final rankings
+ * 6. Store brackets and rankings in gameState
+ *
+ * Requirements: 7.1, 7.2, 7.3, 7.6, 7.7, 17.4
  */
 function resolveRound3(
   _picks: Record<string, BattleBotsPick>,
@@ -263,57 +291,71 @@ function resolveRound3(
 ): BattleBotsRoundResult {
   if (!gameState) throw new Error("Cannot resolve Round 3 without previous state")
   if (gameState.pairings.length === 0) throw new Error("No pairings from Round 2")
+  if (!gameState.builds) throw new Error("Cannot resolve Round 3 without builds")
+
+  const gameSpeed = Number(settings.tuning.GAME_SPEED) || 100
 
   // Categorize winners and losers from Round 2 pairings
-  const winnerIds = gameState.pairings
-    .map((p) => p.winnerId)
-    .filter((id): id is string => id !== null)
-  const loserIds = gameState.pairings
-    .map((p) => p.loserId)
-    .filter((id): id is string => id !== null)
-
-  // Reset HP to full for FFA fairness
-  const hp = Number(settings.tuning.BOT_HP) || BATTLE_BOTS.BOT_HP
-
-  // Create robot instances for winners bracket — reset HP to full
-  const winnersRobots: RobotInstance[] = winnerIds.map((id) => ({
-    ...gameState!.selectedRobots[id],
-    currentHp: hp,
-    maxHp: hp,
-  }))
-
-  // Create robot instances for losers bracket — reset HP to full
-  const losersRobots: RobotInstance[] = loserIds.map((id) => ({
-    ...gameState!.selectedRobots[id],
-    currentHp: hp,
-    maxHp: hp,
-  }))
-
-  // Run FFA simulations for both brackets
-  // Handle edge case: if a bracket has only 1 robot, skip FFA — they auto-win
-  const winnersResult =
-    winnersRobots.length > 1
-      ? simulateFFA([...winnersRobots.map((r) => ({ ...r }))])
-      : { eliminationOrder: [winnersRobots[0].ownerId], tickLog: [] }
-
-  const losersResult =
-    losersRobots.length > 1
-      ? simulateFFA([...losersRobots.map((r) => ({ ...r }))])
-      : { eliminationOrder: [losersRobots[0].ownerId], tickLog: [] }
-
-  // Build bracket objects
-  const winnersBracket: FFABracket = {
-    id: "winners",
-    participants: winnersRobots,
-    eliminationOrder: winnersResult.eliminationOrder,
-    tickLog: winnersResult.tickLog,
+  const winnerIds: string[] = []
+  const loserIds: string[] = []
+  for (const pairing of gameState.pairings) {
+    if (pairing.winnerId) {
+      winnerIds.push(pairing.winnerId)
+      // The loser is the other player
+      const loserId = pairing.player1Id === pairing.winnerId
+        ? pairing.player2Id
+        : pairing.player1Id
+      loserIds.push(loserId)
+    }
   }
 
-  const losersBracket: FFABracket = {
+  // Build CombatRobot arrays with HP reset to maxHp for FFA
+  const winnersRobots: CombatRobot[] = winnerIds.map((id) => {
+    const build = gameState!.builds![id]
+    return { ...build, currentHp: build.maxHp }
+  })
+
+  const losersRobots: CombatRobot[] = loserIds.map((id) => {
+    const build = gameState!.builds![id]
+    return { ...build, currentHp: build.maxHp }
+  })
+
+  // Run FFA simulations for both brackets using the new engine
+  // Handle edge case: if a bracket has only 1 robot, skip FFA — they auto-win
+  let winnersFFAResult: FFAResult | null = null
+  let losersFFAResult: FFAResult | null = null
+
+  if (winnersRobots.length > 1) {
+    winnersFFAResult = simulateFFA(winnersRobots.map((r) => ({ ...r }))) as FFAResult
+  }
+
+  if (losersRobots.length > 1) {
+    losersFFAResult = simulateFFA(losersRobots.map((r) => ({ ...r }))) as FFAResult
+  }
+
+  // Build FFABracketState objects
+  const winnersBracket: FFABracketState = {
+    id: "winners",
+    participantIds: winnerIds,
+    eliminationOrder: winnersFFAResult
+      ? winnersFFAResult.eliminationOrder
+      : [],
+    survivorId: winnersFFAResult
+      ? winnersFFAResult.survivorId
+      : (winnerIds[0] ?? null),
+    tickLog: winnersFFAResult ? winnersFFAResult.tickLog : [],
+  }
+
+  const losersBracket: FFABracketState = {
     id: "losers",
-    participants: losersRobots,
-    eliminationOrder: losersResult.eliminationOrder,
-    tickLog: losersResult.tickLog,
+    participantIds: loserIds,
+    eliminationOrder: losersFFAResult
+      ? losersFFAResult.eliminationOrder
+      : [],
+    survivorId: losersFFAResult
+      ? losersFFAResult.survivorId
+      : (loserIds[0] ?? null),
+    tickLog: losersFFAResult ? losersFFAResult.tickLog : [],
   }
 
   // Build participant info map for ranking engine
@@ -326,8 +368,41 @@ function resolveRound3(
     participantInfo.set(id, { name, isBot })
   }
 
-  // Compute final rankings from elimination order
+  // Compute final rankings from FFABracketState directly
   const finalRankings = computeFinalRankings(winnersBracket, losersBracket, participantInfo)
+
+  // Build TickLogPayloads for FFA brackets
+  const tickLogPayloads: TickLogPayload[] = []
+
+  if (winnersFFAResult) {
+    tickLogPayloads.push({
+      battleId: "ffa-winners",
+      robots: winnersRobots.map((r) => ({
+        ownerId: r.ownerId,
+        name: r.name,
+        stars: r.stars,
+        visual: r.visual,
+        maxHp: r.maxHp,
+      })),
+      tickLog: winnersFFAResult.tickLog,
+      gameSpeed,
+    })
+  }
+
+  if (losersFFAResult) {
+    tickLogPayloads.push({
+      battleId: "ffa-losers",
+      robots: losersRobots.map((r) => ({
+        ownerId: r.ownerId,
+        name: r.name,
+        stars: r.stars,
+        visual: r.visual,
+        maxHp: r.maxHp,
+      })),
+      tickLog: losersFFAResult.tickLog,
+      gameSpeed,
+    })
+  }
 
   // Store in game state
   gameState.winnersBracket = winnersBracket
@@ -339,6 +414,7 @@ function resolveRound3(
     winnersBracket,
     losersBracket,
     finalRankings,
+    tickLogPayloads,
   }
 }
 
@@ -346,7 +422,7 @@ function resolveRound3(
 
 /**
  * Battle Bots game plugin — 3-round robot combat game.
- * Round 1: Prep (robot selection)
+ * Round 1: Prep (robot building via part selection)
  * Round 2: 1v1 battles
  * Round 3: Free-for-all elimination
  */
@@ -360,13 +436,11 @@ export const battleBotsPlugin: GamePlugin<BattleBotsPick, BattleBotsRoundResult>
   validatePick(pick: unknown): pick is BattleBotsPick {
     if (!pick || typeof pick !== "object") return false
     const p = pick as Record<string, unknown>
-    if (typeof p.robotTemplateId !== "string" || p.robotTemplateId.length === 0) return false
-
-    // Cross-reference against player's assigned options if game state exists
-    // (validation happens during PICKING phase when gameState.robotOptions is populated)
-    // Note: we can't validate the specific player's options here because validatePick
-    // doesn't receive the player ID. The cross-reference check is handled in resolveRound.
-    return true
+    return (
+      typeof p.weapon === "string" && VALID_WEAPONS.includes(p.weapon as WeaponType) &&
+      typeof p.head === "string" && VALID_HEADS.includes(p.head as HeadType) &&
+      typeof p.body === "string" && VALID_BODIES.includes(p.body as BodyType)
+    )
   },
 
   resolveRound(
@@ -403,30 +477,50 @@ export const battleBotsPlugin: GamePlugin<BattleBotsPick, BattleBotsRoundResult>
         return { deltas: {} }
 
       case 2: {
-        // 1 point for winners, 0 for losers — exclude bot personas
+        // Winners receive WIN_BONUS points, losers receive 0 — exclude bot personas
         const deltas: Record<string, number> = {}
         for (const pairing of gameState.pairings) {
           if (pairing.winnerId) {
-            deltas[pairing.winnerId] = 25
-          }
-          if (pairing.loserId) {
-            deltas[pairing.loserId] = 0
+            deltas[pairing.winnerId] = WIN_BONUS
+            // The loser is the other player
+            const loserId = pairing.player1Id === pairing.winnerId
+              ? pairing.player2Id
+              : pairing.player1Id
+            deltas[loserId] = 0
           }
         }
         return { deltas: filterBotPersonasFromDeltas(deltas, botPersonaIds) }
       }
 
       case 3: {
-        // Ranking-based scoring — exclude bot personas
-        // Points = totalParticipants - rank (higher rank = more points)
         const deltas: Record<string, number> = {}
-        const totalParticipants = gameState.participants.length
 
-        for (const ranking of gameState.finalRankings) {
-          if (!ranking.isBot) {
-            deltas[ranking.playerId] = (totalParticipants - ranking.rank) * 10
+        // Process both brackets (winners and losers)
+        for (const bracket of [gameState.winnersBracket, gameState.losersBracket]) {
+          if (!bracket) continue
+          const ffaBracket = bracket as FFABracketState
+
+          // Total_Ticks = tick of the final elimination in this bracket
+          const totalTicks = ffaBracket.eliminationOrder.length > 0
+            ? ffaBracket.eliminationOrder[ffaBracket.eliminationOrder.length - 1].eliminatedOnTick
+            : 0
+
+          // Score eliminated players
+          for (const elimination of ffaBracket.eliminationOrder) {
+            if (!botPersonaIds.has(elimination.ownerId)) {
+              deltas[elimination.ownerId] = computeEliminatedSurvivalPoints(
+                elimination.eliminatedOnTick,
+                totalTicks
+              )
+            }
+          }
+
+          // Score survivor
+          if (ffaBracket.survivorId && !botPersonaIds.has(ffaBracket.survivorId)) {
+            deltas[ffaBracket.survivorId] = computeSurvivorScore()
           }
         }
+
         return { deltas: filterBotPersonasFromDeltas(deltas, botPersonaIds) }
       }
 
@@ -452,9 +546,27 @@ export const battleBotsPlugin: GamePlugin<BattleBotsPick, BattleBotsRoundResult>
         .map((entry, i) => ({ ...entry, rank: i + 1 }))
     }
 
-    // After Round 3: use finalRankings
+    // After Round 3: update finalRankings with actual cumulative scores and re-rank
     const botPersonaIds = new Set(gameState.botPersonas.map((b) => b.id))
-    const totalParticipants = gameState.participants.length
+
+    // Inject cumulative scores into the existing finalRankings array entries
+    for (const r of gameState.finalRankings) {
+      r.score = gameScores[r.playerId] ?? 0
+    }
+
+    // Sort in-place by score descending
+    gameState.finalRankings.sort((a, b) => b.score - a.score)
+
+    // Re-assign ranks (tied scores share rank)
+    for (let i = 0; i < gameState.finalRankings.length; i++) {
+      if (i === 0) {
+        gameState.finalRankings[i].rank = 1
+      } else if (gameState.finalRankings[i].score === gameState.finalRankings[i - 1].score) {
+        gameState.finalRankings[i].rank = gameState.finalRankings[i - 1].rank
+      } else {
+        gameState.finalRankings[i].rank = i + 1
+      }
+    }
 
     // Build leaderboard from finalRankings, excluding bot personas
     const leaderboard: GameLeaderboardEntry[] = gameState.finalRankings
@@ -465,7 +577,7 @@ export const battleBotsPlugin: GamePlugin<BattleBotsPick, BattleBotsRoundResult>
         return {
           playerId: r.playerId,
           playerName: player?.name ?? r.playerName,
-          score: totalParticipants - r.rank,
+          score: r.score,
           rank: r.rank,
         }
       })

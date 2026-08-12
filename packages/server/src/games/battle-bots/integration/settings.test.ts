@@ -6,92 +6,88 @@ import {
   getGameState,
 } from "../BattleBotsPlugin"
 import { BATTLE_BOTS, BATTLE_BOTS_SETTINGS_SCHEMA } from "../constants"
+import type { BattleBotsPick } from "../types"
 
 /**
  * Settings integration test
- * Validates: Requirements 1.2, 2.4, 12.2
+ * Validates: Requirements 10.5, 11.1-11.6
  *
- * Verifies that custom HP, accuracy, damage range values from settingsSchema
- * are applied to robot instances and that prep timer uses configured pickWindowMs.
+ * Verifies that the new part-based system uses BASE_HP (100) for all robots,
+ * derives stats from stars/modifier table, and settings schema is correct.
  */
 describe("Settings integration", () => {
   beforeEach(() => {
     resetGameState()
   })
 
-  const customSettings: GameSettings = {
+  const defaultSettings: GameSettings = {
     roundCount: 3,
     pickWindowMs: BATTLE_BOTS.PICK_WINDOW_MS,
     tuning: {
-      BOT_HP: 200,
-      ACCURACY: 50,
-      DAMAGE_MIN: 5,
-      DAMAGE_MAX: 20,
+      PREP_TIMER_MS: "60",
+      CHIPS_MULTIPLIER: "10",
+      GAME_SPEED: "100",
     },
   }
 
-  it("applies custom HP to all robot instances after Round 1", () => {
-    const picks = {
-      p1: { robotTemplateId: "bot-alpha" },
-      p2: { robotTemplateId: "bot-beta" },
+  it("applies BASE_HP (100) to all CombatRobot builds after Round 1", () => {
+    const picks: Record<string, BattleBotsPick> = {
+      p1: { weapon: "drill", head: "square", body: "square" },
+      p2: { weapon: "blaster", head: "rounded", body: "hexagonal" },
     }
 
-    battleBotsPlugin.resolveRound(picks, customSettings)
+    battleBotsPlugin.resolveRound(picks, defaultSettings)
 
     const state = getGameState()!
-    for (const id of Object.keys(state.selectedRobots)) {
-      expect(state.selectedRobots[id].currentHp).toBe(200)
-      expect(state.selectedRobots[id].maxHp).toBe(200)
+    for (const id of Object.keys(state.builds!)) {
+      expect(state.builds![id].currentHp).toBe(100)
+      expect(state.builds![id].maxHp).toBe(100)
     }
   })
 
-  it("applies custom accuracy to all robot instances after Round 1", () => {
-    const picks = {
-      p1: { robotTemplateId: "bot-alpha" },
-      p2: { robotTemplateId: "bot-beta" },
+  it("derives accuracy from stars and modifier table (capped at 90)", () => {
+    const picks: Record<string, BattleBotsPick> = {
+      p1: { weapon: "drill", head: "square", body: "square" },
+      p2: { weapon: "blaster", head: "triangular", body: "triangular" },
     }
 
-    battleBotsPlugin.resolveRound(picks, customSettings)
+    battleBotsPlugin.resolveRound(picks, defaultSettings)
 
     const state = getGameState()!
-    for (const id of Object.keys(state.selectedRobots)) {
-      expect(state.selectedRobots[id].accuracy).toBe(50)
+    for (const id of Object.keys(state.builds!)) {
+      expect(state.builds![id].accuracy).toBeGreaterThanOrEqual(1)
+      expect(state.builds![id].accuracy).toBeLessThanOrEqual(90)
     }
   })
 
-  it("applies custom damage range to all robot instances after Round 1", () => {
-    const picks = {
-      p1: { robotTemplateId: "bot-alpha" },
-      p2: { robotTemplateId: "bot-beta" },
+  it("derives maxHit from stars and modifier table (minimum 1)", () => {
+    const picks: Record<string, BattleBotsPick> = {
+      p1: { weapon: "drill", head: "square", body: "square" },
+      p2: { weapon: "bazooka", head: "hexagonal", body: "hexagonal" },
     }
 
-    battleBotsPlugin.resolveRound(picks, customSettings)
+    battleBotsPlugin.resolveRound(picks, defaultSettings)
 
     const state = getGameState()!
-    for (const id of Object.keys(state.selectedRobots)) {
-      expect(state.selectedRobots[id].damageMin).toBe(5)
-      expect(state.selectedRobots[id].damageMax).toBe(20)
+    for (const id of Object.keys(state.builds!)) {
+      expect(state.builds![id].maxHit).toBeGreaterThanOrEqual(1)
     }
   })
 
-  it("applies all custom stats together (HP, accuracy, damage range)", () => {
-    const picks = {
-      p1: { robotTemplateId: "bot-alpha" },
-      p2: { robotTemplateId: "bot-beta" },
-      p3: { robotTemplateId: "bot-gamma" },
-      p4: { robotTemplateId: "bot-alpha" },
+  it("all builds have star total of 9", () => {
+    const picks: Record<string, BattleBotsPick> = {
+      p1: { weapon: "drill", head: "square", body: "square" },
+      p2: { weapon: "blaster", head: "rounded", body: "hexagonal" },
+      p3: { weapon: "bazooka", head: "triangular", body: "rounded" },
+      p4: { weapon: "drill", head: "hexagonal", body: "triangular" },
     }
 
-    battleBotsPlugin.resolveRound(picks, customSettings)
+    battleBotsPlugin.resolveRound(picks, defaultSettings)
 
     const state = getGameState()!
-    for (const id of Object.keys(state.selectedRobots)) {
-      const robot = state.selectedRobots[id]
-      expect(robot.currentHp).toBe(200)
-      expect(robot.maxHp).toBe(200)
-      expect(robot.accuracy).toBe(50)
-      expect(robot.damageMin).toBe(5)
-      expect(robot.damageMax).toBe(20)
+    for (const id of Object.keys(state.builds!)) {
+      const stars = state.builds![id].stars
+      expect(stars.damage + stars.accuracy + stars.speed).toBe(9)
     }
   })
 
@@ -108,30 +104,22 @@ describe("Settings integration", () => {
     const keys = BATTLE_BOTS_SETTINGS_SCHEMA.map((field) => field.key)
 
     expect(keys).toContain("PREP_TIMER_MS")
-    expect(keys).toContain("BOT_HP")
-    expect(keys).toContain("DAMAGE_MIN")
-    expect(keys).toContain("DAMAGE_MAX")
-    expect(keys).toContain("ACCURACY")
     expect(keys).toContain("CHIPS_MULTIPLIER")
+    expect(keys).toContain("GAME_SPEED")
+    expect(keys).toHaveLength(3)
   })
 
-  it("settings schema default values match BATTLE_BOTS constants", () => {
+  it("settings schema default values match expected constants", () => {
     const schema = BATTLE_BOTS_SETTINGS_SCHEMA
 
-    const botHpField = schema.find((f) => f.key === "BOT_HP")!
-    expect(botHpField.defaultValue).toBe(BATTLE_BOTS.BOT_HP)
-
-    const damageMinField = schema.find((f) => f.key === "DAMAGE_MIN")!
-    expect(damageMinField.defaultValue).toBe(BATTLE_BOTS.DAMAGE_MIN)
-
-    const damageMaxField = schema.find((f) => f.key === "DAMAGE_MAX")!
-    expect(damageMaxField.defaultValue).toBe(BATTLE_BOTS.DAMAGE_MAX)
-
-    const accuracyField = schema.find((f) => f.key === "ACCURACY")!
-    expect(accuracyField.defaultValue).toBe(BATTLE_BOTS.ACCURACY)
+    const prepTimerField = schema.find((f) => f.key === "PREP_TIMER_MS")!
+    expect(prepTimerField.defaultValue).toBe(60)
 
     const chipsField = schema.find((f) => f.key === "CHIPS_MULTIPLIER")!
     expect(chipsField.defaultValue).toBe(BATTLE_BOTS.CHIPS_MULTIPLIER)
+
+    const gameSpeedField = schema.find((f) => f.key === "GAME_SPEED")!
+    expect(gameSpeedField.defaultValue).toBe(100)
   })
 
   it("plugin exposes the settings schema via settingsSchema property", () => {

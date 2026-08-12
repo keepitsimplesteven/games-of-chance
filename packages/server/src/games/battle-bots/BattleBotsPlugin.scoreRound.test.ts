@@ -4,10 +4,10 @@ import type { Player, GameSettings } from "@games-of-chance/shared"
 import type { BattleBotsPick, BattleBotsGameState } from "./types"
 
 /**
- * Validates: Requirements 6.2, 9.1
+ * Validates: Requirements 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4
  *
- * 6.2 — 1 intermediate point to each 1v1 winner, 0 points to each loser
- * 9.1 — GameLeaderboardEntry array from computeGameLeaderboard maps final rankings to player positions
+ * Round 2: WIN_BONUS (25) to each 1v1 winner, 0 points to each loser
+ * Round 3: Survival-tick-based scoring for FFA eliminated players, 125 (100 + 25) for survivor
  */
 
 // Helper to create a minimal settings object
@@ -28,6 +28,12 @@ function createSettings(): GameSettings {
 function createPlayer(id: string, name: string): Player {
   return { id, name } as Player
 }
+
+// Helper picks using valid BattleBotsPick format
+const PICK_A: BattleBotsPick = { weapon: "drill", head: "square", body: "square" }
+const PICK_B: BattleBotsPick = { weapon: "blaster", head: "rounded", body: "rounded" }
+const PICK_C: BattleBotsPick = { weapon: "bazooka", head: "triangular", body: "triangular" }
+const PICK_D: BattleBotsPick = { weapon: "drill", head: "hexagonal", body: "hexagonal" }
 
 describe("BattleBotsPlugin.scoreRound", () => {
   beforeEach(() => {
@@ -50,8 +56,8 @@ describe("BattleBotsPlugin.scoreRound", () => {
     it("returns empty deltas (no scoring in prep phase)", () => {
       // Set up game state via resolveRound1
       const picks: Record<string, BattleBotsPick> = {
-        player1: { robotTemplateId: "bot-alpha" },
-        player2: { robotTemplateId: "bot-beta" },
+        player1: PICK_A,
+        player2: PICK_B,
       }
       const settings = createSettings()
 
@@ -70,13 +76,13 @@ describe("BattleBotsPlugin.scoreRound", () => {
   })
 
   describe("Round 2 — 1v1 Battles", () => {
-    it("returns 1 for winners and 0 for losers", () => {
+    it("returns WIN_BONUS (25) for winners and 0 for losers", () => {
       // Set up game state by running round 1
       const picks: Record<string, BattleBotsPick> = {
-        player1: { robotTemplateId: "bot-alpha" },
-        player2: { robotTemplateId: "bot-beta" },
-        player3: { robotTemplateId: "bot-gamma" },
-        player4: { robotTemplateId: "bot-alpha" },
+        player1: PICK_A,
+        player2: PICK_B,
+        player3: PICK_C,
+        player4: PICK_D,
       }
       const settings = createSettings()
 
@@ -114,9 +120,9 @@ describe("BattleBotsPlugin.scoreRound", () => {
     it("excludes bot personas from deltas", () => {
       // Set up game with 3 players (odd → bot persona added)
       const picks: Record<string, BattleBotsPick> = {
-        player1: { robotTemplateId: "bot-alpha" },
-        player2: { robotTemplateId: "bot-beta" },
-        player3: { robotTemplateId: "bot-gamma" },
+        player1: PICK_A,
+        player2: PICK_B,
+        player3: PICK_C,
       }
       const settings = createSettings()
 
@@ -141,14 +147,14 @@ describe("BattleBotsPlugin.scoreRound", () => {
     })
   })
 
-  describe("Round 3 — Final Rankings", () => {
-    it("returns ranking-based points (totalParticipants - rank)", () => {
+  describe("Round 3 — FFA Survival-Tick Scoring", () => {
+    it("returns survival-tick-based points for eliminated players and 125 for survivor", () => {
       // Set up game with 4 players
       const picks: Record<string, BattleBotsPick> = {
-        player1: { robotTemplateId: "bot-alpha" },
-        player2: { robotTemplateId: "bot-beta" },
-        player3: { robotTemplateId: "bot-gamma" },
-        player4: { robotTemplateId: "bot-alpha" },
+        player1: PICK_A,
+        player2: PICK_B,
+        player3: PICK_C,
+        player4: PICK_D,
       }
       const settings = createSettings()
 
@@ -156,14 +162,26 @@ describe("BattleBotsPlugin.scoreRound", () => {
       battleBotsPlugin.resolveRound(picks, settings) // Round 1
       battleBotsPlugin.resolveRound({}, settings)    // Round 2
 
-      // Manually set finalRankings since Round 3 isn't fully implemented yet
+      // Manually set bracket data for survival-tick scoring
       const state = getGameState()!
-      state.finalRankings = [
-        { playerId: "player1", playerName: "Alice", rank: 1, bracket: "winners", isBot: false },
-        { playerId: "player2", playerName: "Bob", rank: 2, bracket: "winners", isBot: false },
-        { playerId: "player3", playerName: "Charlie", rank: 3, bracket: "losers", isBot: false },
-        { playerId: "player4", playerName: "Diana", rank: 4, bracket: "losers", isBot: false },
-      ]
+      state.winnersBracket = {
+        id: "winners",
+        participantIds: ["player1", "player2"],
+        eliminationOrder: [
+          { ownerId: "player2", eliminatedOnTick: 50 },
+        ],
+        survivorId: "player1",
+        tickLog: [],
+      }
+      state.losersBracket = {
+        id: "losers",
+        participantIds: ["player3", "player4"],
+        eliminationOrder: [
+          { ownerId: "player4", eliminatedOnTick: 30 },
+        ],
+        survivorId: "player3",
+        tickLog: [],
+      }
 
       const round3Result: BattleBotsRoundResult = { round: 3 }
       const players = [
@@ -175,25 +193,26 @@ describe("BattleBotsPlugin.scoreRound", () => {
 
       const scoreResult = battleBotsPlugin.scoreRound(picks, round3Result, players, settings)
 
-      // totalParticipants = 4, so: (totalParticipants - rank) * 10
-      // rank 1 → (4 - 1) * 10 = 30 points
-      // rank 2 → (4 - 2) * 10 = 20 points
-      // rank 3 → (4 - 3) * 10 = 10 points
-      // rank 4 → (4 - 4) * 10 = 0 points
+      // Winners bracket: totalTicks = 50
+      // player2 eliminated on tick 50: ceil(50 / (50 * 1.1) * 100) = ceil(90.90) = 91
+      // player1 survivor: 100 + 25 = 125
+      // Losers bracket: totalTicks = 30
+      // player4 eliminated on tick 30: ceil(30 / (30 * 1.1) * 100) = ceil(90.90) = 91
+      // player3 survivor: 100 + 25 = 125
       expect(scoreResult.deltas).toEqual({
-        player1: 30,
-        player2: 20,
-        player3: 10,
-        player4: 0,
+        player1: 125,
+        player2: 91,
+        player3: 125,
+        player4: 91,
       })
     })
 
     it("excludes bot personas from Round 3 deltas", () => {
       // Set up game with 3 players (odd → bot persona added)
       const picks: Record<string, BattleBotsPick> = {
-        player1: { robotTemplateId: "bot-alpha" },
-        player2: { robotTemplateId: "bot-beta" },
-        player3: { robotTemplateId: "bot-gamma" },
+        player1: PICK_A,
+        player2: PICK_B,
+        player3: PICK_C,
       }
       const settings = createSettings()
 
@@ -204,13 +223,25 @@ describe("BattleBotsPlugin.scoreRound", () => {
       const state = getGameState()!
       const botId = state.botPersonas[0].id
 
-      // Manually set finalRankings with bot persona included
-      state.finalRankings = [
-        { playerId: "player1", playerName: "Alice", rank: 1, bracket: "winners", isBot: false },
-        { playerId: botId, playerName: "MechBot-7", rank: 2, bracket: "winners", isBot: true },
-        { playerId: "player2", playerName: "Bob", rank: 3, bracket: "losers", isBot: false },
-        { playerId: "player3", playerName: "Charlie", rank: 4, bracket: "losers", isBot: false },
-      ]
+      // Set up brackets with bot persona included in elimination
+      state.winnersBracket = {
+        id: "winners",
+        participantIds: ["player1", botId],
+        eliminationOrder: [
+          { ownerId: botId, eliminatedOnTick: 40 },
+        ],
+        survivorId: "player1",
+        tickLog: [],
+      }
+      state.losersBracket = {
+        id: "losers",
+        participantIds: ["player2", "player3"],
+        eliminationOrder: [
+          { ownerId: "player3", eliminatedOnTick: 60 },
+        ],
+        survivorId: "player2",
+        tickLog: [],
+      }
 
       const round3Result: BattleBotsRoundResult = { round: 3 }
       const players = [
@@ -233,13 +264,13 @@ describe("BattleBotsPlugin.scoreRound", () => {
       expect(scoreResult.deltas).toHaveProperty("player3")
     })
 
-    it("awards higher points to better ranks", () => {
+    it("awards higher points to later-eliminated players", () => {
       // Set up game with 4 players
       const picks: Record<string, BattleBotsPick> = {
-        player1: { robotTemplateId: "bot-alpha" },
-        player2: { robotTemplateId: "bot-beta" },
-        player3: { robotTemplateId: "bot-gamma" },
-        player4: { robotTemplateId: "bot-alpha" },
+        player1: PICK_A,
+        player2: PICK_B,
+        player3: PICK_C,
+        player4: PICK_D,
       }
       const settings = createSettings()
 
@@ -248,12 +279,19 @@ describe("BattleBotsPlugin.scoreRound", () => {
       battleBotsPlugin.resolveRound({}, settings)    // Round 2
 
       const state = getGameState()!
-      state.finalRankings = [
-        { playerId: "player1", playerName: "Alice", rank: 1, bracket: "winners", isBot: false },
-        { playerId: "player2", playerName: "Bob", rank: 2, bracket: "winners", isBot: false },
-        { playerId: "player3", playerName: "Charlie", rank: 3, bracket: "losers", isBot: false },
-        { playerId: "player4", playerName: "Diana", rank: 4, bracket: "losers", isBot: false },
-      ]
+      // Single bracket with multiple eliminations at different ticks
+      state.winnersBracket = {
+        id: "winners",
+        participantIds: ["player1", "player2", "player3", "player4"],
+        eliminationOrder: [
+          { ownerId: "player4", eliminatedOnTick: 10 },
+          { ownerId: "player3", eliminatedOnTick: 30 },
+          { ownerId: "player2", eliminatedOnTick: 50 },
+        ],
+        survivorId: "player1",
+        tickLog: [],
+      }
+      state.losersBracket = null
 
       const round3Result: BattleBotsRoundResult = { round: 3 }
       const players = [
@@ -265,10 +303,20 @@ describe("BattleBotsPlugin.scoreRound", () => {
 
       const scoreResult = battleBotsPlugin.scoreRound(picks, round3Result, players, settings)
 
-      // rank 1 gets more than rank 2, rank 2 more than rank 3, etc.
+      // totalTicks = 50 (last elimination)
+      // player4 eliminated on tick 10: ceil(10 / (50 * 1.1) * 100) = ceil(18.18) = 19
+      // player3 eliminated on tick 30: ceil(30 / (50 * 1.1) * 100) = ceil(54.54) = 55
+      // player2 eliminated on tick 50: ceil(50 / (50 * 1.1) * 100) = ceil(90.90) = 91
+      // player1 survivor: 125
       expect(scoreResult.deltas["player1"]).toBeGreaterThan(scoreResult.deltas["player2"])
       expect(scoreResult.deltas["player2"]).toBeGreaterThan(scoreResult.deltas["player3"])
       expect(scoreResult.deltas["player3"]).toBeGreaterThan(scoreResult.deltas["player4"])
+
+      // Verify exact values
+      expect(scoreResult.deltas["player1"]).toBe(125)
+      expect(scoreResult.deltas["player2"]).toBe(91)
+      expect(scoreResult.deltas["player3"]).toBe(55)
+      expect(scoreResult.deltas["player4"]).toBe(19)
     })
   })
 
@@ -276,8 +324,8 @@ describe("BattleBotsPlugin.scoreRound", () => {
     it("returns empty deltas for unknown round numbers", () => {
       // Set up game state
       const picks: Record<string, BattleBotsPick> = {
-        player1: { robotTemplateId: "bot-alpha" },
-        player2: { robotTemplateId: "bot-beta" },
+        player1: PICK_A,
+        player2: PICK_B,
       }
       const settings = createSettings()
 

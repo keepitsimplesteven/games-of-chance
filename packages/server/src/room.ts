@@ -23,7 +23,8 @@ import { getStrategy } from "./scoring"
 import { COIN_TOSS } from "./games/coin-toss/constants"
 import { BATTLE_BOTS } from "./games/battle-bots/constants"
 import { BIG_WHEEL } from "./games/big-wheel/constants"
-import { getRobotTemplates, resetGameState as resetBattleBotsState } from "./games/battle-bots/BattleBotsPlugin"
+import { resetGameState as resetBattleBotsState } from "./games/battle-bots/BattleBotsPlugin"
+import { botPersonaSelectParts } from "./games/battle-bots/BotPersona"
 import { resetCoinTossStreakState, getCoinTossGameState } from "./games/coin-toss/CoinTossPlugin"
 import {
   getBigWheelState,
@@ -1546,14 +1547,10 @@ export class GameRoom extends Server {
         resolvedAt: null,
       }
 
-      // For battle-bots Round 1: pre-generate robot options so clients can display them during PICKING
+      // For battle-bots Round 1: the new system uses a carousel — no pre-generated options needed
+      // The client displays part carousels directly; builds are resolved server-side on lock-in
       if (this.state.config.gameType === "battle-bots" && roundNumber === 1) {
-        const templates = getRobotTemplates(this.state.gameSettings)
-        const robotOptions: Record<string, { playerId: string; options: typeof templates }> = {}
-        for (const player of Object.values(this.state.players)) {
-          robotOptions[player.id] = { playerId: player.id, options: [...templates] }
-        }
-        this.state.round.result = { robotOptions }
+        this.state.round.result = {}
       }
 
       this.broadcastState()
@@ -1604,9 +1601,7 @@ export class GameRoom extends Server {
           break
         }
         case "battle-bots": {
-          const templates = getRobotTemplates(this.state.gameSettings)
-          const selected = templates[Math.floor(Math.random() * templates.length)]
-          vacatedPicks[vacatedId] = { robotTemplateId: selected.id }
+          vacatedPicks[vacatedId] = botPersonaSelectParts()
           break
         }
         case "big-wheel": {
@@ -1846,9 +1841,27 @@ export class GameRoom extends Server {
     // Sync session scores per-round in Chips mode
     this.syncChipsSessionScores()
 
-    // For battle-bots rounds 2 and 3, replay tick logs asynchronously before transitioning
+    // For battle-bots rounds 2 and 3, deliver tickLogPayloads to clients during RESOLVING
+    // so the client can render VsScreen → ReplayBattleArena/ReplayFFAArena animations.
     if (this.state.config.gameType === "battle-bots" && this.state.round.roundNumber >= 2) {
-      this.replayBattleTicks(result)
+      // Set result (with tickLogPayloads) while staying in RESOLVING phase
+      this.state.round.result = result
+      this.pendingResolveResult = result
+      this.broadcastState()
+
+      // Calculate replay duration: longest tick log × gameSpeed + VS screen time
+      const battleResult = result as { tickLogPayloads?: Array<{ tickLog?: Array<unknown>; gameSpeed?: number }> }
+      const tickLogPayloads = battleResult.tickLogPayloads ?? []
+      const longestTickLog = Math.max(...tickLogPayloads.map(p => p.tickLog?.length ?? 0), 0)
+      const gameSpeed = tickLogPayloads[0]?.gameSpeed ?? 100
+      const vsScreenMs = BATTLE_BOTS.VS_SCREEN_DURATION_MS
+      const replayDurationMs = (longestTickLog * gameSpeed) + vsScreenMs + 2000 // +2s buffer
+
+      // Schedule transition to RESULT after replay completes on clients
+      this.tickReplayTimerId = setTimeout(() => {
+        this.tickReplayTimerId = null
+        this.finishResolving(result)
+      }, replayDurationMs)
       return
     }
 
@@ -1871,7 +1884,7 @@ export class GameRoom extends Server {
     // Store the result so SKIP_ANIMATION can finalize the round immediately
     this.pendingResolveResult = result
 
-    const tickRateMs = BATTLE_BOTS.TICK_RATE_MS
+    const tickRateMs = 250 // Legacy: was BATTLE_BOTS.TICK_RATE_MS (removed in combat overhaul)
     const battleResult = result as { round: number; pairings?: Array<{ id: string; robot1: { ownerId: string; currentHp: number }; robot2: { ownerId: string; currentHp: number }; tickLog: Array<{ tick: number; attacks: Array<{ targetId: string; targetHpAfter: number }> }> }>; winnersBracket?: { id: string; participants: Array<{ ownerId: string; currentHp: number }>; tickLog: Array<{ tick: number; attacks: Array<{ targetId: string; targetHpAfter: number }> }> }; losersBracket?: { id: string; participants: Array<{ ownerId: string; currentHp: number }>; tickLog: Array<{ tick: number; attacks: Array<{ targetId: string; targetHpAfter: number }> }> } }
 
     // Collect all tick snapshots to replay, ordered by tick number

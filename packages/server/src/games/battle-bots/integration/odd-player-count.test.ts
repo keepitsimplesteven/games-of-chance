@@ -2,11 +2,11 @@ import { describe, it, expect, beforeEach } from "vitest"
 import { battleBotsPlugin, resetGameState, getGameState } from "../BattleBotsPlugin"
 import type { BattleBotsRoundResult } from "../BattleBotsPlugin"
 import type { GameSettings } from "@games-of-chance/shared"
-import type { FFABracket, FinalRanking } from "../types"
+import type { FFABracketState, FinalRanking, BattleBotsPick } from "../types"
 
 /**
  * Integration test: Odd player count (3 players)
- * Validates: Requirements 3.4, 4.1
+ * Validates: Requirements 10.4
  *
  * - Verifies bot persona added to make 4 participants
  * - Verifies 2 pairings created with even count
@@ -17,18 +17,16 @@ describe("Integration: Odd player count (3 players)", () => {
     roundCount: 3,
     pickWindowMs: 15000,
     tuning: {
-      BOT_HP: "100",
-      ACCURACY: "80",
-      DAMAGE_MIN: "1",
-      DAMAGE_MAX: "10",
+      PREP_TIMER_MS: "60",
       CHIPS_MULTIPLIER: "10",
+      GAME_SPEED: "100",
     },
   }
 
-  const threePlayers = {
-    p1: { robotTemplateId: "bot-alpha" },
-    p2: { robotTemplateId: "bot-beta" },
-    p3: { robotTemplateId: "bot-gamma" },
+  const threePlayers: Record<string, BattleBotsPick> = {
+    p1: { weapon: "drill", head: "square", body: "square" },
+    p2: { weapon: "blaster", head: "rounded", body: "hexagonal" },
+    p3: { weapon: "bazooka", head: "triangular", body: "rounded" },
   }
 
   beforeEach(() => {
@@ -36,7 +34,6 @@ describe("Integration: Odd player count (3 players)", () => {
   })
 
   it("Round 1: adds 1 bot persona to make 4 participants from 3 players", () => {
-    // Round 1 with 3 player picks
     const result = battleBotsPlugin.resolveRound(threePlayers, defaultSettings) as BattleBotsRoundResult
 
     const state = getGameState()!
@@ -58,7 +55,7 @@ describe("Integration: Odd player count (3 players)", () => {
     // Round 1
     battleBotsPlugin.resolveRound(threePlayers, defaultSettings)
     // Round 2
-    const result = battleBotsPlugin.resolveRound(threePlayers, defaultSettings) as BattleBotsRoundResult
+    battleBotsPlugin.resolveRound(threePlayers, defaultSettings)
 
     const state = getGameState()!
 
@@ -84,14 +81,12 @@ describe("Integration: Odd player count (3 players)", () => {
     // Round 3
     const result = battleBotsPlugin.resolveRound(threePlayers, defaultSettings) as BattleBotsRoundResult
 
-    const state = getGameState()!
-
-    const winnersBracket = result.winnersBracket as FFABracket
-    const losersBracket = result.losersBracket as FFABracket
+    const winnersBracket = result.winnersBracket as FFABracketState
+    const losersBracket = result.losersBracket as FFABracketState
 
     // 2 pairings → 2 winners + 2 losers
-    expect(winnersBracket.participants).toHaveLength(2)
-    expect(losersBracket.participants).toHaveLength(2)
+    expect(winnersBracket.participantIds).toHaveLength(2)
+    expect(losersBracket.participantIds).toHaveLength(2)
 
     expect(winnersBracket.id).toBe("winners")
     expect(losersBracket.id).toBe("losers")

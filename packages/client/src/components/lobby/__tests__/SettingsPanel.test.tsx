@@ -119,6 +119,10 @@ describe("SettingsPanel", () => {
 
       render(<SettingsPanel />)
 
+      // Expand the outer settings accordion first
+      const settingsToggle = screen.getByRole("button", { name: /Settings/i })
+      fireEvent.click(settingsToggle)
+
       const roundCountInput = screen.getByLabelText("Rounds per game") as HTMLInputElement
       const pickWindowInput = screen.getByLabelText("Pick window (seconds)") as HTMLInputElement
       const autoModeToggle = screen.getByRole("switch")
@@ -168,6 +172,10 @@ describe("SettingsPanel", () => {
 
       render(<SettingsPanel />)
 
+      // Expand the outer settings accordion first
+      const settingsToggle = screen.getByRole("button", { name: /Settings/i })
+      fireEvent.click(settingsToggle)
+
       const intervalInput = screen.getByLabelText("Auto-round interval (seconds)") as HTMLInputElement
       expect(intervalInput).toBeInTheDocument()
       expect(intervalInput.value).toBe("5")
@@ -178,6 +186,10 @@ describe("SettingsPanel", () => {
       setStoreState("host", roomState)
 
       render(<SettingsPanel />)
+
+      // Expand the outer settings accordion first
+      const settingsToggle = screen.getByRole("button", { name: /Settings/i })
+      fireEvent.click(settingsToggle)
 
       const toggle = screen.getByRole("switch")
       expect(toggle).toHaveAttribute("aria-checked", "false")
@@ -201,6 +213,10 @@ describe("SettingsPanel", () => {
 
       render(<SettingsPanel />)
 
+      // Expand the outer settings accordion first
+      const settingsToggle = screen.getByRole("button", { name: /Settings/i })
+      fireEvent.click(settingsToggle)
+
       const toggle = screen.getByRole("switch")
       expect(toggle).toHaveAttribute("aria-checked", "true")
     })
@@ -215,6 +231,10 @@ describe("SettingsPanel", () => {
 
       render(<SettingsPanel />)
 
+      // Expand the outer settings accordion first
+      const settingsToggle = screen.getByRole("button", { name: /Settings/i })
+      fireEvent.click(settingsToggle)
+
       expect(screen.getByText("Game Tuning")).toBeInTheDocument()
     })
 
@@ -223,6 +243,10 @@ describe("SettingsPanel", () => {
       setStoreState("host", roomState)
 
       render(<SettingsPanel />)
+
+      // Expand the outer settings accordion first
+      const settingsToggle = screen.getByRole("button", { name: /Settings/i })
+      fireEvent.click(settingsToggle)
 
       const toggleButton = screen.getByRole("button", { name: /Game Tuning/i })
       expect(toggleButton).toHaveAttribute("aria-expanded", "true")
@@ -239,6 +263,10 @@ describe("SettingsPanel", () => {
 
       render(<SettingsPanel />)
 
+      // Expand the outer settings accordion first
+      const settingsToggle = screen.getByRole("button", { name: /Settings/i })
+      fireEvent.click(settingsToggle)
+
       const toggleButton = screen.getByRole("button", { name: /Game Tuning/i })
       fireEvent.click(toggleButton)
 
@@ -252,6 +280,10 @@ describe("SettingsPanel", () => {
       setStoreState("host", roomState)
 
       render(<SettingsPanel />)
+
+      // Expand the outer settings accordion first
+      const settingsToggle = screen.getByRole("button", { name: /Settings/i })
+      fireEvent.click(settingsToggle)
 
       const toggleButton = screen.getByRole("button", { name: /Game Tuning/i })
       fireEvent.click(toggleButton) // collapse
