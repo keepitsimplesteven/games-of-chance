@@ -10,6 +10,8 @@ export interface PlayCardGridProps {
   matchupId: string
   /** When true, cards are disabled with a "Play in progress" overlay */
   playInProgress?: boolean
+  /** Offense or defense — used for play type badge labels */
+  role?: "offense" | "defense"
 }
 
 /**
@@ -26,7 +28,7 @@ export interface PlayCardGridProps {
  *
  * Validates: Requirements 4.1, 4.5, 6.1, 6.2, 6.3, 6.4, 6.5, 14.3
  */
-export function PlayCardGrid({ cards, matchupId, playInProgress = false }: PlayCardGridProps) {
+export function PlayCardGrid({ cards, matchupId, playInProgress = false, role = "offense" }: PlayCardGridProps) {
   const theme = useTheme()
   const submitPick = useGameStore((s) => s.submitPick)
   const pickSubmitted = useGameStore((s) => s.pickSubmitted)
@@ -77,6 +79,7 @@ export function PlayCardGrid({ cards, matchupId, playInProgress = false }: PlayC
               artData={card.artData}
               state={cardState}
               onSelect={handleSelect}
+              role={role}
             />
           )
         })}

@@ -307,7 +307,7 @@ console.log("playHistory", driveState.playHistory)
             onAnimationDone={() => { }}
           />
         ) : (
-          <PlayCardGrid cards={cards} matchupId={matchupId} playInProgress={isWaitingForReveal} />
+          <PlayCardGrid cards={cards} matchupId={matchupId} playInProgress={isWaitingForReveal} role={role} />
         )}
       </div>
     </div>

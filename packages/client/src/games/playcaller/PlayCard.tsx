@@ -11,6 +11,7 @@ export interface PlayCardProps {
   artData: PlayArtData
   state: "idle" | "selected" | "unselected" | "disabled" | "highlighted"
   onSelect: (playId: string) => void
+  role?: "offense" | "defense"
 }
 
 /**
@@ -22,11 +23,19 @@ export interface PlayCardProps {
  *
  * Validates: Requirements 4.2, 4.3, 4.4, 6.1, 6.2, 12.3, 13.3
  */
-export function PlayCard({ playId, displayName, formation, artData, state, onSelect }: PlayCardProps) {
+export function PlayCard({ playId, displayName, formation, artData, state, onSelect, role = "offense" }: PlayCardProps) {
   const theme = useTheme()
 
   const isDisabled = state === "disabled" || state === "highlighted"
   const isPass = playId.startsWith("pass")
+  const isAggressive = playId.includes("aggressive")
+
+  // Play type badge: "Safe Run", "Aggr. Pass", etc. — append "D" for defense
+  const riskLabel = isAggressive ? "Aggr." : "Safe"
+  const typeLabel = isPass ? "Pass" : "Run"
+  const suffix = role === "defense" ? " D" : ""
+  const badgeLabel = `${riskLabel} ${typeLabel}${suffix}`
+  const badgeBg = isAggressive ? "bg-red-700" : "bg-black"
 
   // Pass plays = blue, run plays = green (matches comp)
   const cardStyle = isPass
@@ -45,11 +54,18 @@ export function PlayCard({ playId, displayName, formation, artData, state, onSel
         }
       }}
       disabled={isDisabled}
-      className={`${cardStyle} rounded overflow-hidden grid place-items-center p-2 cursor-pointer transition-colors`}
+      className={`${cardStyle} rounded overflow-hidden grid place-items-center p-2 pb-4 cursor-pointer transition-colors relative`}
       style={{ gridTemplateRows: "1fr auto auto" }}
       aria-label={`Select play: ${displayName}`}
       aria-disabled={isDisabled}
     >
+      {/* Play type badge — bottom-left corner */}
+      <span
+        className={`absolute bottom-1 left-1 ${badgeBg} text-white text-[8px] font-bold uppercase px-1.5 py-0.5 rounded leading-none`}
+      >
+        {badgeLabel}
+      </span>
+
       {/* Play art SVG — larger to fill the card */}
       <PlayArtSvg data={artData} className="w-full max-h-[8dvh]" />
 
