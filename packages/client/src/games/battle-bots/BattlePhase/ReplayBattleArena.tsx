@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useRef, useState, useCallback, useMemo, createRef } from "react"
 import { useTheme } from "../../../theme"
 import { CompositeRobot, type RobotVisualConfig } from "../assets/RobotParts"
 import { StarDisplay } from "../PrepPhase/StarDisplay"
 import { HPBar } from "./HPBar"
 import { ReplayController, type TickEntry } from "./ReplayController"
+import { AnimationLayer } from "./animations"
 
 // ── Constants ──
 
@@ -67,6 +68,7 @@ export function ReplayBattleArena({
 }: ReplayBattleArenaProps) {
   const theme = useTheme()
   const controllerRef = useRef<ReplayController | null>(null)
+  console.log("replay arena")
 
   const { robots, tickLog, gameSpeed } = tickLogPayload
 
@@ -85,6 +87,37 @@ export function ReplayBattleArena({
 
   const [isComplete, setIsComplete] = useState(false)
   const [winnerId, setWinnerId] = useState<string | null>(null)
+  const [currentTickEntry, setCurrentTickEntry] = useState<TickEntry | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+
+  // Refs to robot card DOM elements for animation position calculations
+  const robotRefs = useMemo(() => {
+    const refs: Record<string, React.RefObject<HTMLDivElement>> = {}
+    for (const robot of robots) {
+      refs[robot.ownerId] = createRef<HTMLDivElement>()
+    }
+    return refs
+  }, [robots])
+
+  // Refs specifically to the robot SVG container divs (for constraining hit effects)
+  const robotSvgRefs = useMemo(() => {
+    const refs: Record<string, React.RefObject<HTMLDivElement>> = {}
+    for (const robot of robots) {
+      refs[robot.ownerId] = createRef<HTMLDivElement>()
+    }
+    return refs
+  }, [robots])
+  console.log("robot refs", robotSvgRefs)
+
+  // Color assignments matching existing logic in ReplayRobotFighter
+  const robotColors = useMemo(() => {
+    const colors: Record<string, string> = {}
+    for (let i = 0; i < robots.length; i++) {
+      const robot = robots[i]
+      colors[robot.ownerId] = robot.visual?.color ?? ROBOT_COLORS[i % ROBOT_COLORS.length]
+    }
+    return colors
+  }, [robots])
 
   // Determine winner from the final state of the tick log
   const determineWinner = useCallback(
@@ -169,17 +202,20 @@ export function ReplayBattleArena({
     // Register tick callback (processes ticks during live playback)
     controller.onTick((tickEntry) => {
       processTick(tickEntry)
+      setCurrentTickEntry(tickEntry)
     })
 
     // Start playback and jump to reconnect position if needed
     controller.start(tickLog, gameSpeed)
+    setIsPlaying(true)  // Set immediately since start() fires the first tick synchronously
     if (initialTickIndex && initialTickIndex > 0 && tickLog.length > 0) {
       controller.jumpToTick(initialTickIndex)
     }
 
-    // Poll for completion
+    // Poll for completion and isPlaying state
     const checkInterval = window.setInterval(() => {
       const state = controller.getCurrentState()
+      setIsPlaying(state.isPlaying)
       if (state.isComplete) {
         setIsComplete(true)
         window.clearInterval(checkInterval)
@@ -225,21 +261,53 @@ export function ReplayBattleArena({
       )}
 
       {is1v1 ? (
-        <Layout1v1
-          robots={robots}
-          hpStates={hpStates}
-          playerNames={playerNames}
-          winnerId={winnerId}
-          isComplete={isComplete}
-        />
+        <div className="relative">
+          <Layout1v1
+            robots={robots}
+            hpStates={hpStates}
+            playerNames={playerNames}
+            winnerId={winnerId}
+            isComplete={isComplete}
+            robotRefs={robotRefs}
+            robotSvgRefs={robotSvgRefs}
+          />
+          <AnimationLayer
+            tickEntry={currentTickEntry}
+            hpStates={hpStates}
+            robots={robots}
+            robotColors={robotColors}
+            gameSpeed={gameSpeed}
+            isPlaying={isPlaying}
+            isComplete={isComplete}
+            mode="1v1"
+            robotRefs={robotRefs}
+            robotSvgRefs={robotSvgRefs}
+          />
+        </div>
       ) : (
-        <LayoutFFA
-          robots={robots}
-          hpStates={hpStates}
-          playerNames={playerNames}
-          winnerId={winnerId}
-          isComplete={isComplete}
-        />
+        <div className="relative">
+          <LayoutFFA
+            robots={robots}
+            hpStates={hpStates}
+            playerNames={playerNames}
+            winnerId={winnerId}
+            isComplete={isComplete}
+            robotRefs={robotRefs}
+            robotSvgRefs={robotSvgRefs}
+          />
+          <AnimationLayer
+            tickEntry={currentTickEntry}
+            hpStates={hpStates}
+            robots={robots}
+            robotColors={robotColors}
+            gameSpeed={gameSpeed}
+            isPlaying={isPlaying}
+            isComplete={isComplete}
+            mode="ffa"
+            robotRefs={robotRefs}
+            robotSvgRefs={robotSvgRefs}
+          />
+        </div>
       )}
 
       {/* End-of-battle winner announcement */}
@@ -265,9 +333,11 @@ interface LayoutProps {
   playerNames: Record<string, string>
   winnerId: string | null
   isComplete: boolean
+  robotRefs: Record<string, React.RefObject<HTMLDivElement>>
+  robotSvgRefs: Record<string, React.RefObject<HTMLDivElement>>
 }
 
-function Layout1v1({ robots, hpStates, playerNames, winnerId, isComplete }: LayoutProps) {
+function Layout1v1({ robots, hpStates, playerNames, winnerId, isComplete, robotRefs, robotSvgRefs }: LayoutProps) {
   const theme = useTheme()
   const [robot1, robot2] = robots
 
@@ -281,6 +351,8 @@ function Layout1v1({ robots, hpStates, playerNames, winnerId, isComplete }: Layo
           hpState={hpStates[robot1.ownerId]}
           playerName={playerNames[robot1.ownerId] ?? "Unknown"}
           isWinner={isComplete && winnerId === robot1.ownerId}
+          cardRef={robotRefs[robot1.ownerId]}
+          svgRef={robotSvgRefs[robot1.ownerId]}
         />
       )}
 
@@ -297,6 +369,8 @@ function Layout1v1({ robots, hpStates, playerNames, winnerId, isComplete }: Layo
           hpState={hpStates[robot2.ownerId]}
           playerName={playerNames[robot2.ownerId] ?? "Unknown"}
           isWinner={isComplete && winnerId === robot2.ownerId}
+          cardRef={robotRefs[robot2.ownerId]}
+          svgRef={robotSvgRefs[robot2.ownerId]}
         />
       )}
     </div>
@@ -305,7 +379,7 @@ function Layout1v1({ robots, hpStates, playerNames, winnerId, isComplete }: Layo
 
 // ── FFA Layout ──
 
-function LayoutFFA({ robots, hpStates, playerNames, winnerId, isComplete }: LayoutProps) {
+function LayoutFFA({ robots, hpStates, playerNames, winnerId, isComplete, robotRefs, robotSvgRefs }: LayoutProps) {
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:gap-4">
       {robots.map((robot, index) => (
@@ -316,6 +390,8 @@ function LayoutFFA({ robots, hpStates, playerNames, winnerId, isComplete }: Layo
           hpState={hpStates[robot.ownerId]}
           playerName={playerNames[robot.ownerId] ?? "Unknown"}
           isWinner={isComplete && winnerId === robot.ownerId}
+          cardRef={robotRefs[robot.ownerId]}
+          svgRef={robotSvgRefs[robot.ownerId]}
         />
       ))}
     </div>
@@ -330,6 +406,8 @@ interface ReplayRobotFighterProps {
   hpState: RobotHpState | undefined
   playerName: string
   isWinner: boolean
+  cardRef?: React.RefObject<HTMLDivElement>
+  svgRef?: React.RefObject<HTMLDivElement>
 }
 
 function ReplayRobotFighter({
@@ -338,6 +416,8 @@ function ReplayRobotFighter({
   hpState,
   playerName,
   isWinner,
+  cardRef,
+  svgRef,
 }: ReplayRobotFighterProps) {
   const theme = useTheme()
   const color = robot.visual?.color ?? ROBOT_COLORS[index % ROBOT_COLORS.length]
@@ -355,7 +435,7 @@ function ReplayRobotFighter({
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center gap-1 lg:gap-2">
+    <div ref={cardRef} className="flex flex-1 flex-col items-center gap-1 lg:gap-2">
       {/* Status label */}
       <div className="h-5 lg:h-6">
         {isWinner && (
@@ -370,6 +450,7 @@ function ReplayRobotFighter({
 
       {/* Robot SVG */}
       <div
+        ref={svgRef}
         className={`relative transition-all ${
           eliminated ? "opacity-50 grayscale" : ""
         }`}

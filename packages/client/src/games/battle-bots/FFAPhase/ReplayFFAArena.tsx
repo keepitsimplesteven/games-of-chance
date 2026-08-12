@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from "react"
+import { useEffect, useRef, useState, useCallback, useMemo, createRef } from "react"
 import { useTheme } from "../../../theme"
 import { CompositeRobot, type RobotVisualConfig } from "../assets/RobotParts"
 import { StarDisplay } from "../PrepPhase/StarDisplay"
 import { HPBar } from "../BattlePhase/HPBar"
 import { ReplayController, type TickEntry } from "../BattlePhase/ReplayController"
+import { AnimationLayer } from "../BattlePhase/animations"
 
 // ── Constants ──
 
@@ -92,6 +93,38 @@ export function ReplayFFAArena({
   const [isComplete, setIsComplete] = useState(false)
   const [winnerId, setWinnerId] = useState<string | null>(null)
   const [eliminations, setEliminations] = useState<EliminationRecord[]>([])
+  const [currentTickEntry, setCurrentTickEntry] = useState<TickEntry | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+
+  // Refs to robot card DOM elements for slide animations
+  const robotRefs = useRef<Record<string, React.RefObject<HTMLDivElement>>>({})
+  if (Object.keys(robotRefs.current).length === 0 || !robots.every(r => r.ownerId in robotRefs.current)) {
+    const refs: Record<string, React.RefObject<HTMLDivElement>> = {}
+    for (const robot of robots) {
+      refs[robot.ownerId] = robotRefs.current[robot.ownerId] ?? createRef<HTMLDivElement>()
+    }
+    robotRefs.current = refs
+  }
+
+  // Refs specifically to the robot SVG container divs (for hit effects & damage numbers)
+  const robotSvgRefs = useRef<Record<string, React.RefObject<HTMLDivElement>>>({})
+  if (Object.keys(robotSvgRefs.current).length === 0 || !robots.every(r => r.ownerId in robotSvgRefs.current)) {
+    const refs: Record<string, React.RefObject<HTMLDivElement>> = {}
+    for (const robot of robots) {
+      refs[robot.ownerId] = robotSvgRefs.current[robot.ownerId] ?? createRef<HTMLDivElement>()
+    }
+    robotSvgRefs.current = refs
+  }
+
+  // Color assignments for animation layer
+  const robotColors = useMemo(() => {
+    const colors: Record<string, string> = {}
+    for (let i = 0; i < robots.length; i++) {
+      const robot = robots[i]
+      colors[robot.ownerId] = robot.visual?.color ?? ROBOT_COLORS[i % ROBOT_COLORS.length]
+    }
+    return colors
+  }, [robots])
 
   // Determine winner from the final state of the tick log
   const determineWinner = useCallback(
@@ -195,17 +228,20 @@ export function ReplayFFAArena({
     // Register tick callback (processes ticks during live playback)
     controller.onTick((tickEntry) => {
       processTick(tickEntry)
+      setCurrentTickEntry(tickEntry)
     })
 
     // Start playback and jump to reconnect position if needed
     controller.start(tickLog, gameSpeed)
+    setIsPlaying(true)
     if (initialTickIndex && initialTickIndex > 0 && tickLog.length > 0) {
       controller.jumpToTick(initialTickIndex)
     }
 
-    // Poll for completion
+    // Poll for completion and isPlaying state
     const checkInterval = window.setInterval(() => {
       const state = controller.getCurrentState()
+      setIsPlaying(state.isPlaying)
       if (state.isComplete) {
         setIsComplete(true)
         window.clearInterval(checkInterval)
@@ -321,18 +357,34 @@ export function ReplayFFAArena({
       )}
 
       {/* Robot grid — scrollable on mobile for 5+ players */}
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:gap-4">
-          {robots.map((robot, index) => (
-            <FFARobotFighter
-              key={robot.ownerId}
-              robot={robot}
-              index={index}
-              hpState={hpStates[robot.ownerId]}
-              playerName={playerNames[robot.ownerId] ?? "Unknown"}
-              isWinner={isComplete && winnerId === robot.ownerId}
-            />
-          ))}
+      <div className="min-h-0 flex-0 overflow-y-auto">
+        <div className="relative">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:gap-4">
+            {robots.map((robot, index) => (
+              <FFARobotFighter
+                key={robot.ownerId}
+                robot={robot}
+                index={index}
+                hpState={hpStates[robot.ownerId]}
+                playerName={playerNames[robot.ownerId] ?? "Unknown"}
+                isWinner={isComplete && winnerId === robot.ownerId}
+                cardRef={robotRefs.current[robot.ownerId]}
+                svgRef={robotSvgRefs.current[robot.ownerId]}
+              />
+            ))}
+          </div>
+          <AnimationLayer
+            tickEntry={currentTickEntry}
+            hpStates={hpStates}
+            robots={robots}
+            robotColors={robotColors}
+            gameSpeed={gameSpeed}
+            isPlaying={isPlaying}
+            isComplete={isComplete}
+            mode="ffa"
+            robotRefs={robotRefs.current}
+            robotSvgRefs={robotSvgRefs.current}
+          />
         </div>
 
         {/* End-of-battle winner announcement */}
@@ -440,6 +492,8 @@ interface FFARobotFighterProps {
   hpState: RobotHpState | undefined
   playerName: string
   isWinner: boolean
+  cardRef?: React.RefObject<HTMLDivElement>
+  svgRef?: React.RefObject<HTMLDivElement>
 }
 
 function FFARobotFighter({
@@ -448,6 +502,8 @@ function FFARobotFighter({
   hpState,
   playerName,
   isWinner,
+  cardRef,
+  svgRef,
 }: FFARobotFighterProps) {
   const theme = useTheme()
   const color = robot.visual?.color ?? ROBOT_COLORS[index % ROBOT_COLORS.length]
@@ -465,7 +521,7 @@ function FFARobotFighter({
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center gap-1 lg:gap-2">
+    <div ref={cardRef} className="flex flex-1 flex-col items-center gap-1 lg:gap-2">
       {/* Status label */}
       <div className="h-5 lg:h-6">
         {isWinner && (
@@ -480,6 +536,7 @@ function FFARobotFighter({
 
       {/* Robot SVG */}
       <div
+        ref={svgRef}
         className={`relative transition-all ${
           eliminated ? "opacity-50 grayscale" : ""
         }`}

@@ -34,7 +34,7 @@ describe("ReplayController", () => {
     const state = controller.getCurrentState()
     expect(state.tickLog).toEqual([])
     expect(state.currentTickIndex).toBe(0)
-    expect(state.gameSpeed).toBe(100)
+    expect(state.gameSpeed).toBe(50)
     expect(state.isPlaying).toBe(false)
     expect(state.isComplete).toBe(false)
   })

@@ -43,7 +43,7 @@ export class ReplayController {
     this.state = {
       tickLog: [],
       currentTickIndex: 0,
-      gameSpeed: 100,
+      gameSpeed: 50,
       isPlaying: false,
       isComplete: false,
     }

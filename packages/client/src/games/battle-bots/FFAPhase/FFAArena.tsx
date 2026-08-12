@@ -30,6 +30,7 @@ export function FFAArena({ bracketName, combatants }: FFAArenaProps) {
   const winnerId = isFinished
     ? combatants.find((c) => !c.eliminated)?.ownerId ?? null
     : null
+  console.log("replay arena")
 
   return (
     <div className={`flex flex-col gap-4 p-4 rounded-md ${theme.card}`}>
