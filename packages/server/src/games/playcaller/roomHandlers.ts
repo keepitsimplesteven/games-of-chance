@@ -641,6 +641,14 @@ export function advancePlaycallerBracket(ctx: PlaycallerRoomContext): void {
   const bracket = getPlaycallerState()!
   const currentRound = bracket.rounds[bracket.currentRoundIndex]
 
+  // Stamp endingType onto each matchup before resolving (persists in bracket state)
+  for (const matchup of currentRound.matchups) {
+    const drive = drives[matchup.matchupId]
+    if (drive?.completion) {
+      matchup.endingType = drive.completion.endingType
+    }
+  }
+
   // Build a resolver that returns the pre-determined winner from drives
   const driveResolver = (playerA: string, playerB: string): string => {
     const matchup = currentRound.matchups.find(

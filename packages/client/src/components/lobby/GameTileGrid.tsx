@@ -77,129 +77,132 @@ export default function GameTileGrid() {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-      {games.map((game) => {
-        const isSelected = game.id === currentGameType
-        const tileStatus = getTileStatus(game.id)
-        const votes = gameVotes[game.id] ?? []
-        const voteCount = votes.length
-        const playerVotedForThis = votes.includes(playerId ?? "")
+    <div>
+      <h1 className="text-md mb-2 justify-self-center font-bold text-[#f5c542] [text-shadow:2px_2px_0_#8b6914,0_0_8px_rgba(245,197,66,0.3)]">Vote on the next game!</h1>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {games.map((game) => {
+          const isSelected = game.id === currentGameType
+          const tileStatus = getTileStatus(game.id)
+          const votes = gameVotes[game.id] ?? []
+          const voteCount = votes.length
+          const playerVotedForThis = votes.includes(playerId ?? "")
 
-        // In tournament mode, determine clickability from tile status
-        // In endless mode (or no tournament progress), use the original `active` flag
-        const isClickable = isTournament && tileStatus
-          ? tileStatus === "available"
-          : game.active
+          // In tournament mode, determine clickability from tile status
+          // In endless mode (or no tournament progress), use the original `active` flag
+          const isClickable = isTournament && tileStatus
+            ? tileStatus === "available"
+            : game.active
 
-        return (
-          <button
-            key={game.id}
-            type="button"
-            disabled={!isClickable}
-            onClick={() => isClickable && handleTileClick(game.id)}
-            aria-pressed={isSelected}
-            className={`relative flex flex-col items-center justify-center rounded-xl p-4 shadow-md transition ${
-              // Tournament: locked tile
-              tileStatus === "locked"
-                ? `cursor-default opacity-75 ${theme.listItem}`
-                // Tournament: unavailable tile
-                : tileStatus === "unavailable"
-                  ? `cursor-default opacity-50 ${theme.listItem}`
-                  // Tournament: finale available — distinct golden glow
-                  : isTournament && game.isFinale && tileStatus === "available"
-                    ? `cursor-pointer ${game.tileColor} ring-2 ring-[#f5c542] hover:shadow-lg`
-                    // Normal: selected
-                    : isSelected
-                      ? `${game.tileColor} ring-2 ring-[#f5c542]`
-                      // Normal: active/clickable
-                      : game.active
-                        ? `cursor-pointer ${game.tileColor} hover:shadow-lg hover:ring-2 hover:ring-[#f5c542]/50`
-                        // Normal: inactive (coming soon)
-                        : `cursor-default ${theme.listItem}`
-            }`}
-          >
-            {/* Tournament: Locked overlay */}
-            {tileStatus === "locked" && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center rounded-xl bg-gray-900/40">
-                <span className="text-lg" aria-hidden="true">
-                  🔒
-                </span>
-                <span className="mt-1 text-xs font-semibold text-white">
-                  Played
-                </span>
-              </div>
-            )}
-
-            {/* Tournament: Unavailable overlay */}
-            {tileStatus === "unavailable" && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center rounded-xl bg-gray-900/30">
-                {game.isFinale ? (
-                  <>
-                    <span className="text-lg" aria-hidden="true">🔒</span>
-                    <span className="mt-1 text-center text-xs font-semibold text-white px-2">
-                      {(() => {
-                        const remaining = games.filter(g => !g.isFinale && tournamentProgress && tournamentProgress.availability[g.id] !== "locked").length
-                        return `Play ${remaining} more game${remaining !== 1 ? "s" : ""} to unlock`
-                      })()}
-                    </span>
-                  </>
-                ) : (
-                  <span className="mt-1 text-xs font-semibold text-white">
-                    Not Yet
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Tournament: Finale available indicator (crown) */}
-            {isTournament && game.isFinale && tileStatus === "available" && (
-              <div className="absolute right-2 bottom-2">
-                <span className="text-sm" aria-label="Finale game">👑</span>
-              </div>
-            )}
-
-            {/* Selected checkmark (host's choice) */}
-            {isSelected && (
-              <div className="absolute right-2 top-2">
-                <span className={`text-sm ${theme.accentText}`}>✓</span>
-              </div>
-            )}
-
-            {/* Vote count badge */}
-            {voteCount > 0 && isClickable && (
-              <div className={`absolute left-2 top-2 flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 ${theme.btnSecondary}`}>
-                <span className="text-[10px] font-bold">{voteCount}</span>
-              </div>
-            )}
-
-            {/* Player's own vote indicator */}
-            {playerVotedForThis && !isHost && (
-              <div className="absolute right-2 top-2">
-                <span className={`text-sm ${theme.accentText}`}>🗳️</span>
-              </div>
-            )}
-
-            {/* Tile content */}
-            <span className="text-3xl" aria-hidden="true">
-              {game.emoji}
-            </span>
-            <span
-              className={`mt-2 text-center text-sm font-bold ${
-                tileStatus === "locked" || tileStatus === "unavailable"
-                  ? theme.mutedText
-                  : "text-white"
-              }`}
+          return (
+            <button
+              key={game.id}
+              type="button"
+              disabled={!isClickable}
+              onClick={() => isClickable && handleTileClick(game.id)}
+              aria-pressed={isSelected}
+              className={`relative flex flex-col items-center justify-center rounded-xl p-4 shadow-md transition ${
+                // Tournament: locked tile
+                tileStatus === "locked"
+                  ? `cursor-default opacity-75 ${theme.listItem}`
+                  // Tournament: unavailable tile
+                  : tileStatus === "unavailable"
+                    ? `cursor-default opacity-50 ${theme.listItem}`
+                    // Tournament: finale available — distinct golden glow
+                    : isTournament && game.isFinale && tileStatus === "available"
+                      ? `cursor-pointer ${game.tileColor} ring-2 ring-[#f5c542] hover:shadow-lg`
+                      // Normal: selected
+                      : isSelected
+                        ? `${game.tileColor} ring-2 ring-[#f5c542]`
+                        // Normal: active/clickable
+                        : game.active
+                          ? `cursor-pointer ${game.tileColor} hover:shadow-lg hover:ring-2 hover:ring-[#f5c542]/50`
+                          // Normal: inactive (coming soon)
+                          : `cursor-default ${theme.listItem}`
+                }`}
             >
-              {game.name}
-            </span>
-            {game.active && tileStatus !== "locked" && tileStatus !== "unavailable" && (
-              <span className="mt-1 text-center text-xs text-white/70">
-                {game.description}
+              {/* Tournament: Locked overlay */}
+              {tileStatus === "locked" && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center rounded-xl bg-gray-900/40">
+                  <span className="text-lg" aria-hidden="true">
+                    🔒
+                  </span>
+                  <span className="mt-1 text-xs font-semibold text-white">
+                    Played
+                  </span>
+                </div>
+              )}
+
+              {/* Tournament: Unavailable overlay */}
+              {tileStatus === "unavailable" && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center rounded-xl bg-gray-900/30">
+                  {game.isFinale ? (
+                    <>
+                      <span className="text-lg" aria-hidden="true">🔒</span>
+                      <span className="mt-1 text-center text-xs font-semibold text-white px-2">
+                        {(() => {
+                          const remaining = games.filter(g => !g.isFinale && tournamentProgress && tournamentProgress.availability[g.id] !== "locked").length
+                          return `Play ${remaining} more game${remaining !== 1 ? "s" : ""} to unlock`
+                        })()}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="mt-1 text-xs font-semibold text-white">
+                      Not Yet
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Tournament: Finale available indicator (crown) */}
+              {isTournament && game.isFinale && tileStatus === "available" && (
+                <div className="absolute right-2 bottom-2">
+                  <span className="text-sm" aria-label="Finale game">👑</span>
+                </div>
+              )}
+
+              {/* Selected checkmark (host's choice) */}
+              {isSelected && (
+                <div className="absolute right-2 top-2">
+                  <span className={`text-sm ${theme.accentText}`}>✓</span>
+                </div>
+              )}
+
+              {/* Vote count badge */}
+              {voteCount > 0 && isClickable && (
+                <div className={`absolute left-2 top-2 flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 ${theme.btnSecondary}`}>
+                  <span className="text-[10px] font-bold">{voteCount}</span>
+                </div>
+              )}
+
+              {/* Player's own vote indicator */}
+              {playerVotedForThis && !isHost && (
+                <div className="absolute right-2 top-2">
+                  <span className={`text-sm ${theme.accentText}`}>🗳️</span>
+                </div>
+              )}
+
+              {/* Tile content */}
+              <span className="text-3xl" aria-hidden="true">
+                {game.emoji}
               </span>
-            )}
-          </button>
-        )
-      })}
+              <span
+                className={`mt-2 text-center text-sm font-bold ${tileStatus === "locked" || tileStatus === "unavailable"
+                    ? theme.mutedText
+                    : "text-white"
+                  }`}
+              >
+                {game.name}
+              </span>
+              {game.active && tileStatus !== "locked" && tileStatus !== "unavailable" && (
+                <span className="mt-1 text-center text-xs text-white/70">
+                  {game.description}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
     </div>
+
   )
 }

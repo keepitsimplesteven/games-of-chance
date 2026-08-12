@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react"
 import { useTheme } from "../../theme"
 import { usePlayerName } from "./hooks/usePlayerName"
+import { useGameStore } from "../../store/useGameStore"
 import { FieldPanel } from "./FieldPanel"
 import { PlayResultLine } from "./PlayResultLine"
 import { PlayClock } from "./PlayClock"
@@ -44,9 +45,16 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
 
   const { playHistory, offensePlayerId, defensePlayerId } = driveState
 
-  // Derive player names
-  const offensePlayerName = getPlayerName(offensePlayerId)
-  const defensePlayerName = getPlayerName(defensePlayerId)
+  // Bracket seeds for display
+  const seeds = useGameStore((s) => s.roomState?.playcallerGameState?.bracket?.seeds ?? {})
+
+  // Derive player names with seed prefix
+  const offenseRawName = getPlayerName(offensePlayerId)
+  const defenseRawName = getPlayerName(defensePlayerId)
+  const offSeed = seeds[offensePlayerId]
+  const defSeed = seeds[defensePlayerId]
+  const offensePlayerName = offSeed ? `(${offSeed}) ${offenseRawName}` : offenseRawName
+  const defensePlayerName = defSeed ? `(${defSeed}) ${defenseRawName}` : defenseRawName
 
   // ── Play timeline gating (mirrors DriveView) ──
   // Track which play index the UI has "revealed". When a new play arrives
@@ -91,7 +99,7 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
     : displayedPlayCount > 0
       ? playHistory[displayedPlayCount - 1]
       : null
-  const resultText = lastRevealedEntry ? formatPlayResult(lastRevealedEntry.result) : null
+  const resultText = lastRevealedEntry ? formatPlayResult(lastRevealedEntry.result, lastRevealedEntry.yardLine) : null
 
   // Gate history entries — exclude unrevealed plays
   const historyEntries = isWaitingForReveal
@@ -109,6 +117,7 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
     const circ = classifyCircumstance(entry.down, entry.yardsToGo, entry.yardLine)
     const slot = entry.offensivePlay as PlaySlot
     const selectedPlay = selectPlay(offensePlayPool[slot], circ, Math.random)
+    const axis = slot.startsWith("run") ? "run" : "pass"
     commentaryRef.current = {
       playCount,
       lines: selectCommentary(
@@ -119,7 +128,8 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
         entry.yardLine,
         entry.down,
         circ,
-        selectedPlay.messages
+        selectedPlay.messages,
+        axis
       ),
     }
   }

@@ -311,6 +311,8 @@ export interface Matchup {
   playerB: string
   /** Winner (null if unresolved) */
   winner: string | null
+  /** How the matchup ended (present only after resolution via drive gameplay) */
+  endingType?: DriveEndingType | null
 }
 
 /** A single round in the bracket */

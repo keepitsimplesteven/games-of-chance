@@ -25,10 +25,14 @@ const ORDINALS = ["1st", "2nd", "3rd", "4th"]
 
 /**
  * Formats down and yards-to-go into a display string (e.g. "2nd & 7").
+ * Shows "GOAL" instead of the number when yardsToGo equals the yardLine
+ * (i.e., when the first down marker is in/past the end zone).
+ * When yardLine is not provided, falls back to showing the raw number.
  */
-export function formatDownDistance(down: number, yardsToGo: number): string {
+export function formatDownDistance(down: number, yardsToGo: number, yardLine?: number): string {
   const ordinal = ORDINALS[down - 1] ?? `${down}th`
-  return `${ordinal} & ${yardsToGo}`
+  const isGoalToGo = yardLine !== undefined && yardsToGo >= yardLine
+  return `${ordinal} & ${isGoalToGo ? "GOAL" : yardsToGo}`
 }
 
 // ── Round Name Derivation ───────────────────────────────────────────────────
@@ -51,10 +55,10 @@ export function getRoundName(roundIndex: number, totalRounds: number): string {
 /** Simple play name fallback using the offensive play ID. */
 function getPlayDisplayName(offensivePlay: string): string {
   const names: Record<string, string> = {
-    "run-safe": "Inside Run",
-    "run-aggressive": "Outside Run",
-    "pass-safe": "Short Pass",
-    "pass-aggressive": "Deep Pass",
+    "run-safe": "Safe Run",
+    "run-aggressive": "Aggressive Run",
+    "pass-safe": "Safe Pass",
+    "pass-aggressive": "Aggressive Pass",
   }
   return names[offensivePlay] ?? offensivePlay
 }
@@ -63,15 +67,22 @@ function getPlayDisplayName(offensivePlay: string): string {
  * Formats a PlayResult into a human-readable single-line string.
  * Uses a simple fallback for play names (task 3.1 will extend with
  * circumstance-aware naming).
+ *
+ * When yardLine is provided, positive yards gained are clamped to the
+ * remaining distance to the end zone so that (e.g.) a 6-yard gain at the
+ * 2-yard line displays as "2 yards".
  */
-export function formatPlayResult(result: PlayResult): string {
+export function formatPlayResult(result: PlayResult, yardLine?: number): string {
   const playName = getPlayDisplayName(result.offensivePlay)
   if (result.outcome === "interception") return `${playName} — Intercepted!`
   if (result.outcome === "fumble") return `${playName} — Fumble!`
   if (result.outcome === "incomplete_pass") return `${playName} — Incomplete`
   if (result.outcome === "tackle_for_loss")
     return `${playName} — Loss of ${Math.abs(result.yardsGained)}`
-  return `${playName} — ${result.yardsGained} yard${result.yardsGained !== 1 ? "s" : ""}`
+  const displayYards = yardLine !== undefined && result.yardsGained > 0
+    ? Math.min(result.yardsGained, yardLine)
+    : result.yardsGained
+  return `${playName} — ${displayYards} yard${displayYards !== 1 ? "s" : ""}`
 }
 
 // ── Drive Summary ───────────────────────────────────────────────────────────

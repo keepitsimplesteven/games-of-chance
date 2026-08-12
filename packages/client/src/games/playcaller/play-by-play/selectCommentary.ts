@@ -1,8 +1,9 @@
 // packages/client/src/games/playcaller/play-by-play/selectCommentary.ts
 
 import { resolveCommentary } from "./resolver"
-import { defaultMessages } from "./messages"
-import { CircumstanceCommentary } from "./circumstance-messages"
+import { defaultMessages, playByPlayRegistry } from "./messages"
+import { CircumstanceCommentary, CircumstanceActivePlayByAxis } from "./circumstance-messages"
+import type { PlayAxis } from "./circumstance-messages"
 import { categorizeOutcome } from "./types"
 import type { CommentaryTiers, CommentaryPhase, OutcomeCategory } from "./types"
 import type { Circumstance } from "../play-names/types"
@@ -19,9 +20,12 @@ export interface CommentaryLines {
  * Selects a set of 3 commentary lines for a given play result using the
  * 3-tier weighted cascade: play-specific (60%) → circumstance (30%) → default (10%).
  *
- * Each phase (preSnap, activePlay, outcome) is resolved independently with its own
- * tier roll. The outcome phase uses the computed OutcomeCategory to key into
- * play-specific outcome messages.
+ * preSnap and activePlay use the standard 3-tier cascade.
+ * activePlay additionally uses axis-specific circumstance messages (run vs. pass)
+ * to ensure commentary matches the play type.
+ *
+ * outcome ALWAYS uses OutcomeCategory-keyed messages to ensure the commentary
+ * matches what actually happened on the play.
  *
  * @param displayName - The play's display name (unused in new system, kept for compat)
  * @param playOutcome - The outcome enum from the play result
@@ -31,6 +35,7 @@ export interface CommentaryLines {
  * @param down - Current down (1–4)
  * @param circumstance - The current game circumstance
  * @param playMessages - Optional play-specific commentary from the PlayDefinition
+ * @param playAxis - "run" or "pass" — used to select axis-appropriate circumstance messages
  */
 export function selectCommentary(
   displayName: string,
@@ -40,7 +45,8 @@ export function selectCommentary(
   yardLine: number,
   down: number,
   circumstance: Circumstance,
-  playMessages?: Partial<PlayByPlayMessages>
+  playMessages?: Partial<PlayByPlayMessages>,
+  playAxis?: PlayAxis
 ): CommentaryLines | null {
   // Compute the outcome category for the outcome phase
   const outcomeCategory: OutcomeCategory = categorizeOutcome(
@@ -69,26 +75,71 @@ export function selectCommentary(
     }
   }
 
-  // Build the three-tier commentary structure
+  // Build circumstance tier — use axis-specific activePlay messages when available
+  const circumstanceTier: Record<CommentaryPhase, string[]> = {
+    ...CircumstanceCommentary[circumstance],
+  }
+  if (playAxis) {
+    const axisMessages = CircumstanceActivePlayByAxis[circumstance]?.[playAxis]
+    if (axisMessages && axisMessages.length > 0) {
+      circumstanceTier.activePlay = axisMessages
+    }
+  }
+
+  // Build the three-tier commentary structure for preSnap and activePlay
   const tiers: CommentaryTiers = {
     playSpecific,
-    circumstance: CircumstanceCommentary[circumstance],
+    circumstance: circumstanceTier,
     default: defaultMessages,
   }
 
-  // Resolve each phase independently with its own tier roll
+  // Resolve preSnap and activePlay with the standard 3-tier cascade
   const preSnap = resolveCommentary("preSnap", tiers, outcomeCategory, Math.random)
   const activePlay = resolveCommentary("activePlay", tiers, outcomeCategory, Math.random)
-  const outcomeLine = resolveCommentary("outcome", tiers, outcomeCategory, Math.random)
+
+  // Resolve outcome SEPARATELY — always use OutcomeCategory-keyed messages
+  // so the commentary matches the actual play result
+  const outcomeLine = resolveOutcomeCommentary(outcomeCategory, playMessages, Math.random)
 
   if (!preSnap || !activePlay || !outcomeLine) return null
 
-  // Replace {yards} placeholder with actual yardage
-  const formattedOutcome = outcomeLine.replace("{yards}", String(Math.abs(yardsGained)))
+  // Replace {yards} placeholder with actual yardage (clamped to remaining yardLine)
+  const displayYards = yardsGained > 0 ? Math.min(yardsGained, yardLine) : Math.abs(yardsGained)
+  const formattedOutcome = outcomeLine.replace(/\{yards\}/g, String(displayYards))
 
   return {
     preSnap,
     activePlay,
     outcome: formattedOutcome,
   }
+}
+
+/**
+ * Resolves outcome commentary using OutcomeCategory-keyed message arrays.
+ * Priority: play-specific outcome messages → default registry outcome messages.
+ * This ensures the outcome line always describes what actually happened.
+ */
+function resolveOutcomeCommentary(
+  outcomeCategory: OutcomeCategory,
+  playMessages: Partial<PlayByPlayMessages> | undefined,
+  rng: () => number
+): string {
+  // Try play-specific outcome messages first (60% chance if available)
+  const playSpecificLines = playMessages?.outcome?.[outcomeCategory]
+  const defaultLines = playByPlayRegistry["Default"].outcome[outcomeCategory]
+
+  if (playSpecificLines && playSpecificLines.length > 0) {
+    const roll = rng()
+    if (roll < 0.6) {
+      // Use play-specific
+      return playSpecificLines[Math.floor(rng() * playSpecificLines.length)]
+    }
+  }
+
+  // Fall through to default category-keyed messages (always appropriate)
+  if (defaultLines && defaultLines.length > 0) {
+    return defaultLines[Math.floor(rng() * defaultLines.length)]
+  }
+
+  return ""
 }

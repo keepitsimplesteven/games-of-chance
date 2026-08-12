@@ -3,6 +3,7 @@ import { useTheme } from "../../theme"
 import { useCircumstance } from "./hooks/useCircumstance"
 import { usePlayCards } from "./hooks/usePlayCards"
 import { usePlayerName } from "./hooks/usePlayerName"
+import { useGameStore } from "../../store/useGameStore"
 import { FieldPanel } from "./FieldPanel"
 import { GatedMiniScoreboard } from "./GatedMiniScoreboard"
 import { PlayResultLine } from "./PlayResultLine"
@@ -125,7 +126,7 @@ export function DriveView({
   const latestResultText = useMemo(() => {
     if (driveState.playHistory.length === 0) return null
     const lastEntry = driveState.playHistory[driveState.playHistory.length - 1]
-    return formatPlayResult(lastEntry.result)
+    return formatPlayResult(lastEntry.result, lastEntry.yardLine)
   }, [driveState.playHistory])
 
   // ── Ball animation config ──
@@ -193,6 +194,7 @@ export function DriveView({
     const circ = classifyCircumstance(lastEntry.down, lastEntry.yardsToGo, lastEntry.yardLine)
     const slot = lastEntry.offensivePlay as PlaySlot
     const selectedPlay = selectPlay(offensePlayPool[slot], circ, Math.random)
+    const axis = slot.startsWith("run") ? "run" : "pass"
     commentaryRef.current = {
       playCount,
       lines: selectCommentary(
@@ -203,7 +205,8 @@ export function DriveView({
         lastEntry.yardLine,
         lastEntry.down,
         circ,
-        selectedPlay.messages
+        selectedPlay.messages,
+        axis
       ),
     }
   }
@@ -212,17 +215,27 @@ export function DriveView({
   // Role label for header
   const roleLabel = role === "offense" ? "OFF" : "DEF"
 
+  // Bracket seeds for display
+  const seeds = useGameStore((s) => s.roomState?.playcallerGameState?.bracket?.seeds ?? {})
+  const playerId = useGameStore((s) => s.playerId)
+
   // Determine player names for scoreboard
   const offensePlayerName = getPlayerName(driveState.offensePlayerId)
   const defensePlayerName = getPlayerName(driveState.defensePlayerId)
+
+  // Format player name with seed prefix like "(1) [BOT] Delta"
+  const myId = role === "offense" ? driveState.offensePlayerId : driveState.defensePlayerId
+  const opponentId = role === "offense" ? driveState.defensePlayerId : driveState.offensePlayerId
+  const mySeed = seeds[myId]
+  const opponentSeed = seeds[opponentId]
+  const myNameWithSeed = mySeed ? `(${mySeed}) ${getPlayerName(myId)}` : getPlayerName(myId)
+  const opponentNameWithSeed = opponentSeed ? `(${opponentSeed}) ${opponentName}` : opponentName
 
   const hasOtherGames = otherDrives.length > 0
   const [otherGamesOpen, setOtherGamesOpen] = useState(true)
   const showSidePanel = otherGamesOpen && hasOtherGames
 
-console.log("historyEntries", historyEntries)
-console.log("playHistory", driveState.playHistory)
-      historyEntries.filter(play => play !== driveState.playHistory[displayedPlayCount]);
+  historyEntries.filter(play => play !== driveState.playHistory[displayedPlayCount]);
 
 
   return (
@@ -238,7 +251,7 @@ console.log("playHistory", driveState.playHistory)
           {roundName}
         </span>
         <span className={`text-[12px] ${theme.mutedText}`}>
-          You ({roleLabel}) vs {opponentName}
+          You ({roleLabel}) vs {opponentNameWithSeed}
         </span>
       </header>
 

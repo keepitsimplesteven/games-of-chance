@@ -58,7 +58,7 @@ export const playByPlayRegistry: Record<string, PlayByPlayMessages> = {
       negative: [
         "Loss on the play! Pushed back {yards} yards.",
         "Stuffed behind the line! A {yards} yard loss.",
-        "The defense wins that rep. Negative play.",
+        "The defense wins that rep. A loss of {yards}.",
       ],
       turnover: [
         "TURNOVER! The defense comes up with it!",
@@ -72,9 +72,9 @@ export const playByPlayRegistry: Record<string, PlayByPlayMessages> = {
         "The defense holds! Turnover on downs!",
       ],
       first_down: [
-        "First down! The chains move.",
-        "That's enough for a first down!",
-        "They pick up the first — drive continues.",
+        "First down! {yards} yards and the chains move.",
+        "That's enough for a first down! A {yards} yard gain.",
+        "They pick up the first with {yards} yards — drive continues.",
       ],
     },
   },
@@ -119,8 +119,8 @@ export const playByPlayRegistry: Record<string, PlayByPlayMessages> = {
         "Overthrown! Nobody's catching that one.",
       ],
       negative: [
-        "Sacked before he could throw! Loss on the play.",
-        "The rush was too fast, he's brought down behind the line.",
+        "Sacked before he could throw! A loss of {yards}.",
+        "The rush was too fast, he's brought down for a {yards} yard loss.",
       ],
       turnover: [
         "INTERCEPTED! The defender read it all the way!",
@@ -134,22 +134,24 @@ export const playByPlayRegistry: Record<string, PlayByPlayMessages> = {
         "They come up empty on 4th down!",
       ],
       first_down: [
-        "Caught for the first down! Drive stays alive!",
-        "That's a first down grab! Great hands!",
-        "He reels it in for a new set of downs!",
+        "Caught for the first down! {yards} yards and the drive stays alive!",
+        "That's a first down grab! {yards} yards, great hands!",
+        "He reels it in for {yards} yards and a new set of downs!",
       ],
     },
   },
 }
 
 /**
- * Default generic commentary for the tier system.
+ * Default generic commentary for the tier system (preSnap + activePlay only).
  * Maps CommentaryPhase → string[] (flat arrays).
- * This is the guaranteed fallback tier that terminates the cascade —
- * every phase has at least one message so resolution never fails.
+ * This is the guaranteed fallback tier that terminates the cascade for
+ * preSnap and activePlay phases.
  *
- * The outcome array is a flattened set of generic outcome messages
- * (not keyed by OutcomeCategory) for use in the CommentaryTiers.default slot.
+ * NOTE: The outcome phase is NOT resolved through this flat array system.
+ * Outcomes always use the OutcomeCategory-keyed messages from
+ * playByPlayRegistry["Default"].outcome to ensure commentary matches
+ * what actually happened on the play.
  */
 export const defaultMessages: Record<CommentaryPhase, string[]> = {
   preSnap: [

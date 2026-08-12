@@ -39,7 +39,7 @@ const runSafe: PlayDefinition[] = [
     },
     messages: {
       preSnap: ["The fullback lines up in front of the tailback..."],
-      activePlay: ["He hits the hole and pushes forward!"],
+      activePlay: ["He takes the handoff and hits the hole!"],
     },
   },
   {
@@ -493,7 +493,7 @@ const runAggressive: PlayDefinition[] = [
       lineOfScrimmage: 50,
     },
     messages: {
-      activePlay: ["He dives over the pile!"],
+      activePlay: ["He launches himself over the pile!"],
     },
   },
 ]
@@ -527,7 +527,7 @@ const passSafe: PlayDefinition[] = [
       lineOfScrimmage: 50,
     },
     messages: {
-      activePlay: ["Quick throw to the slant — catches it in stride!"],
+      activePlay: ["Quick throw to the slant — it's on the way!"],
     },
   },
   {
@@ -643,7 +643,7 @@ const passSafe: PlayDefinition[] = [
       lineOfScrimmage: 50,
     },
     messages: {
-      activePlay: ["Nothing deep — dumps it off to the back."],
+      activePlay: ["Nothing deep — he looks to dump it off to the back."],
     },
   },
   {

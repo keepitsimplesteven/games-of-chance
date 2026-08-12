@@ -57,7 +57,7 @@ export function FieldPanel({
       {/* Down/Distance text */}
       <div className="text-center text-[11px] py-0.5">
         <span className="font-bold" style={{ color: field.accent }}>
-          {formatDownDistance(down, yardsToGo)}
+          {formatDownDistance(down, yardsToGo, yardLine)}
         </span>
         <span className="ml-1 text-[9px] text-white">&bull; {yardLine} yd</span>
       </div>

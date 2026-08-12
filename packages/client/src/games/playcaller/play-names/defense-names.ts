@@ -330,7 +330,7 @@ const runAggressivePlays: PlayDefinition[] = [
       lineOfScrimmage: 50,
     },
     messages: {
-      activePlay: ["The blitzer fires through the A-gap untouched!"],
+      activePlay: ["The blitzer fires through the A-gap!"],
     },
   },
   {
@@ -819,7 +819,7 @@ const passAggressivePlays: PlayDefinition[] = [
       lineOfScrimmage: 50,
     },
     messages: {
-      activePlay: ["The corner comes off the edge — the quarterback never saw him!"],
+      activePlay: ["The corner comes off the edge — can the QB see him?!"],
     },
   },
   {
@@ -922,7 +922,7 @@ const passAggressivePlays: PlayDefinition[] = [
     },
     messages: {
       preSnap: ["Both inside linebackers creep to the line."],
-      activePlay: ["Double A-gap pressure! The quarterback has nowhere to step up!"],
+      activePlay: ["Double A-gap pressure! They're coming right up the middle!"],
     },
   },
   {

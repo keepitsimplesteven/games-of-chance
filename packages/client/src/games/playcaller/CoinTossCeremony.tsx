@@ -20,13 +20,22 @@ export function CoinTossCeremony() {
   const playcallerGameState = useGameStore(
     (s) => s.roomState?.playcallerGameState as PlaycallerGameState | null | undefined
   )
-  const getPlayerName = usePlayerName()
+  const getRawPlayerName = usePlayerName()
   const theme = useTheme()
 
   if (!playcallerGameState || !playerId) return null
 
-  const { ceremonyStates } = playcallerGameState
+  const { ceremonyStates, bracket } = playcallerGameState
   if (!ceremonyStates) return null
+
+  // Wrap getPlayerName to include bracket seed prefix
+  const seeds = bracket?.seeds ?? {}
+  const getPlayerName = (id: string | null | undefined): string => {
+    if (!id) return "Unknown"
+    const name = getRawPlayerName(id)
+    const seed = seeds[id]
+    return seed ? `(${seed}) ${name}` : name
+  }
 
   // Find the matchup this player belongs to
   const playerCeremony = findPlayerCeremony(playerId, ceremonyStates)
