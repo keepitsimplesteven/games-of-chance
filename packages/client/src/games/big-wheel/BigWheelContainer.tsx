@@ -152,7 +152,7 @@ export function BigWheelContainer() {
   const confirmedTotal = confirmedSpins.reduce((sum, v) => sum + v, 0)
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-4 h-full overflow-hidden">
       {/* Active Spinner Info */}
       <div className="text-center">
         <div className={`text-lg font-bold ${theme.bodyText}`}>
@@ -231,18 +231,13 @@ export function BigWheelContainer() {
 
       {/* Spin Result Display — only shown after wheel animation completes */}
       {phase === "RESULT" && roundResult && !wheelSpinning && (
-        <div className={`flex flex-col items-center gap-1 rounded-lg px-6 py-3 ${theme.card}`}>
+        <div className={`flex items-center gap-3 rounded-lg px-4 py-2 ${theme.card}`}>
           <div className={`text-sm ${theme.mutedText}`}>
             Spin {roundResult.spinNumber} landed on:
           </div>
-          <div className={`text-3xl font-bold ${theme.accentText}`}>
+          <div className={`text-2xl font-bold ${theme.accentText}`}>
             {roundResult.value}
           </div>
-          {roundResult.spinTotal !== null && (
-            <div className={`text-sm font-medium ${theme.bodyText}`}>
-              Total: {roundResult.spinTotal}
-            </div>
-          )}
         </div>
       )}
 
@@ -262,15 +257,17 @@ export function BigWheelContainer() {
       )}
 
       {/* Integrated Leaderboard + Spin Order */}
-      <BigWheelLeaderboard
-        leaderboard={gameLeaderboard}
-        spinOrder={spinOrder}
-        currentTurnIndex={currentTurnIndex}
-        spinResults={deferredSpinResults}
-        players={players}
-        activeSpinnerId={activeSpinnerId}
-        currentPlayerId={playerId}
-      />
+      <div className="w-full flex-1 min-h-0 overflow-hidden">
+        <BigWheelLeaderboard
+          leaderboard={gameLeaderboard}
+          spinOrder={spinOrder}
+          currentTurnIndex={currentTurnIndex}
+          spinResults={deferredSpinResults}
+          players={players}
+          activeSpinnerId={activeSpinnerId}
+          currentPlayerId={playerId}
+        />
+      </div>
     </div>
   )
 }
