@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useGameStore } from "../../store/useGameStore"
 import { useTheme } from "../../theme"
 import { PickWidget } from "./PickWidget"
 import { PickConfirmation } from "./PickConfirmation"
 import { CoinFlipAnimation } from "./CoinFlipAnimation"
+import { CoinIdleSpin } from "./CoinIdleSpin"
 import { CoinTossLeaderboard } from "./CoinTossLeaderboard"
 import { RoundCounter } from "./RoundCounter"
 
@@ -45,9 +46,9 @@ export function CoinTossContainer() {
     }
   }, [phase, animationStarted])
 
-  const handleAnimationComplete = () => {
+  const handleAnimationComplete = useCallback(() => {
     useGameStore.setState({ roundAnimationDone: true })
-  }
+  }, [])
 
   const handleSkipAnimation = () => {
     const send = useGameStore.getState()._socketSend
@@ -70,6 +71,7 @@ export function CoinTossContainer() {
       <RoundCounter currentRound={roundNumber ?? 1} totalRounds={totalRounds} />
 
       {/* ── Phase: PICKING ──────────────────────────────────────────────── */}
+      {phase === "PICKING" && <CoinIdleSpin />}
       {phase === "PICKING" && !pickSubmitted && <PickWidget />}
       {phase === "PICKING" && pickSubmitted && currentPick != null && (
         <PickConfirmation side={(currentPick as { side: "HEADS" | "TAILS" }).side} />
@@ -81,22 +83,18 @@ export function CoinTossContainer() {
           {phase === "RESOLVING" && currentPick != null && (
             <PickConfirmation side={(currentPick as { side: "HEADS" | "TAILS" }).side} />
           )}
-          {!roundAnimationDone && (
-            <>
-              <CoinFlipAnimation
-                result={roomState.round.result}
-                onAnimationComplete={handleAnimationComplete}
-              />
-              {role === "host" && (
-                <button
-                  type="button"
-                  onClick={handleSkipAnimation}
-                  className={`rounded-md px-4 py-2 text-sm font-bold ${theme.btnGhost}`}
-                >
-                  Skip
-                </button>
-              )}
-            </>
+          <CoinFlipAnimation
+            result={roomState.round.result}
+            onAnimationComplete={handleAnimationComplete}
+          />
+          {!roundAnimationDone && role === "host" && (
+            <button
+              type="button"
+              onClick={handleSkipAnimation}
+              className={`rounded-md px-4 py-2 text-sm font-bold ${theme.btnGhost}`}
+            >
+              Skip
+            </button>
           )}
           {/* Show outcome label after animation */}
           {roundAnimationDone && (
