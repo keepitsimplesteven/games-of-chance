@@ -312,16 +312,20 @@ export function PlaycallerContainer() {
     const resolvedRoundIndex = bracket.currentRoundIndex - 1
 
     return (
-      <div className="flex flex-col items-center gap-4 py-4">
-        <RoundHeader
-          roundIndex={resolvedRoundIndex}
-          totalRounds={bracket.totalRounds}
-        />
-        <div className="text-sm text-[#f5c542] font-medium uppercase tracking-wider">
-          Round Complete
+      <div className="flex flex-col h-full overflow-hidden">
+        <div className="shrink-0 flex flex-col items-center gap-2 pt-4">
+          <RoundHeader
+            roundIndex={resolvedRoundIndex}
+            totalRounds={bracket.totalRounds}
+          />
+          <div className="text-sm text-[#f5c542] font-medium uppercase tracking-wider">
+            Round Complete
+          </div>
         </div>
-        <BracketVisualization bracket={bracket} />
-        <div className="w-full max-w-sm mt-2">
+        <div className="flex-1 min-h-0 overflow-auto py-2">
+          <BracketVisualization bracket={bracket} />
+        </div>
+        <div className="shrink-0 w-full max-w-sm mx-auto px-4 pb-4 pt-2">
           <RoundControls />
         </div>
       </div>
