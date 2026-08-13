@@ -43,7 +43,7 @@ export function PlaycallerSplash() {
         <div className={`rounded-lg px-3 py-2 ${theme.card}`}>
           <h3 className={`font-semibold mb-1 ${theme.accentText}`}>How to Play</h3>
           <p className={`${theme.mutedText}`}>
-            College Overtime rules, mostly. Sudden death. Flip a coin to decide Offense vs Defense, then outsmart your opponent to win!
+            College Overtime rules, mostly. Sudden death: one drive only. Flip a coin to decide Offense vs Defense, then outsmart your opponent to win!
           </p>
         </div>
 
