@@ -24,7 +24,7 @@ export function CoinTossSplash() {
   return (
     <SplashLayout
       emoji="🪙"
-      title="Coin Toss"
+      title="Coin Toss Blitz"
       action={
         isHost ? (
           <button
@@ -46,7 +46,7 @@ export function CoinTossSplash() {
         <div className={`rounded-lg px-3 py-2 ${theme.card}`}>
           <h3 className={`font-semibold mb-1 ${theme.accentText}`}>How to Play</h3>
           <p className={`${theme.mutedText}`}>
-            Pick heads or tails each round. If the coin lands on your pick, you score!
+            Pick heads or tails each round. Score more points with consecutive correct guesses!
           </p>
         </div>
 
@@ -61,7 +61,9 @@ export function CoinTossSplash() {
         <div className={`rounded-lg px-3 py-2 ${theme.card}`}>
           <h3 className={`font-semibold mb-1 ${theme.accentText}`}>Streak Bonus</h3>
           <p className={`${theme.mutedText}`}>
-            Get <span className="text-white font-medium">{streakThreshold}</span> correct in a row for a <span className="text-white font-medium">×{streakMultiplier}</span> multiplier!
+            <span className="text-white font-medium">2</span> correct in a row: <span className="text-white font-medium">+20</span>
+            <br />
+            <span className="text-white font-medium">3+</span> correct in a row: <span className="text-white font-medium">+30</span>
           </p>
         </div>
 

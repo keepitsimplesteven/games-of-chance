@@ -43,24 +43,24 @@ export function PlaycallerSplash() {
         <div className={`rounded-lg px-3 py-2 ${theme.card}`}>
           <h3 className={`font-semibold mb-1 ${theme.accentText}`}>How to Play</h3>
           <p className={`${theme.mutedText}`}>
-            Head-to-head bracket tournament! Call offensive or defensive plays each down and drive the ball down the field.
+            College Overtime rules, mostly. Sudden death. Flip a coin to decide Offense vs Defense, then outsmart your opponent to win!
           </p>
         </div>
 
         <div className={`rounded-lg px-3 py-2 ${theme.card}`}>
           <h3 className={`font-semibold mb-1 ${theme.accentText}`}>Plays</h3>
           <ul className={`space-y-0.5 ${theme.mutedText}`}>
-            <li>🏃 <span className="text-white font-medium">Run Safe</span> — steady gains, low risk</li>
-            <li>💨 <span className="text-white font-medium">Run Aggressive</span> — big gains or losses</li>
-            <li>🎯 <span className="text-white font-medium">Pass Safe</span> — moderate gains</li>
-            <li>🚀 <span className="text-white font-medium">Pass Aggressive</span> — high risk, high reward</li>
+            <li>🏃 <span className="text-white font-medium">Safe Run</span> — steady gains, low risk</li>
+            <li>💨 <span className="text-white font-medium">Aggressive Run</span> — big gains or losses</li>
+            <li>🎯 <span className="text-white font-medium">Safe Pass</span> — moderate gains</li>
+            <li>🚀 <span className="text-white font-medium">Aggressive Pass</span> — high risk, high reward</li>
           </ul>
         </div>
 
         <div className={`rounded-lg px-3 py-2 ${theme.card}`}>
           <h3 className={`font-semibold mb-1 ${theme.accentText}`}>Scoring</h3>
           <p className={`${theme.mutedText}`}>
-            Drive <span className="text-white font-medium">35 yards</span> to score a touchdown. Points awarded by bracket placement — <span className="text-white font-medium">1st gets 250 pts</span>!
+            Offense must drive <span className="text-white font-medium">25 yards</span> to score a touchdown. Defense just needs one stop. Points awarded by bracket placement — <span className="text-white font-medium">1st gets 250 pts</span>!
           </p>
         </div>
 

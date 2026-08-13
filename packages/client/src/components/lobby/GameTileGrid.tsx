@@ -5,9 +5,9 @@ import type { TournamentTileStatus } from "@games-of-chance/shared"
 const games = [
   {
     id: "coin-toss",
-    name: "Coin Toss",
+    name: "Coin Toss Blitz",
     emoji: "🪙",
-    description: "Heads or tails — simple luck",
+    description: "Maximize your streak",
     active: true,
     isFinale: false,
     // Poker chip color: green
@@ -17,7 +17,7 @@ const games = [
     id: "battle-bots",
     name: "Battle Bots",
     emoji: "🤖",
-    description: "3-round robot combat: select, battle, and survive",
+    description: "Build, Battle, Survive",
     active: true,
     isFinale: false,
     // Poker chip color: blue
@@ -27,7 +27,7 @@ const games = [
     id: "big-wheel",
     name: "Big Wheel",
     emoji: "🎡",
-    description: "Spin the wheel twice — highest total wins",
+    description: "It's literally the big wheel on The Price is Right",
     active: true,
     isFinale: false,
     // Poker chip color: red
@@ -37,7 +37,7 @@ const games = [
     id: "playcaller",
     name: "Playcaller",
     emoji: "🏈",
-    description: "Single-elimination bracket tournament",
+    description: "Single-elimination bracket tournament. May the best play caller win!",
     active: true,
     isFinale: true,
     // Poker chip color: black
