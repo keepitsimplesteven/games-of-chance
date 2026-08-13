@@ -383,7 +383,7 @@ export function BattleBotsView() {
 
     return (
       <div className="flex h-full flex-col gap-2 overflow-hidden lg:flex-row">
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-0 overflow-y-auto">
           <ReplayBattleArena
             tickLogPayload={myPayload}
             playerNames={playerNames}
@@ -392,7 +392,7 @@ export function BattleBotsView() {
           />
         </div>
         {otherPayloads.length > 0 && (
-          <div className="max-h-[160px] shrink-0 overflow-y-auto lg:max-h-full lg:w-64">
+          <div className="shrink-0 overflow-y-auto lg:max-h-full lg:w-64">
             <ReplaySidebar
               payloads={otherPayloads}
               playerNames={playerNames}
@@ -496,7 +496,7 @@ export function BattleBotsView() {
 
     return (
       <div className="flex h-full flex-col gap-2 overflow-hidden lg:flex-row">
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-0 overflow-y-auto">
           <ReplayFFAArena
             tickLogPayload={myPayload}
             playerNames={playerNames}
@@ -506,7 +506,7 @@ export function BattleBotsView() {
           />
         </div>
         {otherPayload && otherPayload.robots?.length > 0 && otherBracketName && (
-          <div className="max-h-[160px] shrink-0 overflow-y-auto lg:max-h-full lg:w-48">
+          <div className="shrink-0 overflow-y-auto lg:max-h-full lg:w-48">
             <ReplayFFASidebar
               payload={otherPayload}
               bracketName={otherBracketName}

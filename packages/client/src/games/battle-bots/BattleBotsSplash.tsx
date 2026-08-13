@@ -43,7 +43,7 @@ export function BattleBotsSplash() {
         <div className={`rounded-lg px-3 py-2 ${theme.card}`}>
           <h3 className={`font-semibold mb-1 ${theme.accentText}`}>How to Play</h3>
           <p className={`${theme.mutedText}`}>
-            Build a robot by choosing a <span className="text-white font-medium">weapon</span>, <span className="text-white font-medium">head</span>, <span className="text-white font-medium">body</span>, and <span className="text-white font-medium">color</span>. Each part affects your stats!
+            Build a robot by choosing a <span className="text-white font-medium">weapon</span>, <span className="text-white font-medium">head</span>, <span className="text-white font-medium">body</span>, and <span className="text-white font-medium">color</span>. Then battle!
           </p>
         </div>
 
@@ -52,14 +52,14 @@ export function BattleBotsSplash() {
           <ul className={`space-y-0.5 ${theme.mutedText}`}>
             <li>⚔️ <span className="text-white font-medium">Damage</span> — how hard you hit</li>
             <li>🎯 <span className="text-white font-medium">Accuracy</span> — chance to land hits</li>
-            <li>⚡ <span className="text-white font-medium">Speed</span> — attacks per turn</li>
+            <li>⚡ <span className="text-white font-medium">Speed</span> — how fast you attack</li>
           </ul>
         </div>
 
         <div className={`rounded-lg px-3 py-2 ${theme.card}`}>
           <h3 className={`font-semibold mb-1 ${theme.accentText}`}>Combat</h3>
           <p className={`${theme.mutedText}`}>
-            After building, robots fight in <span className="text-white font-medium">1v1 battles</span>. Winners advance to the <span className="text-white font-medium">Winners Bracket FFA</span>, losers fight in the <span className="text-white font-medium">Losers Bracket FFA</span>.
+            After building, robots fight in <span className="text-white font-medium">1v1 battles</span>. Winners advance to the <span className="text-white font-medium">Winners Bracket FFA</span>, losers fight in the <span className="text-white font-medium">Losers Bracket FFA</span>. Gain more points the longer your bot survives!
           </p>
         </div>
 
