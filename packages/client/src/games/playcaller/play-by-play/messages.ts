@@ -4,7 +4,7 @@
 // The "Default" entry is used as a fallback when a specific play has no
 // registered messages — ensures every play gets commentary.
 
-import type { PlayByPlayMessages } from "./types"
+import type { CommentaryPhase, PlayByPlayMessages } from "./types"
 
 /**
  * Registry of play-by-play commentary.
@@ -58,13 +58,23 @@ export const playByPlayRegistry: Record<string, PlayByPlayMessages> = {
       negative: [
         "Loss on the play! Pushed back {yards} yards.",
         "Stuffed behind the line! A {yards} yard loss.",
-        "The defense wins that rep. Negative play.",
+        "The defense wins that rep. A loss of {yards}.",
       ],
       turnover: [
         "TURNOVER! The defense comes up with it!",
         "It's a takeaway! Drive is over!",
         "The ball is loose and the defense has it!",
         "What a play by the defense — turnover!",
+      ],
+      turnover_on_downs: [
+        "Turnover on downs! The offense couldn't convert!",
+        "That's it — they come up short on 4th down!",
+        "The defense holds! Turnover on downs!",
+      ],
+      first_down: [
+        "First down! {yards} yards and the chains move.",
+        "That's enough for a first down! A {yards} yard gain.",
+        "They pick up the first with {yards} yards — drive continues.",
       ],
     },
   },
@@ -109,8 +119,8 @@ export const playByPlayRegistry: Record<string, PlayByPlayMessages> = {
         "Overthrown! Nobody's catching that one.",
       ],
       negative: [
-        "Sacked before he could throw! Loss on the play.",
-        "The rush was too fast, he's brought down behind the line.",
+        "Sacked before he could throw! A loss of {yards}.",
+        "The rush was too fast, he's brought down for a {yards} yard loss.",
       ],
       turnover: [
         "INTERCEPTED! The defender read it all the way!",
@@ -118,6 +128,51 @@ export const playByPlayRegistry: Record<string, PlayByPlayMessages> = {
         "Turnover! That throw was into double coverage!",
         "He had his man but the ball is stolen away!",
       ],
+      turnover_on_downs: [
+        "Turnover on downs! Couldn't connect on the deep ball!",
+        "That's a turnover on downs — the gamble didn't pay off!",
+        "They come up empty on 4th down!",
+      ],
+      first_down: [
+        "Caught for the first down! {yards} yards and the drive stays alive!",
+        "That's a first down grab! {yards} yards, great hands!",
+        "He reels it in for {yards} yards and a new set of downs!",
+      ],
     },
   },
+}
+
+/**
+ * Default generic commentary for the tier system (preSnap + activePlay only).
+ * Maps CommentaryPhase → string[] (flat arrays).
+ * This is the guaranteed fallback tier that terminates the cascade for
+ * preSnap and activePlay phases.
+ *
+ * NOTE: The outcome phase is NOT resolved through this flat array system.
+ * Outcomes always use the OutcomeCategory-keyed messages from
+ * playByPlayRegistry["Default"].outcome to ensure commentary matches
+ * what actually happened on the play.
+ */
+export const defaultMessages: Record<CommentaryPhase, string[]> = {
+  preSnap: [
+    "The official sets the ball...",
+    "Offense breaks the huddle, coming to the line...",
+    "Both sides dig in at the line of scrimmage...",
+    "The play clock is winding down...",
+    "Offense gets set, checking the defense...",
+  ],
+  activePlay: [
+    "QB gets the snap off in time...",
+    "The ball is snapped, play is live...",
+    "Here we go, the play develops...",
+    "Snap is clean, execution underway...",
+    "The offense makes their move...",
+  ],
+  outcome: [
+    "The play is over.",
+    "Back to the huddle.",
+    "Reset the chains.",
+    "That's the end of the play.",
+    "The whistle blows.",
+  ],
 }

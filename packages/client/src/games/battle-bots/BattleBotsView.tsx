@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useGameStore } from "../../store/useGameStore"
 import { useTheme } from "../../theme"
 import { PartCarousel } from "./PrepPhase/PartCarousel"
@@ -71,6 +71,17 @@ export function BattleBotsView() {
   // VsScreen → Replay transition state for Round 2 and Round 3
   const [phase2ShowVs, setPhase2ShowVs] = useState(true)
   const [phase3ShowVs, setPhase3ShowVs] = useState(true)
+
+  // Snapshot session scores at the start of this game instance.
+  // On first render the session leaderboard reflects pre-game totals.
+  const preGameScoresRef = useRef<Record<string, number> | null>(null)
+  if (preGameScoresRef.current === null && roomState) {
+    const snapshot: Record<string, number> = {}
+    for (const entry of roomState.sessionLeaderboard) {
+      snapshot[entry.playerId] = entry.sessionPoints
+    }
+    preGameScoresRef.current = snapshot
+  }
 
   if (!roomState) return null
 
@@ -282,13 +293,29 @@ export function BattleBotsView() {
       score: number
     }>
 
-    // Filter out bot personas and use actual cumulative score
+    // Build current session score lookup
+    const sessionScoreMap: Record<string, number> = {}
+    for (const entry of roomState.sessionLeaderboard) {
+      sessionScoreMap[entry.playerId] = entry.sessionPoints
+    }
+
+    // Delta = current session score - pre-game session score
+    const preGameScores = preGameScoresRef.current ?? {}
+
+    // Filter out bot personas, resolve real player names, and compute delta
     const humanRankings = finalRankings
       .filter((r) => !r.isBot)
-      .map((r) => ({
-        ...r,
-        points: r.score,
-      }))
+      .map((r) => {
+        const currentScore = sessionScoreMap[r.playerId] ?? 0
+        const startScore = preGameScores[r.playerId] ?? 0
+        return {
+          ...r,
+          // Use real player name from roomState, not the ID-based name from the server
+          playerName: playerNames[r.playerId] ?? getParticipantName(r.playerId),
+          points: currentScore,
+          delta: currentScore - startScore,
+        }
+      })
 
     return <FinalRankings rankings={humanRankings} />
   }
@@ -383,7 +410,7 @@ export function BattleBotsView() {
 
     return (
       <div className="flex h-full flex-col gap-2 overflow-hidden lg:flex-row">
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-0 overflow-y-auto">
           <ReplayBattleArena
             tickLogPayload={myPayload}
             playerNames={playerNames}
@@ -392,7 +419,7 @@ export function BattleBotsView() {
           />
         </div>
         {otherPayloads.length > 0 && (
-          <div className="max-h-[160px] shrink-0 overflow-y-auto lg:max-h-full lg:w-64">
+          <div className="shrink-0 overflow-y-auto lg:max-h-full lg:w-64">
             <ReplaySidebar
               payloads={otherPayloads}
               playerNames={playerNames}
@@ -496,7 +523,7 @@ export function BattleBotsView() {
 
     return (
       <div className="flex h-full flex-col gap-2 overflow-hidden lg:flex-row">
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-0 overflow-y-auto">
           <ReplayFFAArena
             tickLogPayload={myPayload}
             playerNames={playerNames}
@@ -506,7 +533,7 @@ export function BattleBotsView() {
           />
         </div>
         {otherPayload && otherPayload.robots?.length > 0 && otherBracketName && (
-          <div className="max-h-[160px] shrink-0 overflow-y-auto lg:max-h-full lg:w-48">
+          <div className="shrink-0 overflow-y-auto lg:max-h-full lg:w-48">
             <ReplayFFASidebar
               payload={otherPayload}
               bracketName={otherBracketName}

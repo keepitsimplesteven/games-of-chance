@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import { MiniScoreboard } from "./MiniScoreboard"
 import { usePlayerName } from "./hooks/usePlayerName"
+import { useGameStore } from "../../store/useGameStore"
 import { PLAY_TIMELINE } from "./PlayByPlayAnnouncer"
 import type { DriveState } from "./field-utils.types"
 
@@ -19,6 +20,7 @@ export interface GatedMiniScoreboardProps {
  */
 export function GatedMiniScoreboard({ driveState }: GatedMiniScoreboardProps) {
   const getPlayerName = usePlayerName()
+  const seeds = useGameStore((s) => s.roomState?.playcallerGameState?.bracket?.seeds ?? {})
 
   const playCount = driveState.playHistory.length
   const [displayedPlayCount, setDisplayedPlayCount] = useState(playCount)
@@ -67,13 +69,21 @@ export function GatedMiniScoreboard({ driveState }: GatedMiniScoreboardProps) {
     displayCompletion = null
   }
 
+  // Format player names with seed prefix
+  const offSeed = seeds[driveState.offensePlayerId]
+  const defSeed = seeds[driveState.defensePlayerId]
+  const offName = getPlayerName(driveState.offensePlayerId)
+  const defName = getPlayerName(driveState.defensePlayerId)
+  const offenseDisplayName = offSeed ? `(${offSeed}) ${offName}` : offName
+  const defenseDisplayName = defSeed ? `(${defSeed}) ${defName}` : defName
+
   return (
     <MiniScoreboard
       down={displayDown}
       yardsToGo={displayYardsToGo}
       yardLine={displayYardLine}
-      offensePlayerName={getPlayerName(driveState.offensePlayerId)}
-      defensePlayerName={getPlayerName(driveState.defensePlayerId)}
+      offensePlayerName={offenseDisplayName}
+      defensePlayerName={defenseDisplayName}
       isComplete={displayIsComplete}
       endingType={displayCompletion?.endingType}
       winnerId={displayCompletion?.winner}

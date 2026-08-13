@@ -2,7 +2,8 @@ import { AnimatePresence, motion } from "framer-motion"
 import { historyDrawerVariants } from "./animations/variants"
 import { useTheme } from "../../theme"
 import { formatDownDistance } from "./field-utils"
-import { getPlayName, classifyCircumstance } from "./play-names"
+import { classifyCircumstance, selectPlay, offensePlayPool, defensePlayPool } from "./play-names"
+import type { PlaySlot } from "./play-names"
 import type { PlayHistoryEntry } from "./field-utils.types"
 
 export interface HistoryDrawerProps {
@@ -83,10 +84,16 @@ export function HistoryDrawer({ entries, isOpen, onClose }: HistoryDrawerProps) 
 
 /** A single history row */
 function HistoryRow({ entry }: { entry: PlayHistoryEntry }) {
-  const circumstance = classifyCircumstance(entry.down, entry.yardsToGo)
-  const offenseName = getPlayName(entry.offensivePlay, circumstance, "offense").displayName
-  const defenseName = getPlayName(entry.defensivePlay, circumstance, "defense").displayName
-  const outcomeText = formatOutcome(entry.result.outcome, entry.result.yardsGained)
+  const circumstance = classifyCircumstance(entry.down, entry.yardsToGo, entry.yardLine)
+  const offenseSlot = entry.offensivePlay as PlaySlot
+  const defenseSlot = entry.defensivePlay as PlaySlot
+
+  // Use a deterministic pseudo-random derived from entry data so names stay stable across renders
+  const offenseRng = createDeterministicRng(entry.down, entry.yardsToGo, entry.yardLine, 1)
+  const defenseRng = createDeterministicRng(entry.down, entry.yardsToGo, entry.yardLine, 2)
+  const offenseName = selectPlay(offensePlayPool[offenseSlot], circumstance, offenseRng).displayName
+  const defenseName = selectPlay(defensePlayPool[defenseSlot], circumstance, defenseRng).displayName
+  const outcomeText = formatOutcome(entry.result.outcome, entry.result.yardsGained, entry.yardLine)
   const outcomeColor = getOutcomeColor(entry.result.outcome, entry.result.yardsGained, entry.yardsToGo)
 
   return (
@@ -97,7 +104,7 @@ function HistoryRow({ entry }: { entry: PlayHistoryEntry }) {
     >
       {/* Down & distance + yard line */}
       <span className="text-white/40 whitespace-nowrap pr-2">
-        {formatDownDistance(entry.down, entry.yardsToGo)}
+        {formatDownDistance(entry.down, entry.yardsToGo, entry.yardLine)}
         <span className="text-white/25"> · {entry.yardLine} yd</span>
       </span>
 
@@ -115,8 +122,8 @@ function HistoryRow({ entry }: { entry: PlayHistoryEntry }) {
   )
 }
 
-/** Formats the outcome into a short display string */
-function formatOutcome(outcome: string, yardsGained: number): string {
+/** Formats the outcome into a short display string, clamping yards to yardLine */
+function formatOutcome(outcome: string, yardsGained: number, yardLine: number): string {
   switch (outcome) {
     case "interception":
       return "INT!"
@@ -126,10 +133,14 @@ function formatOutcome(outcome: string, yardsGained: number): string {
       return "Incomplete"
     case "tackle_for_loss":
       return `${yardsGained} yds`
-    case "critical_success":
-      return yardsGained >= 35 ? "TD!" : `${yardsGained} yds`
-    default:
-      return `${yardsGained} yd${yardsGained !== 1 ? "s" : ""}`
+    case "critical_success": {
+      const clamped = Math.min(yardsGained, yardLine)
+      return clamped >= yardLine ? "TD!" : `${clamped} yds`
+    }
+    default: {
+      const displayYards = yardsGained > 0 ? Math.min(yardsGained, yardLine) : yardsGained
+      return `${displayYards} yd${displayYards !== 1 ? "s" : ""}`
+    }
   }
 }
 
@@ -147,4 +158,17 @@ function getOutcomeColor(outcome: string, yardsGained: number, yardsToGo: number
   if (outcome === "incomplete_pass") return "text-white/60"
   // Normal gain → white
   return "text-white/80"
+}
+
+/**
+ * Creates a deterministic pseudo-RNG from entry-specific data.
+ * Returns a function that always produces the same sequence for
+ * the same inputs, ensuring history play names don't shuffle on re-render.
+ */
+function createDeterministicRng(down: number, yardsToGo: number, yardLine: number, salt: number): () => number {
+  let seed = (down * 7919 + yardsToGo * 104729 + yardLine * 15485863 + salt * 32452843) | 0
+  return () => {
+    seed = (seed * 1664525 + 1013904223) | 0
+    return (seed >>> 0) / 4294967296
+  }
 }

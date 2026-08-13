@@ -10,6 +10,7 @@ import { DriveView } from "./DriveView"
 import { DriveCompletionOverlay } from "./DriveCompletionOverlay"
 import { SpectatorGrid } from "./SpectatorGrid"
 import { SpectatorDriveView } from "./SpectatorDriveView"
+import { CoinTossCeremony } from "./CoinTossCeremony"
 import { MatchupIntro } from "../../components/game/MatchupIntro"
 import RoundControls from "../../components/game/RoundControls"
 import { getRoundName } from "./field-utils"
@@ -69,6 +70,13 @@ export function PlaycallerContainer() {
   const isActiveCompetitor = activeCompetitors.includes(playerId ?? "")
   const hasDriveStates = !!driveStates
 
+  /** Format a player name with their bracket seed prefix */
+  function getSeededName(id: string): string {
+    const seed = bracket.seeds[id]
+    const name = getPlayerName(id)
+    return seed ? `(${seed}) ${name}` : name
+  }
+
   /** Configurable delay (ms) before signaling round animation is done.
    *  Gives the final play's announcer timeline time to complete. */
   const ROUND_END_DELAY_MS = 500
@@ -97,6 +105,15 @@ export function PlaycallerContainer() {
     }
     prevRoundIndexRef.current = bracket.currentRoundIndex
   }, [bracket.currentRoundIndex])
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // COIN_TOSS phase: render the coin toss ceremony container
+  // (placed AFTER all hooks to satisfy React's Rules of Hooks)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  if (phase === "COIN_TOSS") {
+    return <CoinTossCeremony />
+  }
 
   // Get current round's matchups for display
   const currentRound = bracket.rounds[bracket.currentRoundIndex]
@@ -144,8 +161,8 @@ export function PlaycallerContainer() {
           const introMatchups = activeMatchups.map((m) => {
             const drive = driveStates[m.matchupId]
             return {
-              playerAName: drive ? getPlayerName(drive.offensePlayerId) : getPlayerName(m.playerA),
-              playerBName: drive ? getPlayerName(drive.defensePlayerId) : getPlayerName(m.playerB),
+              playerAName: drive ? getSeededName(drive.offensePlayerId) : getSeededName(m.playerA),
+              playerBName: drive ? getSeededName(drive.defensePlayerId) : getSeededName(m.playerB),
               isCurrentPlayer: m.playerA === playerId || m.playerB === playerId,
             }
           })
@@ -229,8 +246,8 @@ export function PlaycallerContainer() {
         const introMatchups = activeMatchups.map((m) => {
           const drive = driveStates[m.matchupId]
           return {
-            playerAName: drive ? getPlayerName(drive.offensePlayerId) : getPlayerName(m.playerA),
-            playerBName: drive ? getPlayerName(drive.defensePlayerId) : getPlayerName(m.playerB),
+            playerAName: drive ? getSeededName(drive.offensePlayerId) : getSeededName(m.playerA),
+            playerBName: drive ? getSeededName(drive.defensePlayerId) : getSeededName(m.playerB),
             isCurrentPlayer: false,
           }
         })

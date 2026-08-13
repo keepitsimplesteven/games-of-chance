@@ -46,7 +46,7 @@ describe("Property 9: Scoreboard reflects current drive state", () => {
             />
           )
 
-          const expectedText = formatDownDistance(down, yardsToGo)
+          const expectedText = formatDownDistance(down, yardsToGo, yardLine)
           expect(container.textContent).toContain(expectedText)
 
           unmount()

@@ -150,7 +150,7 @@ function MatchupCard({
   getPlayerDisplay,
   isEliminated,
 }: MatchupCardProps) {
-  const { playerA, playerB, winner } = matchup
+  const { playerA, playerB, winner, endingType } = matchup
 
   return (
     <div className="w-44 border-2 border-[#2a7a3a] bg-[#1b5e2a] shadow-sm">
@@ -174,6 +174,13 @@ function MatchupCard({
         isLoser={resolved && !!winner && winner !== playerB && !!playerB}
         isEliminated={playerB ? isEliminated(playerB) : false}
       />
+
+      {/* Outcome badge — only shown for resolved matchups with an endingType */}
+      {resolved && endingType && (
+        <div className="border-t border-[#2a7a3a]">
+          <MatchOutcomeBadge endingType={endingType} />
+        </div>
+      )}
     </div>
   )
 }
@@ -233,4 +240,35 @@ function ByeCard({ playerDisplay }: ByeCardProps) {
       </div>
     </div>
   )
+}
+
+// ── MatchOutcomeBadge ──────────────────────────────────────────────────────
+
+interface MatchOutcomeBadgeProps {
+  endingType: string
+}
+
+/** Small colored label showing how a resolved matchup ended */
+function MatchOutcomeBadge({ endingType }: MatchOutcomeBadgeProps) {
+  const { label, colorClass } = getOutcomeDisplay(endingType)
+  return (
+    <div className={`px-3 py-1 text-center text-[10px] font-bold uppercase tracking-wide ${colorClass}`}>
+      {label}
+    </div>
+  )
+}
+
+function getOutcomeDisplay(endingType: string): { label: string; colorClass: string } {
+  switch (endingType) {
+    case "touchdown":
+      return { label: "Touchdown", colorClass: "text-[#3a9a4a]" }
+    case "interception":
+      return { label: "Interception", colorClass: "text-[#cc3333]" }
+    case "fumble":
+      return { label: "Fumble", colorClass: "text-[#cc3333]" }
+    case "turnover_on_downs":
+      return { label: "Turnover on Downs", colorClass: "text-[#cc3333]" }
+    default:
+      return { label: "Game Over", colorClass: "text-white/60" }
+  }
 }

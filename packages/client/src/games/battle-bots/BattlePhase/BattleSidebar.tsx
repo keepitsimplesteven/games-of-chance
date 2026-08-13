@@ -43,7 +43,7 @@ function SidebarRobotEntry({ robot }: { robot: SidebarRobot }) {
       }`}
     >
       <span
-        className={`text-xs font-medium truncate max-w-[80px] font-mono ${
+        className={`text-xs font-medium truncate w-[80%] font-mono ${
           robot.eliminated ? "line-through text-[#3a9a4a]/40" : "text-[#f0f0f0]"
         }`}
       >

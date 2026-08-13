@@ -43,7 +43,7 @@ export function BigWheelSplash() {
         <div className={`rounded-lg px-3 py-2 ${theme.card}`}>
           <h3 className={`font-semibold mb-1 ${theme.accentText}`}>How to Play</h3>
           <p className={`${theme.mutedText}`}>
-            Each player takes a turn spinning the wheel. You get <span className="text-white font-medium">2 spins</span> — your total is the sum of both!
+            Each player takes a turn spinning the wheel. <span className="text-white font-medium">2 spins</span> each. Unlike the gameshow, no penalties for going over 100!
           </p>
         </div>
 

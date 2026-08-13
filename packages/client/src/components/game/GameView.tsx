@@ -107,7 +107,7 @@ export default function GameView() {
   return (
     <div className="flex h-full flex-col gap-2 overflow-hidden">
       {/* Phase indicator — shows current game phase */}
-      <PhaseIndicator phase={phase} gameType={gameType} />
+      {/* <PhaseIndicator phase={phase} gameType={gameType} /> */}
 
       {/* Game-specific UI (pick widget, animation, result) */}
       <div className="min-h-0 flex-1 overflow-hidden">

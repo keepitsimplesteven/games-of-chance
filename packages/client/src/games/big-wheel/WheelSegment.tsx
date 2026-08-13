@@ -79,7 +79,7 @@ export function WheelSegment({
         dominantBaseline="central"
         fill="white"
         fontWeight="bold"
-        fontSize={totalSegments > 30 ? "8" : totalSegments > 15 ? "12" : "16"}
+        fontSize={totalSegments > 30 ? "12" : totalSegments > 15 ? "16" : "24"}
         transform={`rotate(${labelRotation}, ${labelX}, ${labelY})`}
         style={{ pointerEvents: "none" }}
       >

@@ -7,6 +7,8 @@ interface RankingEntry {
   bracket: "winners" | "losers"
   isBot: boolean
   points: number
+  /** Points earned just from Battle Bots (game delta) */
+  delta?: number
 }
 
 interface FinalRankingsProps {
@@ -59,11 +61,11 @@ export function FinalRankings({ rankings }: FinalRankingsProps) {
   return (
     <div className={`flex h-full flex-col gap-2 overflow-hidden rounded-md p-3 lg:p-5 ${theme.card}`}>
       <h2 className={`text-center text-base lg:text-lg font-bold ${theme.titleText}`}>
-        Final Rankings
+        FFA Complete
       </h2>
 
       {/* Table header */}
-      <div className={`grid grid-cols-[36px_1fr_auto_48px] items-center gap-2 px-2 py-1.5 text-xs font-semibold uppercase tracking-wide lg:grid-cols-[48px_1fr_auto_64px] lg:px-3 lg:py-2 ${theme.mutedText}`}>
+      <div className={`grid grid-cols-[36px_1fr_auto_64px] items-center gap-2 px-2 py-1.5 text-xs font-semibold uppercase tracking-wide lg:grid-cols-[48px_1fr_auto_80px] lg:px-3 lg:py-2 ${theme.mutedText}`}>
         <span>Rank</span>
         <span>Name</span>
         <span>Bracket</span>
@@ -81,7 +83,7 @@ export function FinalRankings({ rankings }: FinalRankingsProps) {
             return (
               <div
                 key={entry.playerId}
-                className={`grid grid-cols-[36px_1fr_auto_48px] items-center gap-2 rounded-md border-2 px-2 py-2 lg:grid-cols-[48px_1fr_auto_64px] lg:px-3 lg:py-2.5 ${rowBorder}`}
+                className={`grid grid-cols-[36px_1fr_auto_64px] items-center gap-2 rounded-md border-2 px-2 py-2 lg:grid-cols-[48px_1fr_auto_80px] lg:px-3 lg:py-2.5 ${rowBorder}`}
               >
                 {/* Rank */}
                 <div className="flex items-center gap-1">
@@ -116,14 +118,21 @@ export function FinalRankings({ rankings }: FinalRankingsProps) {
                   {entry.bracket === "winners" ? "W" : "L"}
                 </span>
 
-                {/* Points */}
-                <span
-                  className={`text-right text-xs lg:text-sm font-bold font-mono ${
-                    isTopThree ? theme.accentText : "text-[#3a9a4a]"
-                  }`}
-                >
-                  {entry.points}
-                </span>
+                {/* Points: session total + battle bots delta */}
+                <div className="flex flex-col items-end">
+                  <span
+                    className={`text-xs lg:text-sm font-bold font-mono ${
+                      isTopThree ? theme.accentText : "text-[#3a9a4a]"
+                    }`}
+                  >
+                    {entry.points}
+                  </span>
+                  {entry.delta !== undefined && (
+                    <span className="text-[10px] font-mono text-[#f5c542]/70">
+                      +{entry.delta}
+                    </span>
+                  )}
+                </div>
               </div>
             )
           })}

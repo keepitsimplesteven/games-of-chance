@@ -4,7 +4,7 @@ import { SplashLayout } from "./SplashLayout"
 
 /** Game metadata for splash display */
 const GAME_INFO: Record<string, { name: string; emoji: string }> = {
-  "coin-toss": { name: "Coin Toss", emoji: "🪙" },
+  "coin-toss": { name: "Coin Toss Blitz", emoji: "🪙" },
   "battle-bots": { name: "Battle Bots", emoji: "🤖" },
   "big-wheel": { name: "Big Wheel", emoji: "🎡" },
   "playcaller": { name: "Playcaller", emoji: "🏈" },

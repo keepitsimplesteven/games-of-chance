@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useTheme } from "../../theme"
 import { usePlayerName } from "./hooks/usePlayerName"
+import { useGameStore } from "../../store/useGameStore"
 import { formatDownDistance } from "./field-utils"
 import { PLAY_TIMELINE } from "./PlayByPlayAnnouncer"
 import type { DriveState } from "./field-utils.types"
@@ -28,7 +29,6 @@ const REVEAL_DELAY =
  */
 export function SpectatorGrid({ matchups, onSelectMatchup }: SpectatorGridProps) {
   const theme = useTheme()
-  const getPlayerName = usePlayerName()
 
   if (matchups.length === 0) {
     return (
@@ -70,6 +70,7 @@ interface SpectatorMatchupCardProps {
 function SpectatorMatchupCard({ matchupId, driveState, onSelect }: SpectatorMatchupCardProps) {
   const theme = useTheme()
   const getPlayerName = usePlayerName()
+  const seeds = useGameStore((s) => s.roomState?.playcallerGameState?.bracket?.seeds ?? {})
 
   const playCount = driveState.playHistory.length
   const [displayedPlayCount, setDisplayedPlayCount] = useState(playCount)
@@ -141,7 +142,7 @@ function SpectatorMatchupCard({ matchupId, driveState, onSelect }: SpectatorMatc
                 : theme.bodyText
           }`}
         >
-          {getPlayerName(driveState.offensePlayerId)}
+          {seeds[driveState.offensePlayerId] ? `(${seeds[driveState.offensePlayerId]}) ` : ""}{getPlayerName(driveState.offensePlayerId)}
         </span>
         <span className={`text-[8px] ${theme.mutedText} opacity-60 mx-1`}>
           vs
@@ -155,7 +156,7 @@ function SpectatorMatchupCard({ matchupId, driveState, onSelect }: SpectatorMatc
                 : theme.bodyText
           }`}
         >
-          {getPlayerName(driveState.defensePlayerId)}
+          {seeds[driveState.defensePlayerId] ? `(${seeds[driveState.defensePlayerId]}) ` : ""}{getPlayerName(driveState.defensePlayerId)}
         </span>
       </div>
 
@@ -170,7 +171,7 @@ function SpectatorMatchupCard({ matchupId, driveState, onSelect }: SpectatorMatc
         ) : (
           <>
             <span className={`text-[10px] font-bold ${theme.accentText}`}>
-              {formatDownDistance(displayDown, displayYardsToGo)}
+              {formatDownDistance(displayDown, displayYardsToGo, displayYardLine)}
             </span>
             <span className={`text-[9px] ${theme.mutedText} ml-1`}>
               • Ball on {displayYardLine}

@@ -79,7 +79,7 @@ export function MiniScoreboard({
         ) : (
           <>
             <span className={`text-[10px] font-bold ${theme.accentText}`}>
-              {formatDownDistance(down, yardsToGo)}
+              {formatDownDistance(down, yardsToGo, yardLine)}
             </span>
             <span className={`text-[9px] ${theme.mutedText} ml-1`}>
               • Ball on {yardLine}

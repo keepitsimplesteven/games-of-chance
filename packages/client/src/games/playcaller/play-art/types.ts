@@ -52,5 +52,5 @@ export interface PlayArtData {
   lineOfScrimmage: number
 }
 
-/** Map of play art variants by circumstance */
-export type PlayArtVariants = Record<Circumstance, PlayArtData>
+/** Map of play art variants by circumstance (partial — new circumstances can rely on "standard" fallback) */
+export type PlayArtVariants = Partial<Record<Circumstance, PlayArtData>>
