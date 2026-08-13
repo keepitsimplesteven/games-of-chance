@@ -430,7 +430,7 @@ function EliminationRankings({ rankings, currentPlayerId }: EliminationRankingsP
   return (
     <div className={`mt-4 rounded-md p-3 lg:p-4 ${theme.card}`}>
       <h3 className={`mb-2 text-xs font-bold uppercase tracking-wide ${theme.headingText}`}>
-        Final Rankings
+        FFA Complete
       </h3>
       <ol className="max-h-[180px] space-y-1.5 overflow-y-auto lg:max-h-[240px]">
         {rankings.map((entry) => {
@@ -474,7 +474,7 @@ function EliminationRankings({ rankings, currentPlayerId }: EliminationRankingsP
 
               {/* Elimination info */}
               <span className={`text-xs font-mono ${theme.mutedText}`}>
-                {isSurvivor ? "🏆 Survived" : `Eliminated tick ${entry.eliminatedOnTick}`}
+                {isSurvivor ? "🏆 Survived" : `Eliminated`}
               </span>
             </li>
           )
