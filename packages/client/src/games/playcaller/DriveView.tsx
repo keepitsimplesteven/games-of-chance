@@ -269,7 +269,7 @@ export function DriveView({
       )}
 
       {/* ═══ Field + Side panel ═══ */}
-      <div className="shrink-0 flex gap-2" style={{ height: "38dvh" }}>
+      <div className="flex-1 min-h-0 flex gap-2">
         {/* Field */}
         <div className="h-full flex-1 min-w-0 overflow-hidden">
           <FieldPanel
@@ -319,7 +319,7 @@ export function DriveView({
       </div>
 
       {/* ═══ Play Cards or Completion Overlay ═══ */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="shrink-0 overflow-hidden" style={{ minHeight: "28dvh", height: "28dvh" }}>
         {driveState.isComplete && !isWaitingForReveal ? (
           <DriveCompletionOverlay
             driveState={driveState}

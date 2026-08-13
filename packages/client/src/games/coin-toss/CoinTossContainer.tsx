@@ -66,7 +66,7 @@ export function CoinTossContainer() {
   const showLeaderboard = phase === "PICKING" || roundAnimationDone
 
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div className="flex flex-col items-center gap-3 h-full overflow-hidden">
       <RoundCounter currentRound={roundNumber ?? 1} totalRounds={totalRounds} />
 
       {/* ── Phase: PICKING ──────────────────────────────────────────────── */}
@@ -107,7 +107,7 @@ export function CoinTossContainer() {
 
       {/* Combined leaderboard — visible during PICKING and after animation in RESULT */}
       {showLeaderboard && (
-        <div className="w-full px-2">
+        <div className="w-full px-2 flex-1 min-h-0 overflow-hidden">
           <CoinTossLeaderboard />
         </div>
       )}

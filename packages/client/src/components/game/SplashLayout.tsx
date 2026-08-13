@@ -34,8 +34,8 @@ export function SplashLayout({ emoji, title, children, action }: SplashLayoutPro
   const theme = useTheme()
 
   return (
-    <div className="flex h-full min-h-0 flex-col items-center justify-center px-4">
-      <div className={`flex max-h-full w-full max-w-sm flex-col items-center gap-3 overflow-y-auto rounded-2xl px-5 py-5 shadow-lg ${theme.listItem}`}>
+    <div className="flex h-full min-h-0 flex-col items-center overflow-y-auto px-4 py-4">
+      <div className={`flex w-full max-w-sm flex-col items-center gap-3 rounded-2xl px-5 py-5 shadow-lg my-auto ${theme.listItem}`}>
         <span className="shrink-0 text-5xl" aria-hidden="true">
           {emoji}
         </span>
@@ -43,9 +43,9 @@ export function SplashLayout({ emoji, title, children, action }: SplashLayoutPro
           {title}
         </h2>
 
-        {/* Custom content slot — scrolls internally if too tall */}
+        {/* Custom content slot */}
         {children && (
-          <div className="w-full min-h-0 shrink">
+          <div className="w-full shrink-0">
             {children}
           </div>
         )}

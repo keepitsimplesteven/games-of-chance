@@ -57,7 +57,7 @@ export function BaseLeaderboard({
       {renderHeader && renderHeader(entries)}
 
       {/* Player list */}
-      <ul className={`space-y-1.5 ${renderHeader ? "mt-2" : ""}`}>
+      <ul className={`space-y-1.5 flex-1 min-h-0 overflow-y-auto ${renderHeader ? "mt-2" : ""}`}>
         {entries.map((entry) => {
           const rowClasses = `flex items-center gap-2 rounded-md ${
             isCompact ? "px-2 py-1" : "px-2.5 py-2"
@@ -136,7 +136,7 @@ export function BaseLeaderboard({
   )
 
   // Determine container classes — always full-width
-  const containerClasses = `w-full rounded-lg p-3 ${theme.card}`
+  const containerClasses = `w-full h-full flex flex-col rounded-lg p-3 ${theme.card}`
 
   // With animations enabled (non-compact): entrance animation on mount
   if (useMotion) {

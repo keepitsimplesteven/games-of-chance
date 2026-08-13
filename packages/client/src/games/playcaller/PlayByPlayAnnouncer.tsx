@@ -120,7 +120,7 @@ export function PlayByPlayAnnouncer({
   ]
 
   return (
-    <div className="shrink-0 min-h-[52px] flex flex-col justify-center px-1">
+    <div className="shrink-0 min-h-[52px] max-h-[64px] overflow-hidden flex flex-col justify-center px-1">
       <div className="flex flex-col gap-0.5">
         {lines.map((line, i) => (
           <motion.div

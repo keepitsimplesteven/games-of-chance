@@ -57,7 +57,7 @@ export function PlayCardGrid({ cards, matchupId, playInProgress = false, role = 
   const overlayText = playInProgress ? "Play in progress…" : "Waiting for opponent…"
 
   return (
-    <div className="relative">
+    <div className="relative h-full">
       {/* 2×2 Play Card Grid */}
       <div
         style={{
@@ -65,6 +65,7 @@ export function PlayCardGrid({ cards, matchupId, playInProgress = false, role = 
           gridTemplateColumns: "1fr 1fr",
           gridTemplateRows: "1fr 1fr",
           gap: "4px",
+          height: "100%",
         }}
         className="overflow-hidden min-h-0"
       >
