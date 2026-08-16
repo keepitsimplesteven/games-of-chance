@@ -59,7 +59,6 @@ export interface AnimationLayerProps {
   gameSpeed: number
   isPlaying: boolean
   isComplete: boolean
-  slideEnabled?: boolean
   mode: '1v1' | 'ffa'
   robotRefs: Record<string, React.RefObject<HTMLDivElement>>
   /** Refs specifically to the robot SVG container divs (for constraining hit effects) */

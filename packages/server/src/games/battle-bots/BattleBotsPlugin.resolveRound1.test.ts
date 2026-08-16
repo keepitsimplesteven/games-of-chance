@@ -96,7 +96,7 @@ describe("BattleBotsPlugin resolveRound (Round 1 — Prep Phase)", () => {
       expect(robot.maxHp).toBe(100)
     })
 
-    it("derives combat stats (maxHit, accuracy, tickInterval) from stars", () => {
+    it("derives combat stats (maxHit, accuracy, energyPerTick) from stars", () => {
       battleBotsPlugin.resolveRound(
         { p1: { weapon: "drill", head: "square", body: "square" }, p2: { weapon: "blaster", head: "rounded", body: "hexagonal" } },
         defaultSettings
@@ -104,14 +104,14 @@ describe("BattleBotsPlugin resolveRound (Round 1 — Prep Phase)", () => {
       const state = getGameState()!
       const robot = state.builds!["p1"]
 
-      // All derived stats should be positive integers
+      // All derived stats should be valid
       expect(robot.maxHit).toBeGreaterThanOrEqual(1)
       expect(Number.isInteger(robot.maxHit)).toBe(true)
       expect(robot.accuracy).toBeGreaterThanOrEqual(1)
       expect(robot.accuracy).toBeLessThanOrEqual(90)
       expect(Number.isInteger(robot.accuracy)).toBe(true)
-      expect(robot.tickInterval).toBeGreaterThanOrEqual(1)
-      expect(Number.isInteger(robot.tickInterval)).toBe(true)
+      expect(robot.energyPerTick).toBeGreaterThan(0)
+      expect(robot.currentEnergy).toBe(0)
     })
 
     it("assigns unique robot names to all participants", () => {

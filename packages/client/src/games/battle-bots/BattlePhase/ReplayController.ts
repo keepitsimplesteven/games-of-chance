@@ -14,6 +14,7 @@ export interface TickEntry {
   tick: number
   attacks: AttackEvent[]
   eliminations: string[]
+  energyStates: Record<string, number>  // ownerId → energy after tick
 }
 
 // ─── Replay State & Callback Types ────────────────────────────────────────────

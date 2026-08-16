@@ -46,11 +46,10 @@ describe("MODIFIER_TABLE structure", () => {
     }
   })
 
-  it("all ticksPerAttack are positive integers >= 1", () => {
+  it("all attackEnergyPerTick values are positive numbers > 0", () => {
     for (let stars = 1; stars <= 7; stars++) {
-      const tpa = MODIFIER_TABLE[stars].ticksPerAttack
-      expect(tpa).toBeGreaterThanOrEqual(1)
-      expect(Number.isInteger(tpa)).toBe(true)
+      const ept = MODIFIER_TABLE[stars].attackEnergyPerTick
+      expect(ept).toBeGreaterThan(0)
     }
   })
 
@@ -70,10 +69,10 @@ describe("MODIFIER_TABLE structure", () => {
     }
   })
 
-  it("ticksPerAttack decreases with star count (faster attacks)", () => {
+  it("attackEnergyPerTick increases with star count (faster attacks)", () => {
     for (let stars = 2; stars <= 7; stars++) {
-      expect(MODIFIER_TABLE[stars].ticksPerAttack).toBeLessThanOrEqual(
-        MODIFIER_TABLE[stars - 1].ticksPerAttack
+      expect(MODIFIER_TABLE[stars].attackEnergyPerTick).toBeGreaterThan(
+        MODIFIER_TABLE[stars - 1].attackEnergyPerTick
       )
     }
   })
@@ -115,10 +114,10 @@ describe("deriveCombatStats", () => {
     expect(result.accuracy).toBeLessThanOrEqual(90)
   })
 
-  it("uses ticksPerAttack from speed star entry", () => {
-    // 3 speed stars: ticksPerAttack = 5
+  it("uses attackEnergyPerTick from speed star entry", () => {
+    // 3 speed stars: attackEnergyPerTick = 20.0
     const result = deriveCombatStats({ damage: 3, accuracy: 3, speed: 3 })
-    expect(result.tickInterval).toBe(5)
+    expect(result.energyPerTick).toBe(20.0)
   })
 
   it("7 damage stars cannot kill from full HP in fewer than 10 max hits", () => {
@@ -127,7 +126,7 @@ describe("deriveCombatStats", () => {
     expect(hitsToKill).toBeGreaterThanOrEqual(10)
   })
 
-  it("all derived values are positive integers", () => {
+  it("all derived values are valid", () => {
     for (let d = 1; d <= 7; d++) {
       for (let a = 1; a <= 7; a++) {
         for (let s = 1; s <= 7; s++) {
@@ -136,8 +135,7 @@ describe("deriveCombatStats", () => {
           expect(Number.isInteger(result.maxHit)).toBe(true)
           expect(result.accuracy).toBeGreaterThanOrEqual(1)
           expect(Number.isInteger(result.accuracy)).toBe(true)
-          expect(result.tickInterval).toBeGreaterThanOrEqual(1)
-          expect(Number.isInteger(result.tickInterval)).toBe(true)
+          expect(result.energyPerTick).toBeGreaterThan(0)
           expect(result.hp).toBe(100)
         }
       }
@@ -159,11 +157,11 @@ describe("deriveCombatStats", () => {
       expect(result.accuracy).toBe(expectedAccuracy[a - 1])
     }
 
-    // Verify tick intervals for each speed star
-    const expectedTicks = [8, 6, 5, 4, 3, 2, 1]
+    // Verify energyPerTick for each speed star
+    const expectedEnergyPerTick = [10.5, 15.0, 20.0, 25.0, 31.5, 37.0, 44.2]
     for (let s = 1; s <= 7; s++) {
       const result = deriveCombatStats({ damage: 1, accuracy: 1, speed: s })
-      expect(result.tickInterval).toBe(expectedTicks[s - 1])
+      expect(result.energyPerTick).toBe(expectedEnergyPerTick[s - 1])
     }
   })
 })

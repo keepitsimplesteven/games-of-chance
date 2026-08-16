@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo, createRef } from "re
 import { useTheme } from "../../../theme"
 import { CompositeRobot, type RobotVisualConfig } from "../assets/RobotParts"
 import { StarDisplay } from "../PrepPhase/StarDisplay"
+import { EnergyBar } from "./EnergyBar"
 import { HPBar } from "./HPBar"
 import { ReplayController, type TickEntry } from "./ReplayController"
 import { AnimationLayer } from "./animations"
@@ -84,6 +85,9 @@ export function ReplayBattleArena({
     }
     return initial
   })
+
+  // Energy state tracking for EnergyBar display
+  const [energyStates, setEnergyStates] = useState<Record<string, number>>({})
 
   const [isComplete, setIsComplete] = useState(false)
   const [winnerId, setWinnerId] = useState<string | null>(null)
@@ -197,12 +201,19 @@ export function ReplayBattleArena({
           return next
         })
       }
+
+      // Initialize energy state directly from the reconnect tick's TickEntry (no iteration)
+      const reconnectTick = tickLog[initialTickIndex - 1]
+      if (reconnectTick?.energyStates) {
+        setEnergyStates(reconnectTick.energyStates)
+      }
     }
 
     // Register tick callback (processes ticks during live playback)
     controller.onTick((tickEntry) => {
       processTick(tickEntry)
       setCurrentTickEntry(tickEntry)
+      setEnergyStates(tickEntry.energyStates ?? {})
     })
 
     // Start playback and jump to reconnect position if needed
@@ -265,6 +276,8 @@ export function ReplayBattleArena({
           <Layout1v1
             robots={robots}
             hpStates={hpStates}
+            energyStates={energyStates}
+            gameSpeed={gameSpeed}
             playerNames={playerNames}
             winnerId={winnerId}
             isComplete={isComplete}
@@ -289,6 +302,8 @@ export function ReplayBattleArena({
           <LayoutFFA
             robots={robots}
             hpStates={hpStates}
+            energyStates={energyStates}
+            gameSpeed={gameSpeed}
             playerNames={playerNames}
             winnerId={winnerId}
             isComplete={isComplete}
@@ -330,6 +345,8 @@ export function ReplayBattleArena({
 interface LayoutProps {
   robots: ReplayBattleArenaProps["tickLogPayload"]["robots"]
   hpStates: Record<string, RobotHpState>
+  energyStates: Record<string, number>
+  gameSpeed: number
   playerNames: Record<string, string>
   winnerId: string | null
   isComplete: boolean
@@ -337,7 +354,7 @@ interface LayoutProps {
   robotSvgRefs: Record<string, React.RefObject<HTMLDivElement>>
 }
 
-function Layout1v1({ robots, hpStates, playerNames, winnerId, isComplete, robotRefs, robotSvgRefs }: LayoutProps) {
+function Layout1v1({ robots, hpStates, energyStates, gameSpeed, playerNames, winnerId, isComplete, robotRefs, robotSvgRefs }: LayoutProps) {
   const theme = useTheme()
   const [robot1, robot2] = robots
 
@@ -349,6 +366,8 @@ function Layout1v1({ robots, hpStates, playerNames, winnerId, isComplete, robotR
           robot={robot1}
           index={0}
           hpState={hpStates[robot1.ownerId]}
+          currentEnergy={energyStates[robot1.ownerId] ?? 0}
+          gameSpeed={gameSpeed}
           playerName={playerNames[robot1.ownerId] ?? "Unknown"}
           isWinner={isComplete && winnerId === robot1.ownerId}
           cardRef={robotRefs[robot1.ownerId]}
@@ -367,6 +386,8 @@ function Layout1v1({ robots, hpStates, playerNames, winnerId, isComplete, robotR
           robot={robot2}
           index={1}
           hpState={hpStates[robot2.ownerId]}
+          currentEnergy={energyStates[robot2.ownerId] ?? 0}
+          gameSpeed={gameSpeed}
           playerName={playerNames[robot2.ownerId] ?? "Unknown"}
           isWinner={isComplete && winnerId === robot2.ownerId}
           cardRef={robotRefs[robot2.ownerId]}
@@ -379,7 +400,7 @@ function Layout1v1({ robots, hpStates, playerNames, winnerId, isComplete, robotR
 
 // ── FFA Layout ──
 
-function LayoutFFA({ robots, hpStates, playerNames, winnerId, isComplete, robotRefs, robotSvgRefs }: LayoutProps) {
+function LayoutFFA({ robots, hpStates, energyStates, gameSpeed, playerNames, winnerId, isComplete, robotRefs, robotSvgRefs }: LayoutProps) {
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:gap-4">
       {robots.map((robot, index) => (
@@ -388,6 +409,8 @@ function LayoutFFA({ robots, hpStates, playerNames, winnerId, isComplete, robotR
           robot={robot}
           index={index}
           hpState={hpStates[robot.ownerId]}
+          currentEnergy={energyStates[robot.ownerId] ?? 0}
+          gameSpeed={gameSpeed}
           playerName={playerNames[robot.ownerId] ?? "Unknown"}
           isWinner={isComplete && winnerId === robot.ownerId}
           cardRef={robotRefs[robot.ownerId]}
@@ -404,6 +427,8 @@ interface ReplayRobotFighterProps {
   robot: ReplayBattleArenaProps["tickLogPayload"]["robots"][number]
   index: number
   hpState: RobotHpState | undefined
+  currentEnergy: number
+  gameSpeed: number
   playerName: string
   isWinner: boolean
   cardRef?: React.RefObject<HTMLDivElement>
@@ -414,6 +439,8 @@ function ReplayRobotFighter({
   robot,
   index,
   hpState,
+  currentEnergy,
+  gameSpeed,
   playerName,
   isWinner,
   cardRef,
@@ -478,6 +505,7 @@ function ReplayRobotFighter({
       {/* HP Bar */}
       <div className="w-full max-w-[120px] lg:max-w-[160px]">
         <HPBar currentHp={currentHp} maxHp={maxHp} />
+        <EnergyBar currentEnergy={currentEnergy} maxEnergy={100} gameSpeed={gameSpeed} isEliminated={eliminated} />
       </div>
 
       {/* Star values */}

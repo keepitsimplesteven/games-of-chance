@@ -32,7 +32,7 @@ function randomInt(min: number, max: number): number {
  *
  * Algorithm per tick:
  * 1. Capture snapshot: record each living robot's HP at tick start
- * 2. Determine attackers: robots where tick % tickInterval === 0 and snapshot HP > 0
+ * 2. Determine attackers: robots whose energy accumulator reaches ≥100 and snapshot HP > 0
  * 3. For each attacker: roll accuracy, if hit roll damage (1 to maxHit), record attack event
  * 4. Sum damage per target from all attacks this tick
  * 5. Apply damage to get tentative new HP values
@@ -48,6 +48,12 @@ export function simulate1v1(robot1: CombatRobot, robot2: CombatRobot): BattleRes
   const hp: Record<string, number> = {
     [robot1.ownerId]: robot1.currentHp,
     [robot2.ownerId]: robot2.currentHp,
+  }
+
+  // Initialize energy accumulators to 0 for all bots at battle start
+  const energy: Record<string, number> = {
+    [robot1.ownerId]: 0,
+    [robot2.ownerId]: 0,
   }
 
   const robots = [robot1, robot2]
@@ -69,12 +75,19 @@ export function simulate1v1(robot1: CombatRobot, robot2: CombatRobot): BattleRes
       break
     }
 
-    // Step 2: Determine attackers — scheduled this tick AND snapshot HP > 0
+    // Step 2: Accumulate energy for all living bots
+    for (const robot of robots) {
+      if (snapshot[robot.ownerId] > 0) {
+        energy[robot.ownerId] += robot.energyPerTick
+      }
+    }
+
+    // Step 3: Determine attackers — any bot with energy >= 100
     const attackers = robots.filter(
-      (r) => snapshot[r.ownerId] > 0 && tick % r.tickInterval === 0
+      (r) => snapshot[r.ownerId] > 0 && energy[r.ownerId] >= 100
     )
 
-    // Step 3: Roll attacks, record events
+    // Step 4: Roll attacks, record events
     const attacks: AttackEvent[] = []
     const damageAccumulator: Record<string, number> = {
       [robot1.ownerId]: 0,
@@ -108,13 +121,13 @@ export function simulate1v1(robot1: CombatRobot, robot2: CombatRobot): BattleRes
       })
     }
 
-    // Step 4-5: Calculate tentative HP after applying all damage
+    // Step 5-6: Calculate tentative HP after applying all damage
     const tentativeHp: Record<string, number> = {}
     for (const id of livingIds) {
       tentativeHp[id] = Math.max(0, snapshot[id] - damageAccumulator[id])
     }
 
-    // Step 6: Guaranteed Survivor Rule
+    // Step 7: Guaranteed Survivor Rule
     // Check if ALL living robots would reach HP ≤ 0
     const allWouldDie = livingIds.every((id) => tentativeHp[id] <= 0)
 
@@ -133,7 +146,7 @@ export function simulate1v1(robot1: CombatRobot, robot2: CombatRobot): BattleRes
       }
     }
 
-    // Step 7: Finalize HP values
+    // Step 8: Finalize HP values
     for (const id of livingIds) {
       hp[id] = tentativeHp[id]
     }
@@ -146,13 +159,31 @@ export function simulate1v1(robot1: CombatRobot, robot2: CombatRobot): BattleRes
     // Determine eliminations
     const eliminations = livingIds.filter((id) => hp[id] <= 0)
 
+    // Subtract 100 from each attacker's energy (preserve overflow)
+    for (const attacker of attackers) {
+      energy[attacker.ownerId] -= 100
+      // Cap at 99 for bots with energyPerTick >= 100
+      if (attacker.energyPerTick >= 100) {
+        energy[attacker.ownerId] = Math.min(energy[attacker.ownerId], 99)
+      }
+    }
+
+    // Record energy states for living bots at end of tick (only bots with HP > 0)
+    const energyStates: Record<string, number> = {}
+    for (const id of livingIds) {
+      if (hp[id] > 0) {
+        energyStates[id] = energy[id]
+      }
+    }
+
     tickLog.push({
       tick,
       attacks,
       eliminations,
+      energyStates,
     })
 
-    // Step 8: Check termination — if one robot remains, end
+    // Step 9: Check termination — if one robot remains, end
     const remainingAlive = robots.filter((r) => hp[r.ownerId] > 0)
     if (remainingAlive.length <= 1) {
       break
@@ -204,7 +235,7 @@ function determineWinner(
  *
  * Algorithm per tick:
  * 1. Capture snapshot: record each living robot's HP at tick start
- * 2. Determine attackers: robots where tick % tickInterval === 0 and snapshot HP > 0
+ * 2. Determine attackers: robots whose energy accumulator reaches ≥100 and snapshot HP > 0
  * 3. For each attacker: select random living target (not self, snapshot HP > 0),
  *    roll accuracy, if hit roll damage (1 to maxHit), record attack event
  * 4. Sum damage per target from all attacks this tick
@@ -218,7 +249,7 @@ export function simulateFFA(robots: CombatRobot[]): FFAResult
 export function simulateFFA(robots: RobotInstance[]): LegacyFFAResult
 export function simulateFFA(robots: CombatRobot[] | RobotInstance[]): FFAResult | LegacyFFAResult {
   // Detect if input is CombatRobot[] (new system) or RobotInstance[] (legacy)
-  const isNewFormat = robots.length > 0 && 'tickInterval' in robots[0] && 'maxHit' in robots[0]
+  const isNewFormat = robots.length > 0 && 'energyPerTick' in robots[0] && 'maxHit' in robots[0]
 
   if (isNewFormat) {
     // New API path — return structured eliminationOrder
@@ -257,6 +288,12 @@ function simulateFFAInternal(robots: CombatRobot[]): FFAResult {
     hp[robot.ownerId] = robot.currentHp
   }
 
+  // Initialize energy accumulators for all bots
+  const energy: Record<string, number> = {}
+  for (const robot of robots) {
+    energy[robot.ownerId] = 0
+  }
+
   for (let tick = 1; tick <= BATTLE_BOTS.TICK_LIMIT; tick++) {
     // Step 1: Capture HP snapshot at start of tick
     const snapshot: Record<string, number> = {}
@@ -274,12 +311,19 @@ function simulateFFAInternal(robots: CombatRobot[]): FFAResult {
       break
     }
 
-    // Step 2: Determine attackers — scheduled this tick AND snapshot HP > 0
+    // Step 2: Accumulate energy for all living bots
+    for (const robot of robots) {
+      if (snapshot[robot.ownerId] > 0) {
+        energy[robot.ownerId] += robot.energyPerTick
+      }
+    }
+
+    // Step 3: Determine attackers — any bot with energy >= 100
     const attackers = robots.filter(
-      (r) => snapshot[r.ownerId] > 0 && tick % r.tickInterval === 0
+      (r) => snapshot[r.ownerId] > 0 && energy[r.ownerId] >= 100
     )
 
-    // Step 3: Roll attacks with random target selection, record events
+    // Step 4: Roll attacks with random target selection, record events
     const attacks: AttackEvent[] = []
     const damageAccumulator: Record<string, number> = {}
     for (const id of livingIds) {
@@ -318,7 +362,7 @@ function simulateFFAInternal(robots: CombatRobot[]): FFAResult {
       })
     }
 
-    // Step 4-5: Calculate tentative HP after applying all damage
+    // Step 5: Calculate tentative HP after applying all damage
     const tentativeHp: Record<string, number> = {}
     for (const id of livingIds) {
       tentativeHp[id] = Math.max(0, snapshot[id] - damageAccumulator[id])
@@ -352,6 +396,15 @@ function simulateFFAInternal(robots: CombatRobot[]): FFAResult {
       attack.targetHpAfter = hp[attack.targetId]
     }
 
+    // Subtract 100 from each attacker's energy (preserve overflow)
+    for (const attacker of attackers) {
+      energy[attacker.ownerId] -= 100
+      // Cap at 99 for bots with energyPerTick >= 100
+      if (attacker.energyPerTick >= 100) {
+        energy[attacker.ownerId] = Math.min(energy[attacker.ownerId], 99)
+      }
+    }
+
     // Determine eliminations
     const eliminations = livingIds.filter((id) => hp[id] <= 0)
 
@@ -360,10 +413,19 @@ function simulateFFAInternal(robots: CombatRobot[]): FFAResult {
       eliminationOrder.push({ ownerId: eliminatedId, eliminatedOnTick: tick })
     }
 
+    // Record energy states for living bots at end of tick (after damage applied)
+    const energyStates: Record<string, number> = {}
+    for (const id of livingIds) {
+      if (hp[id] > 0) {
+        energyStates[id] = energy[id]
+      }
+    }
+
     tickLog.push({
       tick,
       attacks,
       eliminations,
+      energyStates,
     })
 
     // Step 8: Check termination — if one robot remains, end
@@ -392,7 +454,8 @@ function robotInstanceToCombatRobot(robot: RobotInstance): CombatRobot {
     name: robot.templateId ?? "Robot",
     maxHit: robot.damageMax,
     accuracy: robot.accuracy,
-    tickInterval: 1, // Legacy robots attack every tick
+    energyPerTick: 100,    // attacks every tick (legacy behavior)
+    currentEnergy: 0,
     currentHp: robot.currentHp,
     maxHp: robot.maxHp,
     stars: { damage: 3, accuracy: 3, speed: 3 },

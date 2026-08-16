@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo, createRef } from "re
 import { useTheme } from "../../../theme"
 import { CompositeRobot, type RobotVisualConfig } from "../assets/RobotParts"
 import { StarDisplay } from "../PrepPhase/StarDisplay"
+import { EnergyBar } from "../BattlePhase/EnergyBar"
 import { HPBar } from "../BattlePhase/HPBar"
 import { ReplayController, type TickEntry } from "../BattlePhase/ReplayController"
 import { AnimationLayer } from "../BattlePhase/animations"
@@ -89,6 +90,9 @@ export function ReplayFFAArena({
     }
     return initial
   })
+
+  // Energy state tracking for EnergyBar display
+  const [energyStates, setEnergyStates] = useState<Record<string, number>>({})
 
   const [isComplete, setIsComplete] = useState(false)
   const [winnerId, setWinnerId] = useState<string | null>(null)
@@ -223,12 +227,19 @@ export function ReplayFFAArena({
           ])
         }
       }
+
+      // Initialize energy state directly from the reconnect tick's TickEntry (no iteration)
+      const reconnectTick = tickLog[initialTickIndex - 1]
+      if (reconnectTick?.energyStates) {
+        setEnergyStates(reconnectTick.energyStates)
+      }
     }
 
     // Register tick callback (processes ticks during live playback)
     controller.onTick((tickEntry) => {
       processTick(tickEntry)
       setCurrentTickEntry(tickEntry)
+      setEnergyStates(tickEntry.energyStates ?? {})
     })
 
     // Start playback and jump to reconnect position if needed
@@ -366,6 +377,8 @@ export function ReplayFFAArena({
                 robot={robot}
                 index={index}
                 hpState={hpStates[robot.ownerId]}
+                currentEnergy={energyStates[robot.ownerId] ?? 0}
+                gameSpeed={gameSpeed}
                 playerName={playerNames[robot.ownerId] ?? "Unknown"}
                 isWinner={isComplete && winnerId === robot.ownerId}
                 cardRef={robotRefs.current[robot.ownerId]}
@@ -490,6 +503,8 @@ interface FFARobotFighterProps {
   robot: ReplayFFAArenaProps["tickLogPayload"]["robots"][number]
   index: number
   hpState: RobotHpState | undefined
+  currentEnergy: number
+  gameSpeed: number
   playerName: string
   isWinner: boolean
   cardRef?: React.RefObject<HTMLDivElement>
@@ -500,6 +515,8 @@ function FFARobotFighter({
   robot,
   index,
   hpState,
+  currentEnergy,
+  gameSpeed,
   playerName,
   isWinner,
   cardRef,
@@ -561,9 +578,10 @@ function FFARobotFighter({
         {robot.name} - {playerName}
       </span>
 
-      {/* HP Bar */}
+      {/* HP Bar + Energy Bar */}
       <div className="w-full max-w-[120px] lg:max-w-[160px]">
         <HPBar currentHp={currentHp} maxHp={maxHp} />
+        <EnergyBar currentEnergy={currentEnergy} maxEnergy={100} gameSpeed={gameSpeed} isEliminated={eliminated} />
       </div>
 
       {/* Star values */}
