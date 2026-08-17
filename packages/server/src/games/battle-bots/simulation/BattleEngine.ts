@@ -1,8 +1,9 @@
-import type { CombatRobot, TickEntry, AttackEvent } from "../types"
+﻿import type { CombatRobot, TickEntry, AttackEvent } from "../types"
 import type { RobotInstance } from "../types"
 import { BATTLE_BOTS } from "../constants"
+import { get1v1Scalar, getFFAScalar } from "../BalanceScalars"
 
-// ─── Result Types ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Result Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface BattleResult {
   winnerId: string
@@ -15,7 +16,7 @@ export interface FFAResult {
   tickLog: TickEntry[]
 }
 
-// ─── RNG Helper ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ RNG Helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Generate a random integer in the range [min, max] (inclusive, uniform).
@@ -25,18 +26,18 @@ function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min
 }
 
-// ─── 1v1 Battle Simulation ───────────────────────────────────────────────────
+// â”€â”€â”€ 1v1 Battle Simulation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Simulate a 1v1 battle using the snapshot model + guaranteed survivor rule.
  *
  * Algorithm per tick:
  * 1. Capture snapshot: record each living robot's HP at tick start
- * 2. Determine attackers: robots whose energy accumulator reaches ≥100 and snapshot HP > 0
+ * 2. Determine attackers: robots whose energy accumulator reaches â‰¥100 and snapshot HP > 0
  * 3. For each attacker: roll accuracy, if hit roll damage (1 to maxHit), record attack event
  * 4. Sum damage per target from all attacks this tick
  * 5. Apply damage to get tentative new HP values
- * 6. Guaranteed Survivor Check: if ALL robots with snapshot HP > 0 would reach HP ≤ 0,
+ * 6. Guaranteed Survivor Check: if ALL robots with snapshot HP > 0 would reach HP â‰¤ 0,
  *    pick one at random and negate all damage to it for this tick
  * 7. Finalize HP values, mark eliminations
  * 8. If one robot remains or tick reaches TICK_LIMIT: end simulation
@@ -82,7 +83,7 @@ export function simulate1v1(robot1: CombatRobot, robot2: CombatRobot): BattleRes
       }
     }
 
-    // Step 3: Determine attackers — any bot with energy >= 100
+    // Step 3: Determine attackers â€” any bot with energy >= 100
     const attackers = robots.filter(
       (r) => snapshot[r.ownerId] > 0 && energy[r.ownerId] >= 100
     )
@@ -104,8 +105,10 @@ export function simulate1v1(robot1: CombatRobot, robot2: CombatRobot): BattleRes
 
       let damage = 0
       if (hit) {
-        // Roll damage (1 to maxHit inclusive)
-        damage = randomInt(1, attacker.maxHit)
+        // Roll damage (1 to maxHit inclusive), apply per-matchup balance scalar
+        const rawDmg = randomInt(1, attacker.maxHit)
+        const scalar = get1v1Scalar(attacker.stars, target.stars)
+        damage = Math.max(1, Math.round(rawDmg * scalar))
       }
 
       // Accumulate damage for target
@@ -128,11 +131,11 @@ export function simulate1v1(robot1: CombatRobot, robot2: CombatRobot): BattleRes
     }
 
     // Step 7: Guaranteed Survivor Rule
-    // Check if ALL living robots would reach HP ≤ 0
+    // Check if ALL living robots would reach HP â‰¤ 0
     const allWouldDie = livingIds.every((id) => tentativeHp[id] <= 0)
 
     if (allWouldDie) {
-      // Pick one random robot to survive — negate all damage to it
+      // Pick one random robot to survive â€” negate all damage to it
       const survivorIndex = randomInt(0, livingIds.length - 1)
       const survivorId = livingIds[survivorIndex]
       tentativeHp[survivorId] = snapshot[survivorId] // restore pre-tick HP
@@ -183,7 +186,7 @@ export function simulate1v1(robot1: CombatRobot, robot2: CombatRobot): BattleRes
       energyStates,
     })
 
-    // Step 9: Check termination — if one robot remains, end
+    // Step 9: Check termination â€” if one robot remains, end
     const remainingAlive = robots.filter((r) => hp[r.ownerId] > 0)
     if (remainingAlive.length <= 1) {
       break
@@ -212,7 +215,7 @@ function determineWinner(
     return alive[0].ownerId
   }
 
-  // Timeout case — highest HP wins
+  // Timeout case â€” highest HP wins
   if (alive.length > 1) {
     const sorted = [...alive].sort((a, b) => hp[b.ownerId] - hp[a.ownerId])
     // If tied HP, pick randomly among the tied robots
@@ -228,19 +231,19 @@ function determineWinner(
   return robots[randomInt(0, robots.length - 1)].ownerId
 }
 
-// ─── FFA Battle Simulation ───────────────────────────────────────────────────
+// â”€â”€â”€ FFA Battle Simulation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Simulate a Free-For-All battle using the snapshot model + guaranteed survivor rule.
  *
  * Algorithm per tick:
  * 1. Capture snapshot: record each living robot's HP at tick start
- * 2. Determine attackers: robots whose energy accumulator reaches ≥100 and snapshot HP > 0
+ * 2. Determine attackers: robots whose energy accumulator reaches â‰¥100 and snapshot HP > 0
  * 3. For each attacker: select random living target (not self, snapshot HP > 0),
  *    roll accuracy, if hit roll damage (1 to maxHit), record attack event
  * 4. Sum damage per target from all attacks this tick
  * 5. Apply damage to get tentative new HP values
- * 6. Guaranteed Survivor Check: if ALL robots with snapshot HP > 0 would reach HP ≤ 0,
+ * 6. Guaranteed Survivor Check: if ALL robots with snapshot HP > 0 would reach HP â‰¤ 0,
  *    pick one at random and negate all damage to it for this tick
  * 7. Finalize HP values, mark eliminations, record in eliminationOrder
  * 8. If one robot remains or tick reaches TICK_LIMIT: end simulation
@@ -252,11 +255,11 @@ export function simulateFFA(robots: CombatRobot[] | RobotInstance[]): FFAResult 
   const isNewFormat = robots.length > 0 && 'energyPerTick' in robots[0] && 'maxHit' in robots[0]
 
   if (isNewFormat) {
-    // New API path — return structured eliminationOrder
+    // New API path â€” return structured eliminationOrder
     return simulateFFAInternal(robots as CombatRobot[])
   }
 
-  // Legacy path — convert and return flat string eliminationOrder
+  // Legacy path â€” convert and return flat string eliminationOrder
   const combatRobots: CombatRobot[] = (robots as RobotInstance[]).map(robotInstanceToCombatRobot)
   const result = simulateFFAInternal(combatRobots)
 
@@ -318,7 +321,7 @@ function simulateFFAInternal(robots: CombatRobot[]): FFAResult {
       }
     }
 
-    // Step 3: Determine attackers — any bot with energy >= 100
+    // Step 3: Determine attackers â€” any bot with energy >= 100
     const attackers = robots.filter(
       (r) => snapshot[r.ownerId] > 0 && energy[r.ownerId] >= 100
     )
@@ -345,8 +348,10 @@ function simulateFFAInternal(robots: CombatRobot[]): FFAResult {
 
       let damage = 0
       if (hit) {
-        // Roll damage (1 to maxHit inclusive)
-        damage = randomInt(1, attacker.maxHit)
+        // Roll damage (1 to maxHit inclusive), apply per-build FFA balance scalar
+        const rawDmg = randomInt(1, attacker.maxHit)
+        const scalar = getFFAScalar(attacker.stars)
+        damage = Math.max(1, Math.round(rawDmg * scalar))
       }
 
       // Accumulate damage for target
@@ -369,11 +374,11 @@ function simulateFFAInternal(robots: CombatRobot[]): FFAResult {
     }
 
     // Step 6: Guaranteed Survivor Rule
-    // Check if ALL living robots would reach HP ≤ 0
+    // Check if ALL living robots would reach HP â‰¤ 0
     const allWouldDie = livingIds.every((id) => tentativeHp[id] <= 0)
 
     if (allWouldDie) {
-      // Pick one random robot to survive — negate all damage to it
+      // Pick one random robot to survive â€” negate all damage to it
       const survivorIndex = randomInt(0, livingIds.length - 1)
       const survivorId = livingIds[survivorIndex]
       tentativeHp[survivorId] = snapshot[survivorId] // restore pre-tick HP
@@ -428,7 +433,7 @@ function simulateFFAInternal(robots: CombatRobot[]): FFAResult {
       energyStates,
     })
 
-    // Step 8: Check termination — if one robot remains, end
+    // Step 8: Check termination â€” if one robot remains, end
     const remainingAlive = robots.filter((r) => hp[r.ownerId] > 0)
     if (remainingAlive.length <= 1) {
       break
@@ -442,7 +447,7 @@ function simulateFFAInternal(robots: CombatRobot[]): FFAResult {
 }
 
 
-// ─── Legacy Adapter ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Legacy Adapter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Adapts a legacy RobotInstance to a CombatRobot for use with the new engine.

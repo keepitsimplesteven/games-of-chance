@@ -65,4 +65,7 @@ export interface AnimationLayerProps {
   robotSvgRefs?: Record<string, React.RefObject<HTMLDivElement>>
   /** Maps ownerId to grid column index (0 = left, 1 = right). Used for directional projectiles. */
   robotColumns?: Record<string, number>
+  /** Callback fired when a projectile completes its travel phase and impacts the target.
+   *  Used by parent components to defer HP/elimination updates until visual impact. */
+  onImpact?: (attack: { attackerId: string; targetId: string; hit: boolean; damage: number; targetHpAfter: number; isElimination: boolean }) => void
 }

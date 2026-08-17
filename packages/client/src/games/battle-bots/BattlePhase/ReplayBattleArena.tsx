@@ -94,6 +94,11 @@ export function ReplayBattleArena({
   const [currentTickEntry, setCurrentTickEntry] = useState<TickEntry | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
 
+  // Track pending projectile impacts for deferred completion
+  const pendingImpactsRef = useRef(0)
+  const controllerCompleteRef = useRef(false)
+  const completionFallbackRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   // Refs to robot card DOM elements for animation position calculations
   const robotRefs = useMemo(() => {
     const refs: Record<string, React.RefObject<HTMLDivElement>> = {}
@@ -144,37 +149,50 @@ export function ReplayBattleArena({
     []
   )
 
-  // Process a tick entry to update HP states
+  // Helper to check if replay is truly done (controller finished AND all impacts resolved)
+  const checkCompletion = useCallback(() => {
+    if (controllerCompleteRef.current && pendingImpactsRef.current <= 0) {
+      // Clear the safety fallback since we're completing naturally
+      if (completionFallbackRef.current) {
+        clearTimeout(completionFallbackRef.current)
+        completionFallbackRef.current = null
+      }
+      setIsPlaying(false)
+      setIsComplete(true)
+    }
+  }, [])
+
+  // Process a tick entry — energy and tick metadata only (HP deferred to handleImpact)
   const processTick = useCallback(
     (tickEntry: TickEntry) => {
-      setHpStates((prev) => {
-        const next = { ...prev }
-
-        // Track the latest HP for each target from attacks in this tick
-        for (const attack of tickEntry.attacks) {
-          if (next[attack.targetId]) {
-            next[attack.targetId] = {
-              ...next[attack.targetId],
-              currentHp: attack.targetHpAfter,
-            }
-          }
-        }
-
-        // Mark eliminations
-        for (const eliminatedId of tickEntry.eliminations) {
-          if (next[eliminatedId]) {
-            next[eliminatedId] = {
-              ...next[eliminatedId],
-              currentHp: 0,
-              eliminated: true,
-            }
-          }
-        }
-
-        return next
-      })
+      setCurrentTickEntry(tickEntry)
+      setEnergyStates(tickEntry.energyStates ?? {})
+      // Track pending impacts (attacks that will generate projectiles)
+      pendingImpactsRef.current += tickEntry.attacks.length
     },
     []
+  )
+
+  // Handle individual projectile impacts — applies HP/elimination deferred from processTick
+  const handleImpact = useCallback(
+    (attack: { attackerId: string; targetId: string; hit: boolean; damage: number; targetHpAfter: number; isElimination: boolean }) => {
+      setHpStates((prev) => {
+        const current = prev[attack.targetId]
+        if (!current) return prev
+        return {
+          ...prev,
+          [attack.targetId]: {
+            ...current,
+            currentHp: attack.isElimination ? 0 : attack.targetHpAfter,
+            eliminated: attack.isElimination ? true : current.eliminated,
+          },
+        }
+      })
+      // Decrement pending impacts and check if replay can complete
+      pendingImpactsRef.current -= 1
+      checkCompletion()
+    },
+    [checkCompletion]
   )
 
   // Start replay on mount
@@ -221,8 +239,6 @@ export function ReplayBattleArena({
     // Register tick callback (processes ticks during live playback)
     controller.onTick((tickEntry) => {
       processTick(tickEntry)
-      setCurrentTickEntry(tickEntry)
-      setEnergyStates(tickEntry.energyStates ?? {})
     })
 
     // Start playback and jump to reconnect position if needed
@@ -235,18 +251,31 @@ export function ReplayBattleArena({
     // Poll for completion and isPlaying state
     const checkInterval = window.setInterval(() => {
       const state = controller.getCurrentState()
-      setIsPlaying(state.isPlaying)
-      if (state.isComplete) {
-        setIsComplete(true)
+      if (state.isComplete && !controllerCompleteRef.current) {
+        controllerCompleteRef.current = true
         window.clearInterval(checkInterval)
+        // Keep isPlaying=true so AnimationLayer continues processing
+        // until all pending projectile impacts resolve
+        checkCompletion()
+        // Safety fallback: force completion after grace period
+        // (handles edge case where some attacks are skipped by AnimationLayer
+        // because attacker/target was already eliminated — those never fire onImpact)
+        completionFallbackRef.current = setTimeout(() => {
+          setIsPlaying(false)
+          setIsComplete(true)
+        }, gameSpeed * 3)
+      } else if (!state.isComplete) {
+        // Only update isPlaying while controller is still running
+        setIsPlaying(state.isPlaying)
       }
     }, gameSpeed)
 
     return () => {
       window.clearInterval(checkInterval)
+      if (completionFallbackRef.current) clearTimeout(completionFallbackRef.current)
       controller.destroy()
     }
-  }, [tickLog, gameSpeed, processTick, initialTickIndex])
+  }, [tickLog, gameSpeed, processTick, initialTickIndex, checkCompletion])
 
   // When complete, determine winner and fire callback
   useEffect(() => {
@@ -305,6 +334,7 @@ export function ReplayBattleArena({
             robotRefs={robotRefs}
             robotSvgRefs={robotSvgRefs}
             robotColumns={robotColumns}
+            onImpact={handleImpact}
           />
         </div>
       ) : (
@@ -332,6 +362,7 @@ export function ReplayBattleArena({
             robotRefs={robotRefs}
             robotSvgRefs={robotSvgRefs}
             robotColumns={robotColumns}
+            onImpact={handleImpact}
           />
         </div>
       )}

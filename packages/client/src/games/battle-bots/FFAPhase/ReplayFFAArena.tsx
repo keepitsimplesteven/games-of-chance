@@ -100,6 +100,12 @@ export function ReplayFFAArena({
   const [currentTickEntry, setCurrentTickEntry] = useState<TickEntry | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
 
+  // Track pending projectile impacts for deferred completion
+  const pendingImpactsRef = useRef(0)
+  const controllerCompleteRef = useRef(false)
+  const completionFallbackRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const currentTickRef = useRef(0)
+
   // Refs to robot card DOM elements for slide animations
   const robotRefs = useRef<Record<string, React.RefObject<HTMLDivElement>>>({})
   if (Object.keys(robotRefs.current).length === 0 || !robots.every(r => r.ownerId in robotRefs.current)) {
@@ -151,46 +157,55 @@ export function ReplayFFAArena({
     []
   )
 
-  // Process a tick entry to update HP states and track eliminations
-  const processTick = useCallback((tickEntry: TickEntry) => {
-    setHpStates((prev) => {
-      const next = { ...prev }
-
-      // Track the latest HP for each target from attacks in this tick
-      for (const attack of tickEntry.attacks) {
-        if (next[attack.targetId]) {
-          next[attack.targetId] = {
-            ...next[attack.targetId],
-            currentHp: attack.targetHpAfter,
-          }
-        }
+  // Helper to check if replay is truly done (controller finished AND all impacts resolved)
+  const checkCompletion = useCallback(() => {
+    if (controllerCompleteRef.current && pendingImpactsRef.current <= 0) {
+      if (completionFallbackRef.current) {
+        clearTimeout(completionFallbackRef.current)
+        completionFallbackRef.current = null
       }
-
-      // Mark eliminations
-      for (const eliminatedId of tickEntry.eliminations) {
-        if (next[eliminatedId]) {
-          next[eliminatedId] = {
-            ...next[eliminatedId],
-            currentHp: 0,
-            eliminated: true,
-          }
-        }
-      }
-
-      return next
-    })
-
-    // Record eliminations for ranking display
-    if (tickEntry.eliminations.length > 0) {
-      setEliminations((prev) => [
-        ...prev,
-        ...tickEntry.eliminations.map((ownerId) => ({
-          ownerId,
-          eliminatedOnTick: tickEntry.tick,
-        })),
-      ])
+      setIsPlaying(false)
+      setIsComplete(true)
     }
   }, [])
+
+  // Process a tick entry — energy and tick metadata only (HP deferred to handleImpact)
+  const processTick = useCallback((tickEntry: TickEntry) => {
+    setCurrentTickEntry(tickEntry)
+    setEnergyStates(tickEntry.energyStates ?? {})
+    currentTickRef.current = tickEntry.tick
+    // Track pending impacts (attacks that will generate projectiles)
+    pendingImpactsRef.current += tickEntry.attacks.length
+  }, [])
+
+  // Handle individual projectile impacts — applies HP/elimination deferred from processTick
+  const handleImpact = useCallback(
+    (attack: { attackerId: string; targetId: string; hit: boolean; damage: number; targetHpAfter: number; isElimination: boolean }) => {
+      setHpStates((prev) => {
+        const current = prev[attack.targetId]
+        if (!current) return prev
+        return {
+          ...prev,
+          [attack.targetId]: {
+            ...current,
+            currentHp: attack.isElimination ? 0 : attack.targetHpAfter,
+            eliminated: attack.isElimination ? true : current.eliminated,
+          },
+        }
+      })
+      // Record elimination for ranking display (deferred until impact)
+      if (attack.isElimination) {
+        setEliminations((prev) => [
+          ...prev,
+          { ownerId: attack.targetId, eliminatedOnTick: currentTickRef.current },
+        ])
+      }
+      // Decrement pending impacts and check if replay can complete
+      pendingImpactsRef.current -= 1
+      checkCompletion()
+    },
+    [checkCompletion]
+  )
 
   // Start replay on mount
   useEffect(() => {
@@ -247,8 +262,6 @@ export function ReplayFFAArena({
     // Register tick callback (processes ticks during live playback)
     controller.onTick((tickEntry) => {
       processTick(tickEntry)
-      setCurrentTickEntry(tickEntry)
-      setEnergyStates(tickEntry.energyStates ?? {})
     })
 
     // Start playback and jump to reconnect position if needed
@@ -261,18 +274,29 @@ export function ReplayFFAArena({
     // Poll for completion and isPlaying state
     const checkInterval = window.setInterval(() => {
       const state = controller.getCurrentState()
-      setIsPlaying(state.isPlaying)
-      if (state.isComplete) {
-        setIsComplete(true)
+      if (state.isComplete && !controllerCompleteRef.current) {
+        controllerCompleteRef.current = true
         window.clearInterval(checkInterval)
+        // Keep isPlaying=true so AnimationLayer continues processing
+        // until all pending projectile impacts resolve
+        checkCompletion()
+        // Safety fallback: force completion after grace period
+        completionFallbackRef.current = setTimeout(() => {
+          setIsPlaying(false)
+          setIsComplete(true)
+        }, gameSpeed * 3)
+      } else if (!state.isComplete) {
+        // Only update isPlaying while controller is still running
+        setIsPlaying(state.isPlaying)
       }
     }, gameSpeed)
 
     return () => {
       window.clearInterval(checkInterval)
+      if (completionFallbackRef.current) clearTimeout(completionFallbackRef.current)
       controller.destroy()
     }
-  }, [tickLog, gameSpeed, processTick, initialTickIndex])
+  }, [tickLog, gameSpeed, processTick, initialTickIndex, checkCompletion])
 
   // When complete, determine winner and fire callback
   useEffect(() => {
@@ -407,6 +431,7 @@ export function ReplayFFAArena({
             robotRefs={robotRefs.current}
             robotSvgRefs={robotSvgRefs.current}
             robotColumns={robotColumns}
+            onImpact={handleImpact}
           />
         </div>
 

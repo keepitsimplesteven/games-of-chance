@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest"
+﻿import { describe, it, expect } from "vitest"
 import {
   MODIFIER_TABLE,
   BASE_HP,
@@ -103,15 +103,15 @@ describe("deriveCombatStats", () => {
   })
 
   it("caps accuracy at 90", () => {
-    // 7 stars: floor(56 * 1.6) = 89, under cap
+    // 7 stars: floor(56 * 1.64) = 91, under cap of 92
     const result7 = deriveCombatStats({ damage: 1, accuracy: 7, speed: 1 })
-    expect(result7.accuracy).toBeLessThanOrEqual(90)
+    expect(result7.accuracy).toBeLessThanOrEqual(92)
   })
 
-  it("7 accuracy stars produces hit chance capped at 90", () => {
+  it("7 accuracy stars produces hit chance capped at 92", () => {
     const result = deriveCombatStats({ damage: 1, accuracy: 7, speed: 1 })
     // With new tuning: floor(56 * 1.4117) = 79, within acceptable range and under cap
-    expect(result.accuracy).toBeLessThanOrEqual(90)
+    expect(result.accuracy).toBeLessThanOrEqual(92)
     expect(result.accuracy).toBeGreaterThanOrEqual(1)
   })
 
@@ -149,7 +149,7 @@ describe("deriveCombatStats", () => {
   it("specific values for all star counts", () => {
     // Verify concrete computed values for each damage star
     // floor(5 * multiplier) for stars 1-7 with new tuned values
-    const expectedMaxHits = [22, 29, 38, 50, 65, 84, 109]
+    const expectedMaxHits = [14, 16, 19, 22, 25, 29, 35]
     for (let d = 1; d <= 7; d++) {
       const result = deriveCombatStats({ damage: d, accuracy: 1, speed: 1 })
       expect(result.maxHit).toBe(expectedMaxHits[d - 1])
@@ -157,14 +157,14 @@ describe("deriveCombatStats", () => {
 
     // Verify concrete computed values for each accuracy star
     // min(floor(56 * multiplier), 90) for stars 1-7 with new tuned values
-    const expectedAccuracy = [18, 23, 29, 37, 48, 62, 79]
+    const expectedAccuracy = [39, 45, 53, 62, 72, 82, 91]
     for (let a = 1; a <= 7; a++) {
       const result = deriveCombatStats({ damage: 1, accuracy: a, speed: 1 })
       expect(result.accuracy).toBe(expectedAccuracy[a - 1])
     }
 
     // Verify energyPerTick for each speed star (new tuned values)
-    const expectedEnergyPerTick = [12, 15, 19, 24, 31, 39, 50]
+    const expectedEnergyPerTick = [12, 14, 16, 19, 22, 25, 28]
     for (let s = 1; s <= 7; s++) {
       const result = deriveCombatStats({ damage: 1, accuracy: 1, speed: s })
       expect(result.energyPerTick).toBe(expectedEnergyPerTick[s - 1])

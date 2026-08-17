@@ -26,7 +26,7 @@ interface ActiveProjectile {
   /** Which animation phase the projectile is in */
   phase: 'exit' | 'delay' | 'travel'
   /** Attack event data for triggering hit/damage effects on completion */
-  attackEvent: { hit: boolean; damage: number }
+  attackEvent: { hit: boolean; damage: number; targetHpAfter: number; isElimination: boolean }
   attackerWeapon: string
   effectIndex: number
   stackIndex: number
@@ -72,6 +72,7 @@ export function AnimationLayer({
   robotRefs,
   robotSvgRefs,
   robotColumns,
+  onImpact,
 }: AnimationLayerProps) {
   const [activeProjectiles, setActiveProjectiles] = useState<ActiveProjectile[]>([])
   const [activeHitEffects, setActiveHitEffects] = useState<ActiveHitEffect[]>([])
@@ -197,10 +198,20 @@ export function AnimationLayer({
         }
       }
 
+      // Notify parent of impact for deferred HP updates
+      onImpact?.({
+        attackerId: projectile.attackerId,
+        targetId: projectile.targetId,
+        hit: projectile.attackEvent.hit,
+        damage: projectile.attackEvent.damage,
+        targetHpAfter: projectile.attackEvent.targetHpAfter,
+        isElimination: projectile.attackEvent.isElimination,
+      })
+
       // Remove projectile
       setActiveProjectiles((prev) => prev.filter((p) => p.id !== projectile.id))
     },
-    [getBounds, gameSpeed, scheduleCleanup]
+    [getBounds, gameSpeed, scheduleCleanup, onImpact]
   )
 
   // Process tick entry changes
@@ -294,7 +305,7 @@ export function AnimationLayer({
         delayMs: phases.delayMs,
         travelDurationMs: phases.travelDurationMs,
         phase: 'exit',
-        attackEvent: { hit: attack.hit, damage: attack.damage },
+        attackEvent: { hit: attack.hit, damage: attack.damage, targetHpAfter: attack.targetHpAfter, isElimination: tickEntry.eliminations.includes(attack.targetId) },
         attackerWeapon: getRobotWeapon(attackerId),
         effectIndex,
         stackIndex,
@@ -339,7 +350,7 @@ export function AnimationLayer({
                 animate={{
                   left: proj.attackerExit.x - 4,
                   top: proj.attackerExit.y - 4,
-                  opacity: 1,
+                  opacity: 0,
                 }}
                 transition={{
                   duration: proj.exitDurationMs / 1000,
@@ -386,7 +397,7 @@ export function AnimationLayer({
                 initial={{
                   left: proj.targetEntry.x - 4,
                   top: proj.targetEntry.y - 4,
-                  opacity: 1,
+                  opacity: 0,
                 }}
                 animate={{
                   left: proj.targetImpact.x - 4,

@@ -1,0 +1,316 @@
+{
+  "pbtResults": {
+    "2. Write preservation property tests (BEFORE implementing fix)": {
+      "status": "passed",
+      "lastRunTimestamp": 1786945021824
+    },
+    "3.9 Verify bug condition exploration test now passes": {
+      "status": "passed",
+      "lastRunTimestamp": 1786946457006
+    },
+    "3.10 Verify preservation tests still pass": {
+      "status": "passed",
+      "lastRunTimestamp": 1786946512265
+    }
+  },
+  "executionHistory": {
+    "1. Write bug condition exploration test": [
+      {
+        "executionId": "f09f0400-b3ba-4ec1-a172-df8e1f34cfa3",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944157109
+      },
+      {
+        "executionId": "f09f0400-b3ba-4ec1-a172-df8e1f34cfa3",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944164834
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944719746
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944730698
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944752864
+      }
+    ],
+    "2. Write preservation property tests (BEFORE implementing fix)": [
+      {
+        "executionId": "f09f0400-b3ba-4ec1-a172-df8e1f34cfa3",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944157179
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944719777
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944756748
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786945038131
+      }
+    ],
+    "3.1 Extend AnimationLayerProps with onImpact callback (types.ts)": [
+      {
+        "executionId": "f09f0400-b3ba-4ec1-a172-df8e1f34cfa3",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944157274
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944719805
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786945045579
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786945118244
+      }
+    ],
+    "3.2 Extend ActiveProjectile to carry targetHpAfter and isElimination (AnimationLayer.tsx)": [
+      {
+        "executionId": "f09f0400-b3ba-4ec1-a172-df8e1f34cfa3",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944157321
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944719850
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786945122564
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786945202530
+      }
+    ],
+    "3.3 Add opacity transitions to exit and travel phases (AnimationLayer.tsx)": [
+      {
+        "executionId": "f09f0400-b3ba-4ec1-a172-df8e1f34cfa3",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944157365
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944719876
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786945205957
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786945274788
+      }
+    ],
+    "3.4 Call onImpact in handleProjectileImpact (AnimationLayer.tsx)": [
+      {
+        "executionId": "f09f0400-b3ba-4ec1-a172-df8e1f34cfa3",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944157418
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944719901
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786945278352
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786945357477
+      }
+    ],
+    "3.5 Split processTick in ReplayBattleArena — defer HP updates (ReplayBattleArena.tsx)": [
+      {
+        "executionId": "f09f0400-b3ba-4ec1-a172-df8e1f34cfa3",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944157460
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944719930
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786945361168
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786945855206
+      }
+    ],
+    "3.6 Handle fast-forward/reconnect edge case (ReplayBattleArena.tsx)": [
+      {
+        "executionId": "f09f0400-b3ba-4ec1-a172-df8e1f34cfa3",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944157508
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944719957
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786945858810
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786945922569
+      }
+    ],
+    "3.7 Handle replay completion edge case (ReplayBattleArena.tsx)": [
+      {
+        "executionId": "f09f0400-b3ba-4ec1-a172-df8e1f34cfa3",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944157556
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944719996
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786945927650
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786946222543
+      }
+    ],
+    "3.8 Apply same deferred HP pattern to ReplayFFAArena (ReplayFFAArena.tsx)": [
+      {
+        "executionId": "f09f0400-b3ba-4ec1-a172-df8e1f34cfa3",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944157599
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944720034
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786946227192
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786946419187
+      }
+    ],
+    "3.9 Verify bug condition exploration test now passes": [
+      {
+        "executionId": "f09f0400-b3ba-4ec1-a172-df8e1f34cfa3",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944157637
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944720061
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786946422875
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786946469826
+      }
+    ],
+    "3.10 Verify preservation tests still pass": [
+      {
+        "executionId": "f09f0400-b3ba-4ec1-a172-df8e1f34cfa3",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944157708
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944720089
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786946474191
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786946522280
+      }
+    ],
+    "4. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "f09f0400-b3ba-4ec1-a172-df8e1f34cfa3",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944157748
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786944720117
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786946526530
+      },
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786946575897
+      }
+    ],
+    "3. Fix for projectile opacity transitions and deferred HP application": [
+      {
+        "executionId": "0bb754a7-5413-4701-bebf-13f7461711b0",
+        "chatSessionId": "sess_74f40154-359b-42ac-9c2a-cb02339b8faf",
+        "timestamp": 1786946522317
+      }
+    ]
+  }
+}
