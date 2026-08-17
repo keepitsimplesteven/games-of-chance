@@ -302,8 +302,8 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
 
 ---
 
-- [ ] 13. Implement session scoring strategies
-  - [~] 13.1 Create SessionScoringStrategy interface and implementations (`packages/server/src/scoring/`)
+- [x] 13. Implement session scoring strategies
+  - [x] 13.1 Create SessionScoringStrategy interface and implementations (`packages/server/src/scoring/`)
     - `SessionScoringStrategy` interface: `applyGameResult(players, gameLeaderboard, rawScores) → SessionUpdate`
     - `GrandPrixStrategy`: award placement points based solely on final `gameLeaderboard` rankings and `placementPoints` table (default `[10, 5, 3, 1, 1, 1, 1, 0, 0, 0]`) — never from raw scores directly
     - `ChipsStrategy`: accumulate raw game deltas directly as session points — no rank-based transformation
@@ -317,7 +317,7 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - **Property 21: Chips Mode Direct Accumulation** — Session score update equals sum of raw deltas with no rank transformation.
     - **Validates: Requirements 19.4, 19.5, 20.3**
 
-  - [~] 13.3 Wire session scoring into END_GAME flow on server
+  - [x] 13.3 Wire session scoring into END_GAME flow on server
     - On `END_GAME`: look up `SessionScoringStrategy` based on `roomConfig.scoringMode`
     - Call `strategy.applyGameResult(players, gameLeaderboard, gameScores)` to get `SessionUpdate`
     - Update `sessionScores` and `sessionLeaderboard` in room state
@@ -325,22 +325,22 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - Transition to LOBBY, broadcast STATE_SYNC
     - _Requirements: 20.1, 17.3_
 
-- [ ] 14. Implement session leaderboard and scoring mode selection
-  - [~] 14.1 Add scoring mode selection to room creation flow
+- [x] 14. Implement session leaderboard and scoring mode selection
+  - [x] 14.1 Add scoring mode selection to room creation flow
     - On LandingPage "Create Room": present scoring mode selector with "GrandPrix" and "Chips" options
     - Store selected mode in `RoomConfig.scoringMode` — set at creation, immutable during session
     - Pass scoring mode to server in JOIN message payload when creating room (host role)
     - _Requirements: 19.1, 19.2_
 
-  - [~] 14.2 Create SessionLeaderboard component and display on player list
+  - [x] 14.2 Create SessionLeaderboard component and display on player list
     - Show each player's name, cumulative session points, games played, and rank
     - Update when STATE_SYNC contains new session leaderboard data
     - Tied players show equal rank
     - Display session scores on PlayerList entries
     - _Requirements: 20.2, 20.4, 6.7_
 
-- [ ] 15. Implement reconnection logic
-  - [~] 15.1 Implement client reconnection handling
+- [x] 15. Implement reconnection logic
+  - [x] 15.1 Implement client reconnection handling
     - PartySocket already provides exponential backoff (configured in task 4.4)
     - On reconnection established: server sends full STATE_SYNC automatically (already implemented in M1)
     - On reconnect during PICKING phase: restore pick interface with correct deadline countdown from received `pickDeadlineMs`
@@ -349,8 +349,8 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - Display connection status indicator throughout
     - _Requirements: 21.3, 21.4, 21.5, 21.6_
 
-- [ ] 16. Deployment configuration
-  - [~] 16.1 Configure deployment pipeline
+- [x] 16. Deployment configuration
+  - [x] 16.1 Configure deployment pipeline
     - Ensure `packages/client` builds to static assets via `vite build` (suitable for Cloudflare Pages)
     - Ensure `packages/server` is deployable via `npx partykit deploy` using `partykit.json`
     - `partykit.json` specifies server entry point and Cloudflare Pages domain for CORS
@@ -358,7 +358,7 @@ Implementation follows three sequential milestones. Each milestone is a hard sto
     - CORS restricted to configured Pages domain origin
     - _Requirements: 23.1, 23.2, 23.3, 23.4, 23.5_
 
-- [~] 17. Milestone 3 Checkpoint — Final
+- [x] 17. Milestone 3 Checkpoint — Final
   - Ensure all tests pass (`pnpm test`)
   - Test session scoring: play multiple games, verify GrandPrix awards placement points by rank, Chips accumulates raw deltas
   - Test scoring mode selection at room creation persists for the session

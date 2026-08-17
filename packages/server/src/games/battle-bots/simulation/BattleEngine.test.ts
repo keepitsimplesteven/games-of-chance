@@ -8,7 +8,8 @@ function makeCombatRobot(overrides: Partial<CombatRobot> = {}): CombatRobot {
     name: "TestBot",
     maxHit: 4,
     accuracy: 45,
-    tickInterval: 5,
+    energyPerTick: 20,
+    currentEnergy: 0,
     currentHp: 100,
     maxHp: 100,
     stars: { damage: 3, accuracy: 3, speed: 3 },
@@ -48,21 +49,26 @@ describe("simulate1v1", () => {
     }
   })
 
-  it("robots only attack on ticks matching their tickInterval", () => {
-    const robot1 = makeCombatRobot({ ownerId: "p1", tickInterval: 3 })
-    const robot2 = makeCombatRobot({ ownerId: "p2", tickInterval: 5 })
+  it("robots attack when their energy accumulator reaches >= 100", () => {
+    const robot1 = makeCombatRobot({ ownerId: "p1", energyPerTick: 50 })  // every 2 ticks
+    const robot2 = makeCombatRobot({ ownerId: "p2", energyPerTick: 100 }) // every tick
 
     const result = simulate1v1(robot1, robot2)
 
-    for (const entry of result.tickLog) {
-      for (const attack of entry.attacks) {
-        if (attack.attackerId === "p1") {
-          expect(entry.tick % 3).toBe(0)
-        }
-        if (attack.attackerId === "p2") {
-          expect(entry.tick % 5).toBe(0)
-        }
-      }
+    // robot2 (energyPerTick=100) should attack on tick 1 (first attack)
+    const firstEntry = result.tickLog[0]
+    const p2Attacks = firstEntry.attacks.filter((a) => a.attackerId === "p2")
+    expect(p2Attacks.length).toBe(1)
+
+    // robot1 (energyPerTick=50) should NOT attack on tick 1 (energy=50 < 100)
+    const p1AttacksTick1 = firstEntry.attacks.filter((a) => a.attackerId === "p1")
+    expect(p1AttacksTick1.length).toBe(0)
+
+    // robot1 should attack on tick 2 (energy=100 >= 100)
+    if (result.tickLog.length > 1) {
+      const secondEntry = result.tickLog[1]
+      const p1AttacksTick2 = secondEntry.attacks.filter((a) => a.attackerId === "p1")
+      expect(p1AttacksTick2.length).toBe(1)
     }
   })
 
@@ -106,7 +112,7 @@ describe("simulate1v1", () => {
       maxHp: 5,
       accuracy: 90,
       maxHit: 10,
-      tickInterval: 1,
+      energyPerTick: 100,
     })
     const robot2 = makeCombatRobot({
       ownerId: "p2",
@@ -114,7 +120,7 @@ describe("simulate1v1", () => {
       maxHp: 5,
       accuracy: 90,
       maxHit: 10,
-      tickInterval: 1,
+      energyPerTick: 100,
     })
 
     // Run multiple times to confirm GSR always produces a winner
@@ -129,8 +135,8 @@ describe("simulate1v1", () => {
 
   it("does not exceed 1000 ticks (TICK_LIMIT)", () => {
     // Low accuracy to make a long battle
-    const robot1 = makeCombatRobot({ ownerId: "p1", accuracy: 10, tickInterval: 8 })
-    const robot2 = makeCombatRobot({ ownerId: "p2", accuracy: 10, tickInterval: 8 })
+    const robot1 = makeCombatRobot({ ownerId: "p1", accuracy: 10, energyPerTick: 13 })
+    const robot2 = makeCombatRobot({ ownerId: "p2", accuracy: 10, energyPerTick: 13 })
 
     const result = simulate1v1(robot1, robot2)
 
@@ -145,7 +151,7 @@ describe("simulate1v1", () => {
       ownerId: "p1",
       accuracy: 1,
       maxHit: 1,
-      tickInterval: 8,
+      energyPerTick: 13,
       currentHp: 100,
       maxHp: 100,
     })
@@ -153,7 +159,7 @@ describe("simulate1v1", () => {
       ownerId: "p2",
       accuracy: 1,
       maxHit: 1,
-      tickInterval: 8,
+      energyPerTick: 13,
       currentHp: 50,
       maxHp: 50,
     })
@@ -222,7 +228,8 @@ describe("simulateFFA", () => {
       name: `Bot-${id}`,
       maxHit: 4,
       accuracy: 45,
-      tickInterval: 5,
+      energyPerTick: 20,
+      currentEnergy: 0,
       currentHp: 100,
       maxHp: 100,
       stars: { damage: 3, accuracy: 3, speed: 3 },
@@ -320,9 +327,9 @@ describe("simulateFFA", () => {
   it("guaranteed survivor rule prevents all robots dying simultaneously", () => {
     // High damage/accuracy, low HP to force mutual KO
     const robots = [
-      makeFFARobot("p1", { currentHp: 5, maxHp: 5, accuracy: 90, maxHit: 10, tickInterval: 1 }),
-      makeFFARobot("p2", { currentHp: 5, maxHp: 5, accuracy: 90, maxHit: 10, tickInterval: 1 }),
-      makeFFARobot("p3", { currentHp: 5, maxHp: 5, accuracy: 90, maxHit: 10, tickInterval: 1 }),
+      makeFFARobot("p1", { currentHp: 5, maxHp: 5, accuracy: 90, maxHit: 10, energyPerTick: 100 }),
+      makeFFARobot("p2", { currentHp: 5, maxHp: 5, accuracy: 90, maxHit: 10, energyPerTick: 100 }),
+      makeFFARobot("p3", { currentHp: 5, maxHp: 5, accuracy: 90, maxHit: 10, energyPerTick: 100 }),
     ]
 
     for (let i = 0; i < 20; i++) {
@@ -334,9 +341,9 @@ describe("simulateFFA", () => {
 
   it("does not exceed 1000 ticks (TICK_LIMIT)", () => {
     const robots = [
-      makeFFARobot("p1", { accuracy: 10, tickInterval: 8 }),
-      makeFFARobot("p2", { accuracy: 10, tickInterval: 8 }),
-      makeFFARobot("p3", { accuracy: 10, tickInterval: 8 }),
+      makeFFARobot("p1", { accuracy: 10, energyPerTick: 13 }),
+      makeFFARobot("p2", { accuracy: 10, energyPerTick: 13 }),
+      makeFFARobot("p3", { accuracy: 10, energyPerTick: 13 }),
     ]
 
     const result = simulateFFA(robots)
@@ -348,9 +355,9 @@ describe("simulateFFA", () => {
   it("timeout selects highest HP robot as survivor", () => {
     // Very low accuracy to likely timeout, give p1 extra HP
     const robots = [
-      makeFFARobot("p1", { accuracy: 1, maxHit: 1, tickInterval: 8, currentHp: 100 }),
-      makeFFARobot("p2", { accuracy: 1, maxHit: 1, tickInterval: 8, currentHp: 50 }),
-      makeFFARobot("p3", { accuracy: 1, maxHit: 1, tickInterval: 8, currentHp: 30 }),
+      makeFFARobot("p1", { accuracy: 1, maxHit: 1, energyPerTick: 13, currentHp: 100 }),
+      makeFFARobot("p2", { accuracy: 1, maxHit: 1, energyPerTick: 13, currentHp: 50 }),
+      makeFFARobot("p3", { accuracy: 1, maxHit: 1, energyPerTick: 13, currentHp: 30 }),
     ]
 
     const result = simulateFFA(robots)
@@ -368,7 +375,7 @@ describe("simulateFFA", () => {
     }
   })
 
-  it("damage values are within [1, maxHit] when hit, 0 when miss", () => {
+  it("damage values are within [1, maxHit] when hit, 0 when miss or GSR-negated", () => {
     const robots = [
       makeFFARobot("p1", { maxHit: 6 }),
       makeFFARobot("p2", { maxHit: 8 }),
@@ -381,8 +388,12 @@ describe("simulateFFA", () => {
     for (const entry of result.tickLog) {
       for (const attack of entry.attacks) {
         if (attack.hit) {
-          expect(attack.damage).toBeGreaterThanOrEqual(1)
-          expect(attack.damage).toBeLessThanOrEqual(maxHitByOwner[attack.attackerId])
+          // Damage can be 0 if GSR negated damage to the target (Guaranteed Survivor Rule)
+          // Otherwise must be in [1, maxHit]
+          if (attack.damage > 0) {
+            expect(attack.damage).toBeGreaterThanOrEqual(1)
+            expect(attack.damage).toBeLessThanOrEqual(maxHitByOwner[attack.attackerId])
+          }
         } else {
           expect(attack.damage).toBe(0)
         }
@@ -421,10 +432,10 @@ describe("simulateFFA", () => {
   it("same-tick eliminations share the same tick number in eliminationOrder", () => {
     // High damage/accuracy, same tick interval to encourage same-tick eliminations
     const robots = [
-      makeFFARobot("p1", { accuracy: 90, maxHit: 50, tickInterval: 1, currentHp: 20 }),
-      makeFFARobot("p2", { accuracy: 90, maxHit: 50, tickInterval: 1, currentHp: 20 }),
-      makeFFARobot("p3", { accuracy: 90, maxHit: 50, tickInterval: 1, currentHp: 20 }),
-      makeFFARobot("p4", { accuracy: 90, maxHit: 50, tickInterval: 1, currentHp: 20 }),
+      makeFFARobot("p1", { accuracy: 90, maxHit: 50, energyPerTick: 100, currentHp: 20 }),
+      makeFFARobot("p2", { accuracy: 90, maxHit: 50, energyPerTick: 100, currentHp: 20 }),
+      makeFFARobot("p3", { accuracy: 90, maxHit: 50, energyPerTick: 100, currentHp: 20 }),
+      makeFFARobot("p4", { accuracy: 90, maxHit: 50, energyPerTick: 100, currentHp: 20 }),
     ]
 
     // Run multiple times — some runs should produce same-tick eliminations

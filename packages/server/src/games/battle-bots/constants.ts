@@ -12,7 +12,7 @@ export const BATTLE_BOTS = {
   CHIPS_MULTIPLIER: 10,
 
   /** Maximum number of ticks before a battle is force-terminated */
-  TICK_LIMIT: 1000,
+  TICK_LIMIT: 2000,
 
   /** Duration of the VS screen before replay begins (milliseconds) */
   VS_SCREEN_DURATION_MS: 4000,
@@ -43,7 +43,7 @@ export const BATTLE_BOTS_SETTINGS_SCHEMA: SettingsSchema = [
     key: "GAME_SPEED",
     label: "Game speed (ms per tick)",
     type: "number",
-    defaultValue: 100,
-    constraints: { min: 50, max: 250, step: 10 },
+    defaultValue: 250,
+    constraints: { min: 50, max: 500, step: 10 },
   },
 ]

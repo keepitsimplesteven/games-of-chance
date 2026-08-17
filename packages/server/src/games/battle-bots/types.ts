@@ -36,7 +36,8 @@ export interface CombatRobot {
   name: string
   maxHit: number
   accuracy: number       // capped at 90
-  tickInterval: number
+  energyPerTick: number  // replaces tickInterval
+  currentEnergy: number  // energy accumulator, starts at 0
   currentHp: number
   maxHp: number          // always BASE_HP (100)
   stars: { damage: number; accuracy: number; speed: number }
@@ -59,6 +60,7 @@ export interface TickEntry {
   tick: number
   attacks: AttackEvent[]
   eliminations: string[]  // ownerIds eliminated this tick
+  energyStates: Record<string, number>  // ownerId → energy after tick
 }
 
 /** Complete tick log payload sent to clients */

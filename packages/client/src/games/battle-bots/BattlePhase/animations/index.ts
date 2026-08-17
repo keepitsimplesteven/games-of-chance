@@ -18,4 +18,10 @@ export {
   computeAnimationDuration,
   evaluateSlide,
 } from './SlideEngine'
+export type { ProjectileConfig, ProjectilePhases, ProjectileDecision } from './ProjectileEngine'
+export {
+  computeProjectilePhases,
+  computeAttackerPoints,
+  computeTargetEntry,
+} from './ProjectileEngine'
 export { AnimationLayer } from './AnimationLayer'

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo, createRef } from "re
 import { useTheme } from "../../../theme"
 import { CompositeRobot, type RobotVisualConfig } from "../assets/RobotParts"
 import { StarDisplay } from "../PrepPhase/StarDisplay"
+import { EnergyBar } from "./EnergyBar"
 import { HPBar } from "./HPBar"
 import { ReplayController, type TickEntry } from "./ReplayController"
 import { AnimationLayer } from "./animations"
@@ -85,10 +86,18 @@ export function ReplayBattleArena({
     return initial
   })
 
+  // Energy state tracking for EnergyBar display
+  const [energyStates, setEnergyStates] = useState<Record<string, number>>({})
+
   const [isComplete, setIsComplete] = useState(false)
   const [winnerId, setWinnerId] = useState<string | null>(null)
   const [currentTickEntry, setCurrentTickEntry] = useState<TickEntry | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
+
+  // Track pending projectile impacts for deferred completion
+  const pendingImpactsRef = useRef(0)
+  const controllerCompleteRef = useRef(false)
+  const completionFallbackRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Refs to robot card DOM elements for animation position calculations
   const robotRefs = useMemo(() => {
@@ -119,6 +128,15 @@ export function ReplayBattleArena({
     return colors
   }, [robots])
 
+  // Column assignments for directional projectiles (2-column grid: index % 2)
+  const robotColumns = useMemo(() => {
+    const cols: Record<string, number> = {}
+    for (let i = 0; i < robots.length; i++) {
+      cols[robots[i].ownerId] = i % 2 // 0 = left column, 1 = right column
+    }
+    return cols
+  }, [robots])
+
   // Determine winner from the final state of the tick log
   const determineWinner = useCallback(
     (states: Record<string, RobotHpState>): string | null => {
@@ -131,37 +149,50 @@ export function ReplayBattleArena({
     []
   )
 
-  // Process a tick entry to update HP states
+  // Helper to check if replay is truly done (controller finished AND all impacts resolved)
+  const checkCompletion = useCallback(() => {
+    if (controllerCompleteRef.current && pendingImpactsRef.current <= 0) {
+      // Clear the safety fallback since we're completing naturally
+      if (completionFallbackRef.current) {
+        clearTimeout(completionFallbackRef.current)
+        completionFallbackRef.current = null
+      }
+      setIsPlaying(false)
+      setIsComplete(true)
+    }
+  }, [])
+
+  // Process a tick entry — energy and tick metadata only (HP deferred to handleImpact)
   const processTick = useCallback(
     (tickEntry: TickEntry) => {
-      setHpStates((prev) => {
-        const next = { ...prev }
-
-        // Track the latest HP for each target from attacks in this tick
-        for (const attack of tickEntry.attacks) {
-          if (next[attack.targetId]) {
-            next[attack.targetId] = {
-              ...next[attack.targetId],
-              currentHp: attack.targetHpAfter,
-            }
-          }
-        }
-
-        // Mark eliminations
-        for (const eliminatedId of tickEntry.eliminations) {
-          if (next[eliminatedId]) {
-            next[eliminatedId] = {
-              ...next[eliminatedId],
-              currentHp: 0,
-              eliminated: true,
-            }
-          }
-        }
-
-        return next
-      })
+      setCurrentTickEntry(tickEntry)
+      setEnergyStates(tickEntry.energyStates ?? {})
+      // Track pending impacts (attacks that will generate projectiles)
+      pendingImpactsRef.current += tickEntry.attacks.length
     },
     []
+  )
+
+  // Handle individual projectile impacts — applies HP/elimination deferred from processTick
+  const handleImpact = useCallback(
+    (attack: { attackerId: string; targetId: string; hit: boolean; damage: number; targetHpAfter: number; isElimination: boolean }) => {
+      setHpStates((prev) => {
+        const current = prev[attack.targetId]
+        if (!current) return prev
+        return {
+          ...prev,
+          [attack.targetId]: {
+            ...current,
+            currentHp: attack.isElimination ? 0 : attack.targetHpAfter,
+            eliminated: attack.isElimination ? true : current.eliminated,
+          },
+        }
+      })
+      // Decrement pending impacts and check if replay can complete
+      pendingImpactsRef.current -= 1
+      checkCompletion()
+    },
+    [checkCompletion]
   )
 
   // Start replay on mount
@@ -197,12 +228,17 @@ export function ReplayBattleArena({
           return next
         })
       }
+
+      // Initialize energy state directly from the reconnect tick's TickEntry (no iteration)
+      const reconnectTick = tickLog[initialTickIndex - 1]
+      if (reconnectTick?.energyStates) {
+        setEnergyStates(reconnectTick.energyStates)
+      }
     }
 
     // Register tick callback (processes ticks during live playback)
     controller.onTick((tickEntry) => {
       processTick(tickEntry)
-      setCurrentTickEntry(tickEntry)
     })
 
     // Start playback and jump to reconnect position if needed
@@ -215,18 +251,31 @@ export function ReplayBattleArena({
     // Poll for completion and isPlaying state
     const checkInterval = window.setInterval(() => {
       const state = controller.getCurrentState()
-      setIsPlaying(state.isPlaying)
-      if (state.isComplete) {
-        setIsComplete(true)
+      if (state.isComplete && !controllerCompleteRef.current) {
+        controllerCompleteRef.current = true
         window.clearInterval(checkInterval)
+        // Keep isPlaying=true so AnimationLayer continues processing
+        // until all pending projectile impacts resolve
+        checkCompletion()
+        // Safety fallback: force completion after grace period
+        // (handles edge case where some attacks are skipped by AnimationLayer
+        // because attacker/target was already eliminated — those never fire onImpact)
+        completionFallbackRef.current = setTimeout(() => {
+          setIsPlaying(false)
+          setIsComplete(true)
+        }, gameSpeed * 3)
+      } else if (!state.isComplete) {
+        // Only update isPlaying while controller is still running
+        setIsPlaying(state.isPlaying)
       }
     }, gameSpeed)
 
     return () => {
       window.clearInterval(checkInterval)
+      if (completionFallbackRef.current) clearTimeout(completionFallbackRef.current)
       controller.destroy()
     }
-  }, [tickLog, gameSpeed, processTick, initialTickIndex])
+  }, [tickLog, gameSpeed, processTick, initialTickIndex, checkCompletion])
 
   // When complete, determine winner and fire callback
   useEffect(() => {
@@ -265,6 +314,8 @@ export function ReplayBattleArena({
           <Layout1v1
             robots={robots}
             hpStates={hpStates}
+            energyStates={energyStates}
+            gameSpeed={gameSpeed}
             playerNames={playerNames}
             winnerId={winnerId}
             isComplete={isComplete}
@@ -282,6 +333,8 @@ export function ReplayBattleArena({
             mode="1v1"
             robotRefs={robotRefs}
             robotSvgRefs={robotSvgRefs}
+            robotColumns={robotColumns}
+            onImpact={handleImpact}
           />
         </div>
       ) : (
@@ -289,6 +342,8 @@ export function ReplayBattleArena({
           <LayoutFFA
             robots={robots}
             hpStates={hpStates}
+            energyStates={energyStates}
+            gameSpeed={gameSpeed}
             playerNames={playerNames}
             winnerId={winnerId}
             isComplete={isComplete}
@@ -306,6 +361,8 @@ export function ReplayBattleArena({
             mode="ffa"
             robotRefs={robotRefs}
             robotSvgRefs={robotSvgRefs}
+            robotColumns={robotColumns}
+            onImpact={handleImpact}
           />
         </div>
       )}
@@ -330,6 +387,8 @@ export function ReplayBattleArena({
 interface LayoutProps {
   robots: ReplayBattleArenaProps["tickLogPayload"]["robots"]
   hpStates: Record<string, RobotHpState>
+  energyStates: Record<string, number>
+  gameSpeed: number
   playerNames: Record<string, string>
   winnerId: string | null
   isComplete: boolean
@@ -337,7 +396,7 @@ interface LayoutProps {
   robotSvgRefs: Record<string, React.RefObject<HTMLDivElement>>
 }
 
-function Layout1v1({ robots, hpStates, playerNames, winnerId, isComplete, robotRefs, robotSvgRefs }: LayoutProps) {
+function Layout1v1({ robots, hpStates, energyStates, gameSpeed, playerNames, winnerId, isComplete, robotRefs, robotSvgRefs }: LayoutProps) {
   const theme = useTheme()
   const [robot1, robot2] = robots
 
@@ -349,6 +408,8 @@ function Layout1v1({ robots, hpStates, playerNames, winnerId, isComplete, robotR
           robot={robot1}
           index={0}
           hpState={hpStates[robot1.ownerId]}
+          currentEnergy={energyStates[robot1.ownerId] ?? 0}
+          gameSpeed={gameSpeed}
           playerName={playerNames[robot1.ownerId] ?? "Unknown"}
           isWinner={isComplete && winnerId === robot1.ownerId}
           cardRef={robotRefs[robot1.ownerId]}
@@ -367,6 +428,8 @@ function Layout1v1({ robots, hpStates, playerNames, winnerId, isComplete, robotR
           robot={robot2}
           index={1}
           hpState={hpStates[robot2.ownerId]}
+          currentEnergy={energyStates[robot2.ownerId] ?? 0}
+          gameSpeed={gameSpeed}
           playerName={playerNames[robot2.ownerId] ?? "Unknown"}
           isWinner={isComplete && winnerId === robot2.ownerId}
           cardRef={robotRefs[robot2.ownerId]}
@@ -379,15 +442,17 @@ function Layout1v1({ robots, hpStates, playerNames, winnerId, isComplete, robotR
 
 // ── FFA Layout ──
 
-function LayoutFFA({ robots, hpStates, playerNames, winnerId, isComplete, robotRefs, robotSvgRefs }: LayoutProps) {
+function LayoutFFA({ robots, hpStates, energyStates, gameSpeed, playerNames, winnerId, isComplete, robotRefs, robotSvgRefs }: LayoutProps) {
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:gap-4">
+    <div className="grid grid-cols-2 gap-2 lg:gap-4">
       {robots.map((robot, index) => (
         <ReplayRobotFighter
           key={robot.ownerId}
           robot={robot}
           index={index}
           hpState={hpStates[robot.ownerId]}
+          currentEnergy={energyStates[robot.ownerId] ?? 0}
+          gameSpeed={gameSpeed}
           playerName={playerNames[robot.ownerId] ?? "Unknown"}
           isWinner={isComplete && winnerId === robot.ownerId}
           cardRef={robotRefs[robot.ownerId]}
@@ -404,6 +469,8 @@ interface ReplayRobotFighterProps {
   robot: ReplayBattleArenaProps["tickLogPayload"]["robots"][number]
   index: number
   hpState: RobotHpState | undefined
+  currentEnergy: number
+  gameSpeed: number
   playerName: string
   isWinner: boolean
   cardRef?: React.RefObject<HTMLDivElement>
@@ -414,6 +481,8 @@ function ReplayRobotFighter({
   robot,
   index,
   hpState,
+  currentEnergy,
+  gameSpeed,
   playerName,
   isWinner,
   cardRef,
@@ -478,6 +547,7 @@ function ReplayRobotFighter({
       {/* HP Bar */}
       <div className="w-full max-w-[120px] lg:max-w-[160px]">
         <HPBar currentHp={currentHp} maxHp={maxHp} />
+        <EnergyBar currentEnergy={currentEnergy} maxEnergy={100} gameSpeed={gameSpeed} isEliminated={eliminated} />
       </div>
 
       {/* Star values */}

@@ -1,20 +1,35 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { AnimationLayerProps, SlideDecision, HitEffect, DamageNumberEffect } from './types'
-import { evaluateSlide } from './SlideEngine'
-import { buildHitEffect } from './HitEffectEngine'
+import type { AnimationLayerProps, HitEffect, DamageNumberEffect } from './types'
+import { computeProjectilePhases, computeAttackerPoints, computeTargetEntry } from './ProjectileEngine'
+import { buildHitEffect, computeHitPosition } from './HitEffectEngine'
 import { buildDamageNumber, computeDamageNumberOffset } from './DamageNumberEngine'
 import { HIT_SVG_COMPONENTS } from './hitEffects'
 import { ANIMATION_CONSTANTS } from './constants'
 
-const { CLEANUP_DELAY_MS, DAMAGE_FLOAT_MIN_PX } = ANIMATION_CONSTANTS
+const { CLEANUP_DELAY_MS } = ANIMATION_CONSTANTS
 
 // ── Internal Effect Types ──
 
-interface ActiveSlide {
+interface ActiveProjectile {
   id: string
-  robotId: string
-  decision: SlideDecision
+  attackerId: string
+  targetId: string
+  color: string
+  attackerOrigin: { x: number; y: number }
+  attackerExit: { x: number; y: number }
+  targetEntry: { x: number; y: number }
+  targetImpact: { x: number; y: number }
+  exitDurationMs: number
+  delayMs: number
+  travelDurationMs: number
+  /** Which animation phase the projectile is in */
+  phase: 'exit' | 'delay' | 'travel'
+  /** Attack event data for triggering hit/damage effects on completion */
+  attackEvent: { hit: boolean; damage: number; targetHpAfter: number; isElimination: boolean }
+  attackerWeapon: string
+  effectIndex: number
+  stackIndex: number
 }
 
 interface ActiveHitEffect {
@@ -37,13 +52,13 @@ function nextEffectId(prefix: string): string {
 }
 
 /**
- * AnimationLayer — top-level overlay that coordinates slides, hit SVGs,
- * and floating damage numbers on top of the battle arena.
+ * AnimationLayer — top-level overlay that coordinates projectile animations,
+ * hit SVGs, and floating damage numbers on top of the battle arena.
  *
  * Renders as position:absolute overlay with pointer-events:none and z-index:10.
  * Subscribes to tick changes and produces visual effects without modifying game state.
  *
- * Validates: Requirements 1.4, 1.5, 3.3, 3.4, 4.6, 4.7, 5.2, 5.5, 6.2, 6.5, 7.1, 7.2, 7.4, 7.5, 7.6
+ * Validates: Requirements 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7
  */
 export function AnimationLayer({
   tickEntry,
@@ -53,18 +68,16 @@ export function AnimationLayer({
   gameSpeed,
   isPlaying,
   isComplete,
-  slideEnabled = true,
   mode,
   robotRefs,
   robotSvgRefs,
+  robotColumns,
+  onImpact,
 }: AnimationLayerProps) {
+  const [activeProjectiles, setActiveProjectiles] = useState<ActiveProjectile[]>([])
   const [activeHitEffects, setActiveHitEffects] = useState<ActiveHitEffect[]>([])
   const [activeDamageNumbers, setActiveDamageNumbers] = useState<ActiveDamageNumber[]>([])
 
-  // Track the previous slideEnabled value to handle in-progress completion
-  const prevSlideEnabledRef = useRef(slideEnabled)
-  // Track whether a slide is currently in progress per robot
-  const slidesInProgressRef = useRef<Set<string>>(new Set())
   // Track cleanup timeouts so we can clear them on unmount
   const cleanupTimeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
   // Ref to the overlay container for relative position calculations
@@ -80,20 +93,6 @@ export function AnimationLayer({
     }
   }, [])
 
-  // Handle slideEnabled toggled off: allow in-progress slides to finish
-  useEffect(() => {
-    prevSlideEnabledRef.current = slideEnabled
-  }, [slideEnabled])
-
-  // Get robot position within overlay ('left' | 'right' for 1v1)
-  const getRobotPosition = useCallback(
-    (robotId: string): 'left' | 'right' => {
-      const index = robots.findIndex((r) => r.ownerId === robotId)
-      return index === 0 ? 'left' : 'right'
-    },
-    [robots]
-  )
-
   // Get robot's weapon type
   const getRobotWeapon = useCallback(
     (robotId: string): string => {
@@ -103,12 +102,11 @@ export function AnimationLayer({
     [robots]
   )
 
-  // Get bounds for a target robot's SVG area relative to the overlay
-  const getTargetBounds = useCallback(
-    (targetId: string): { width: number; height: number; x: number; y: number } | null => {
-      // Prefer SVG-specific refs for constraining effects to the robot visual
-      const svgRef = robotSvgRefs?.[targetId]
-      const ref = svgRef?.current ? svgRef : robotRefs[targetId]
+  // Get bounds for a robot's SVG area relative to the overlay
+  const getBounds = useCallback(
+    (robotId: string): { width: number; height: number; x: number; y: number } | null => {
+      const svgRef = robotSvgRefs?.[robotId]
+      const ref = svgRef?.current ? svgRef : robotRefs[robotId]
       if (!ref?.current || !overlayRef.current) return null
 
       const targetRect = ref.current.getBoundingClientRect()
@@ -149,6 +147,73 @@ export function AnimationLayer({
     []
   )
 
+  // Transition projectile to next phase
+  const advanceProjectilePhase = useCallback((projectileId: string) => {
+    setActiveProjectiles((prev) =>
+      prev.map((p) => {
+        if (p.id !== projectileId) return p
+        if (p.phase === 'exit') return { ...p, phase: 'delay' as const }
+        if (p.phase === 'delay') return { ...p, phase: 'travel' as const }
+        return p
+      })
+    )
+  }, [])
+
+  // Handle projectile travel completion — trigger hit effect and damage number
+  const handleProjectileImpact = useCallback(
+    (projectile: ActiveProjectile) => {
+      const targetBounds = getBounds(projectile.targetId)
+
+      // Trigger hit effect at impact location
+      if (targetBounds) {
+        const hitEffect = buildHitEffect(
+          projectile.attackEvent,
+          projectile.attackerWeapon,
+          projectile.color,
+          { width: targetBounds.width, height: targetBounds.height },
+          projectile.effectIndex
+        )
+        // Override position to use the impact point (relative to target bounds)
+        hitEffect.position = {
+          x: projectile.targetImpact.x - targetBounds.x,
+          y: projectile.targetImpact.y - targetBounds.y,
+        }
+        const hitId = nextEffectId('hit')
+        setActiveHitEffects((prev) => [...prev, { id: hitId, effect: hitEffect, targetId: projectile.targetId }])
+        scheduleCleanup(hitId, 'hit', hitEffect.durationMs + CLEANUP_DELAY_MS)
+      }
+
+      // Trigger damage number (only for hits)
+      if (projectile.attackEvent.hit && targetBounds) {
+        const dmgEffect = buildDamageNumber(
+          projectile.attackEvent,
+          { width: targetBounds.width, height: targetBounds.height },
+          gameSpeed,
+          projectile.stackIndex
+        )
+        if (dmgEffect) {
+          const dmgId = nextEffectId('dmg')
+          setActiveDamageNumbers((prev) => [...prev, { id: dmgId, effect: dmgEffect, targetId: projectile.targetId }])
+          scheduleCleanup(dmgId, 'damage', dmgEffect.durationMs + CLEANUP_DELAY_MS)
+        }
+      }
+
+      // Notify parent of impact for deferred HP updates
+      onImpact?.({
+        attackerId: projectile.attackerId,
+        targetId: projectile.targetId,
+        hit: projectile.attackEvent.hit,
+        damage: projectile.attackEvent.damage,
+        targetHpAfter: projectile.attackEvent.targetHpAfter,
+        isElimination: projectile.attackEvent.isElimination,
+      })
+
+      // Remove projectile
+      setActiveProjectiles((prev) => prev.filter((p) => p.id !== projectile.id))
+    },
+    [getBounds, gameSpeed, scheduleCleanup, onImpact]
+  )
+
   // Process tick entry changes
   useEffect(() => {
     // Guard: produce no effects when paused and not complete
@@ -160,25 +225,16 @@ export function AnimationLayer({
     // Guard: overlay must be mounted
     if (!overlayRef.current) return
 
-    const newSlides: ActiveSlide[] = []
-    const newHitEffects: ActiveHitEffect[] = []
-    const newDamageNumbers: ActiveDamageNumber[] = []
+    const newProjectiles: ActiveProjectile[] = []
 
-    // Count attacks per attacker for slide probability
-    const attacksPerAttacker = new Map<string, number>()
     // Count hits per target for stacking damage numbers
     const hitsPerTarget = new Map<string, number>()
+    // Count effects per target for hit effect indexing
+    const effectsPerTarget = new Map<string, number>()
 
     for (const attack of tickEntry.attacks) {
-      attacksPerAttacker.set(
-        attack.attackerId,
-        (attacksPerAttacker.get(attack.attackerId) ?? 0) + 1
-      )
       if (attack.hit) {
-        hitsPerTarget.set(
-          attack.targetId,
-          (hitsPerTarget.get(attack.targetId) ?? 0) + 1
-        )
+        hitsPerTarget.set(attack.targetId, (hitsPerTarget.get(attack.targetId) ?? 0) + 1)
       }
     }
 
@@ -196,121 +252,68 @@ export function AnimationLayer({
       const targetHp = hpStates[targetId]
       if (targetHp?.eliminated) continue
 
-      // ── Slide for attacker ──
-      const attacksInTick = attacksPerAttacker.get(attackerId) ?? 1
-      const robotRef = robotRefs[attackerId]
-      const robotWidth = robotRef?.current?.getBoundingClientRect().width ?? 80
+      // Get bounds for attacker and target
+      const attackerBounds = getBounds(attackerId)
+      const targetBounds = getBounds(targetId)
+      if (!attackerBounds || !targetBounds) continue
 
-      // Determine effective slideEnabled — allow in-progress to finish
-      const effectiveSlideEnabled =
-        slideEnabled || slidesInProgressRef.current.has(attackerId)
+      // Compute projectile phases
+      const phases = computeProjectilePhases(gameSpeed)
 
-      const slideDecision = evaluateSlide(
-        attackerId,
-        attacksInTick,
-        {
-          mode,
-          slideEnabled: effectiveSlideEnabled,
-          gameSpeed,
-          robotWidth,
-        },
-        attackerHp?.eliminated ?? false,
-        mode === '1v1' ? getRobotPosition(attackerId) : undefined
-      )
+      // Determine attacker's side from column position (0 = left, 1 = right)
+      const attackerCol = robotColumns?.[attackerId] ?? 0
+      const attackerSide: 'left' | 'right' = attackerCol === 0 ? 'left' : 'right'
+      // Target side is the opposite of attacker's side for incoming direction
+      const targetCol = robotColumns?.[targetId] ?? 1
+      const targetSide: 'left' | 'right' = targetCol === 0 ? 'left' : 'right'
 
-      if (slideDecision.shouldSlide) {
-        // Only add one slide per attacker per tick
-        if (!newSlides.some((s) => s.robotId === attackerId)) {
-          const slideId = nextEffectId('slide')
-          newSlides.push({ id: slideId, robotId: attackerId, decision: slideDecision })
-          slidesInProgressRef.current.add(attackerId)
-        }
+      // Compute attacker origin and exit points (shoots toward opponent's side)
+      const { origin: attackerOrigin, exit: attackerExit } = computeAttackerPoints(attackerBounds, mode, attackerSide)
+
+      // Compute target entry point (arrives from attacker's direction)
+      const targetEntry = computeTargetEntry(targetBounds, mode, targetSide)
+
+      // Compute target impact point using hit position logic
+      const effectIndex = effectsPerTarget.get(targetId) ?? 0
+      effectsPerTarget.set(targetId, effectIndex + 1)
+      const hitPos = computeHitPosition(targetBounds.width, targetBounds.height, effectIndex)
+      const targetImpact = {
+        x: targetBounds.x + hitPos.x,
+        y: targetBounds.y + hitPos.y,
       }
 
-      // ── Hit effect on target ──
-      const targetBounds = getTargetBounds(targetId)
-      if (targetBounds) {
-        const effectIndex = newHitEffects.filter((h) => h.targetId === targetId).length
-        const hitEffect = buildHitEffect(
-          attack,
-          getRobotWeapon(attackerId),
-          robotColors[attackerId] ?? '#ffffff',
-          { width: targetBounds.width, height: targetBounds.height },
-          effectIndex
-        )
-        const hitId = nextEffectId('hit')
-        newHitEffects.push({ id: hitId, effect: hitEffect, targetId })
-      }
-
-      // ── Damage number on target (only for hits) ──
+      // Get stack index for damage numbers
+      const stackIndex = damageIndexPerTarget.get(targetId) ?? 0
       if (attack.hit) {
-        const targetBoundsForDmg = getTargetBounds(targetId)
-        if (targetBoundsForDmg) {
-          const stackIndex = damageIndexPerTarget.get(targetId) ?? 0
-          damageIndexPerTarget.set(targetId, stackIndex + 1)
-
-          const dmgEffect = buildDamageNumber(
-            attack,
-            { width: targetBoundsForDmg.width, height: targetBoundsForDmg.height },
-            gameSpeed,
-            stackIndex
-          )
-
-          if (dmgEffect) {
-            const dmgId = nextEffectId('dmg')
-            newDamageNumbers.push({ id: dmgId, effect: dmgEffect, targetId })
-          }
-        }
+        damageIndexPerTarget.set(targetId, stackIndex + 1)
       }
+
+      // Create projectile
+      const projectileId = nextEffectId('proj')
+      const color = robotColors[attackerId] ?? '#ffffff'
+
+      newProjectiles.push({
+        id: projectileId,
+        attackerId,
+        targetId,
+        color,
+        attackerOrigin,
+        attackerExit,
+        targetEntry,
+        targetImpact,
+        exitDurationMs: phases.exitDurationMs,
+        delayMs: phases.delayMs,
+        travelDurationMs: phases.travelDurationMs,
+        phase: 'exit',
+        attackEvent: { hit: attack.hit, damage: attack.damage, targetHpAfter: attack.targetHpAfter, isElimination: tickEntry.eliminations.includes(attack.targetId) },
+        attackerWeapon: getRobotWeapon(attackerId),
+        effectIndex,
+        stackIndex,
+      })
     }
 
-    // Apply slide transforms directly to the actual robot elements
-    for (const slide of newSlides) {
-      const svgRef = robotSvgRefs?.[slide.robotId]
-      const ref = svgRef?.current ? svgRef : robotRefs[slide.robotId]
-      if (!ref?.current) continue
-
-      const el = ref.current
-      const { direction, offsetPx, durationMs } = slide.decision
-      const halfDuration = durationMs / 2
-
-      let transform = ''
-      if (direction === 'right') transform = `translateX(${offsetPx}px)`
-      else if (direction === 'left') transform = `translateX(${-offsetPx}px)`
-      else if (direction === 'down') transform = `translateY(${offsetPx}px)`
-
-      el.style.transition = `transform ${halfDuration}ms ease-in-out`
-      el.style.transform = transform
-
-      // Return to original position after half duration
-      const returnTimeout = setTimeout(() => {
-        el.style.transition = `transform ${halfDuration}ms ease-in-out`
-        el.style.transform = ''
-        cleanupTimeoutsRef.current.delete(returnTimeout)
-      }, halfDuration)
-      cleanupTimeoutsRef.current.add(returnTimeout)
-
-      // Clean up transition property after full duration
-      const cleanTransitionTimeout = setTimeout(() => {
-        el.style.transition = ''
-        slidesInProgressRef.current.delete(slide.robotId)
-        cleanupTimeoutsRef.current.delete(cleanTransitionTimeout)
-      }, durationMs + 50)
-      cleanupTimeoutsRef.current.add(cleanTransitionTimeout)
-    }
-
-    // Add new effects to state (hit effects and damage numbers rendered by framer-motion)
-    if (newHitEffects.length > 0) setActiveHitEffects((prev) => [...prev, ...newHitEffects])
-    if (newDamageNumbers.length > 0) setActiveDamageNumbers((prev) => [...prev, ...newDamageNumbers])
-
-    // Schedule cleanup for hit effects (fixed 150ms + CLEANUP_DELAY_MS)
-    for (const hit of newHitEffects) {
-      scheduleCleanup(hit.id, 'hit', hit.effect.durationMs + CLEANUP_DELAY_MS)
-    }
-
-    // Schedule cleanup for damage numbers
-    for (const dmg of newDamageNumbers) {
-      scheduleCleanup(dmg.id, 'damage', dmg.effect.durationMs + CLEANUP_DELAY_MS)
+    if (newProjectiles.length > 0) {
+      setActiveProjectiles((prev) => [...prev, ...newProjectiles])
     }
   }, [tickEntry, isPlaying]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -326,9 +329,96 @@ export function AnimationLayer({
       data-testid="animation-layer"
     >
       <AnimatePresence>
+        {/* Projectile animations */}
+        {activeProjectiles.map((proj) => {
+          if (proj.phase === 'exit') {
+            return (
+              <motion.div
+                key={`${proj.id}-exit`}
+                style={{
+                  position: 'absolute',
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  backgroundColor: proj.color,
+                }}
+                initial={{
+                  left: proj.attackerOrigin.x - 4,
+                  top: proj.attackerOrigin.y - 4,
+                  opacity: 1,
+                }}
+                animate={{
+                  left: proj.attackerExit.x - 4,
+                  top: proj.attackerExit.y - 4,
+                  opacity: 0,
+                }}
+                transition={{
+                  duration: proj.exitDurationMs / 1000,
+                  ease: 'linear',
+                }}
+                onAnimationComplete={() => advanceProjectilePhase(proj.id)}
+              />
+            )
+          }
+
+          if (proj.phase === 'delay') {
+            return (
+              <motion.div
+                key={`${proj.id}-delay`}
+                style={{
+                  position: 'absolute',
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  backgroundColor: proj.color,
+                  opacity: 0,
+                }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0 }}
+                transition={{
+                  duration: proj.delayMs / 1000,
+                }}
+                onAnimationComplete={() => advanceProjectilePhase(proj.id)}
+              />
+            )
+          }
+
+          if (proj.phase === 'travel') {
+            return (
+              <motion.div
+                key={`${proj.id}-travel`}
+                style={{
+                  position: 'absolute',
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  backgroundColor: proj.color,
+                }}
+                initial={{
+                  left: proj.targetEntry.x - 4,
+                  top: proj.targetEntry.y - 4,
+                  opacity: 0,
+                }}
+                animate={{
+                  left: proj.targetImpact.x - 4,
+                  top: proj.targetImpact.y - 4,
+                  opacity: 1,
+                }}
+                transition={{
+                  duration: proj.travelDurationMs / 1000,
+                  ease: 'linear',
+                }}
+                onAnimationComplete={() => handleProjectileImpact(proj)}
+              />
+            )
+          }
+
+          return null
+        })}
+
         {/* Hit effect SVGs */}
         {activeHitEffects.map((hitItem) => {
-          const targetBounds = getTargetBounds(hitItem.targetId)
+          const targetBounds = getBounds(hitItem.targetId)
           if (!targetBounds) return null
 
           const HitSVGComponent = HIT_SVG_COMPONENTS[hitItem.effect.weaponType]
@@ -361,7 +451,7 @@ export function AnimationLayer({
 
         {/* Floating damage numbers */}
         {activeDamageNumbers.map((dmgItem) => {
-          const targetBounds = getTargetBounds(dmgItem.targetId)
+          const targetBounds = getBounds(dmgItem.targetId)
           if (!targetBounds) return null
 
           const offset = computeDamageNumberOffset(
