@@ -621,48 +621,35 @@ export function generateConsolationForRound(
       placementStart,
     })
   } else if (players.length === 4) {
-    // Mini single-elimination bracket: 2 semi-finals + 1 final
-    // Semi-finals: seed 1 vs seed 4, seed 2 vs seed 3 (standard bracket seeding)
-    const semiFinalRound: ConsolationRound = {
+    // Two pairwise matchups: best vs worst seed, 2nd vs 3rd seed
+    // First matchup determines placementStart / placementStart+1
+    consolationRounds.push({
       roundIndex: consolationIndex,
-      matchups: [
-        {
-          matchupId: `c${consolationIndex}-m0`,
-          playerA: players[0], // best seed in group
-          playerB: players[3], // worst seed in group
-          winner: null,
-        },
-        {
-          matchupId: `c${consolationIndex}-m1`,
-          playerA: players[1], // 2nd best seed
-          playerB: players[2], // 3rd best seed
-          winner: null,
-        },
-      ],
+      matchups: [{
+        matchupId: `c${consolationIndex}-m0`,
+        playerA: players[0], // best seed
+        playerB: players[3], // worst seed
+        winner: null,
+      }],
       resolved: false,
       sourceRoundIndex: roundIndex,
       placementStart,
-    }
-    consolationRounds.push(semiFinalRound)
+    })
     consolationIndex++
 
-    // Final: winners of the two semi-finals play for placementStart position
-    // Players are empty until semi-finals resolve
-    const finalRound: ConsolationRound = {
+    // Second matchup determines placementStart+2 / placementStart+3
+    consolationRounds.push({
       roundIndex: consolationIndex,
-      matchups: [
-        {
-          matchupId: `c${consolationIndex}-m0`,
-          playerA: "",
-          playerB: "",
-          winner: null,
-        },
-      ],
+      matchups: [{
+        matchupId: `c${consolationIndex}-m0`,
+        playerA: players[1], // 2nd best seed
+        playerB: players[2], // 3rd best seed
+        winner: null,
+      }],
       resolved: false,
       sourceRoundIndex: roundIndex,
-      placementStart,
-    }
-    consolationRounds.push(finalRound)
+      placementStart: placementStart + 2,
+    })
   } else if (players.length > 4) {
     // For groups larger than 4, create pairwise matchups
     // This handles unusual cases (e.g., 6 or 8 players eliminated in same round)

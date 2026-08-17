@@ -66,8 +66,8 @@ describe("resolveConsolationRound", () => {
     expect(bracket.currentConsolationIndex).toBe(1)
   })
 
-  it("resolves a 4-player mini-bracket (semi-finals feed into final)", () => {
-    // 10-player bracket: quarter-final losers form a 4-player mini-bracket
+  it("resolves a 4-player group as flat pairwise matchups (no mini-bracket)", () => {
+    // 10-player bracket: quarter-final losers form a 4-player group
     const players = ["p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8", "p9", "p10"]
     let bracket = generateBracket(players)
 
@@ -79,37 +79,35 @@ describe("resolveConsolationRound", () => {
     bracket.consolationRounds = generateConsolationRounds(bracket)
     bracket.currentConsolationIndex = 0
 
-    // Find a consolation round that is a semi-final (has 2 matchups, part of a mini-bracket)
-    const semiFinalIndex = bracket.consolationRounds.findIndex(
+    // For a 4-player group, we should get 2 separate ConsolationRound objects (each with 1 matchup)
+    // instead of the old mini-bracket (1 round with 2 matchups + 1 final round with empty players)
+    // Verify no round has 2 matchups (old mini-bracket semi-final format)
+    const hasMiniBracketSemiFinal = bracket.consolationRounds.some(
       (r) => r.matchups.length === 2
     )
-    expect(semiFinalIndex).toBeGreaterThanOrEqual(0)
+    expect(hasMiniBracketSemiFinal).toBe(false)
 
-    // Advance to the semi-final round if it's not the first
-    while (bracket.currentConsolationIndex < semiFinalIndex) {
+    // Verify no round has empty players (old mini-bracket final format)
+    const hasEmptyPlayers = bracket.consolationRounds.some(
+      (r) => r.matchups.some((m) => m.playerA === "" || m.playerB === "")
+    )
+    expect(hasEmptyPlayers).toBe(false)
+
+    // All consolation rounds should be single-matchup pairwise games
+    for (const round of bracket.consolationRounds) {
+      expect(round.matchups.length).toBe(1)
+      expect(round.matchups[0].playerA).not.toBe("")
+      expect(round.matchups[0].playerB).not.toBe("")
+    }
+
+    // Resolve all consolation rounds
+    for (let i = 0; i < bracket.consolationRounds.length; i++) {
+      bracket.currentConsolationIndex = i
       bracket = resolveConsolationRound(bracket, playerAResolver)
     }
 
-    // The semi-final round — resolve it
-    const semiFinalRound = bracket.consolationRounds[bracket.currentConsolationIndex]
-    const nextRound = bracket.consolationRounds[bracket.currentConsolationIndex + 1]
-
-    // Verify the next round shares the same placementStart (same mini-bracket)
-    expect(nextRound.placementStart).toBe(semiFinalRound.placementStart)
-
-    // Before resolution, the final's players should be empty
-    expect(nextRound.matchups[0].playerA).toBe("")
-    expect(nextRound.matchups[0].playerB).toBe("")
-
-    // Resolve semi-finals
-    bracket = resolveConsolationRound(bracket, playerAResolver)
-
-    // After resolution, the next round's (final) players should be filled with semi-final winners
-    const finalRound = bracket.consolationRounds[bracket.currentConsolationIndex]
-    expect(finalRound.matchups[0].playerA).toBeTruthy()
-    expect(finalRound.matchups[0].playerB).toBeTruthy()
-    expect(finalRound.matchups[0].playerA).not.toBe("")
-    expect(finalRound.matchups[0].playerB).not.toBe("")
+    // All consolation rounds should now be resolved
+    expect(bracket.consolationRounds.every((r) => r.resolved)).toBe(true)
   })
 
   it("advances currentConsolationIndex after each resolution", () => {

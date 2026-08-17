@@ -23,7 +23,7 @@ import {
   fillMissingPicks,
   initializeDrives,
 } from "./PlaycallerPlugin"
-import { resolveCurrentRound, isFullyComplete, resolveConsolationRound, generateConsolationForRound, buildSchedule, getActiveMatchupsForSchedule } from "./BracketEngine"
+import { resolveCurrentRound, isFullyComplete, generateConsolationForRound, buildSchedule, getActiveMatchupsForSchedule } from "./BracketEngine"
 import { registry } from "../GameRegistry"
 import { PLAYCALLER, COIN_TOSS_CEREMONY } from "./constants"
 import {
@@ -681,12 +681,12 @@ export function advancePlaycallerBracket(ctx: PlaycallerRoomContext): void {
     resultMatchups = currentRound.matchups
   }
 
-  // ── Resolve consolation matchups (for each consolation round index in the schedule entry) ──
+  // ── Resolve consolation matchups ──
   for (const cIdx of scheduleEntry.consolationRoundIndices) {
     const consolationRound = bracket.consolationRounds[cIdx]
     if (!consolationRound || consolationRound.resolved) continue
 
-    // Skip rounds that were not actually played (empty players, no drive completions)
+    // Skip rounds that were not actually played (no drive completions)
     const hasCompletedDrive = consolationRound.matchups.some((m) => drives[m.matchupId]?.completion)
     if (!hasCompletedDrive) continue
 
@@ -698,22 +698,19 @@ export function advancePlaycallerBracket(ctx: PlaycallerRoomContext): void {
       }
     }
 
-    // Build resolver from drive winners for this consolation round
-    const consolationResolver = (playerA: string, playerB: string): string => {
-      const matchup = consolationRound.matchups.find(
-        m => (m.playerA === playerA && m.playerB === playerB) ||
-             (m.playerA === playerB && m.playerB === playerA)
-      )
-      return matchup ? winners[matchup.matchupId] : playerA
+    // Resolve: set winner on each matchup (try winners map first, then drive completion directly)
+    for (const matchup of consolationRound.matchups) {
+      if (winners[matchup.matchupId]) {
+        matchup.winner = winners[matchup.matchupId]
+      } else if (drives[matchup.matchupId]?.completion?.winner) {
+        matchup.winner = drives[matchup.matchupId].completion!.winner
+      }
     }
 
-    // Align currentConsolationIndex with the round we're actually resolving
-    bracket.currentConsolationIndex = cIdx
+    // Mark as resolved
+    consolationRound.resolved = true
 
-    // Resolve the consolation round (handles mini-bracket winner propagation)
-    resolveConsolationRound(bracket, consolationResolver)
-
-    // Track resolved consolation matchups for the result
+    // Track for result payload
     consolationMatchupsResolved.push(...consolationRound.matchups)
     consolationContext.push({
       placementStart: consolationRound.placementStart,
@@ -734,20 +731,8 @@ export function advancePlaycallerBracket(ctx: PlaycallerRoomContext): void {
   // ── Rebuild the schedule to include newly generated consolation rounds ──
   bracket.schedule = buildSchedule(bracket)
 
-  // -- Check if the consolation entry still has unresolved matchups with players ready --
-  // (e.g., mini-bracket final now has players populated after semi-finals resolved)
-  const updatedEntry = bracket.schedule[bracket.currentScheduleIndex]
-  const hasMoreConsolation = updatedEntry && updatedEntry.mainBracketRoundIndex === null &&
-    updatedEntry.consolationRoundIndices.some((cIdx) => {
-      const cRound = bracket.consolationRounds[cIdx]
-      return cRound && !cRound.resolved &&
-        cRound.matchups.some((m) => m.playerA !== "" && m.playerB !== "")
-    })
-
-  // -- Advance currentScheduleIndex (unless consolation still has ready matchups) --
-  if (!hasMoreConsolation) {
-    bracket.currentScheduleIndex++
-  }
+  // ── Advance currentScheduleIndex ──
+  bracket.currentScheduleIndex++
 
   // Persist the updated bracket state
   setPlaycallerState(bracket)

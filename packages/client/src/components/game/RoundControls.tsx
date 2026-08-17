@@ -18,6 +18,7 @@ export default function RoundControls() {
   const roundAnimationDone = useGameStore((s) => s.roundAnimationDone)
   const roundNumber = useGameStore((s) => s.roomState?.round.roundNumber ?? 0)
   const totalRounds = useGameStore((s) => s.roomState?.gameSettings?.roundCount ?? 0)
+  const roundResult = useGameStore((s) => s.roomState?.round.result)
   const startRound = useGameStore((s) => s.startRound)
   const endGame = useGameStore((s) => s.endGame)
   const theme = useTheme()
@@ -49,7 +50,10 @@ export default function RoundControls() {
   // RESULT phase: show "Next Round" and "End Game" (disabled until animation done)
   // On the last round, show "View Final Results" instead of "Next Round"
   if (phase === "RESULT") {
-    const isLastRound = totalRounds > 0 && roundNumber >= totalRounds
+    // For playcaller, check if the bracket is fully complete (from the round result)
+    const isLastRound = gameType === "playcaller"
+      ? (roundResult as { isComplete?: boolean } | null)?.isComplete === true
+      : totalRounds > 0 && roundNumber >= totalRounds
 
     return (
       <div className="flex flex-col gap-2">

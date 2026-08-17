@@ -13,7 +13,7 @@ import { createDriveState, resolveDown, selectRandomPlay, DEFAULT_PLAY_CONFIG, D
 import type { GamePlugin } from "../GamePlugin"
 import { registry } from "../GameRegistry"
 import { PLAYCALLER, PLAYCALLER_SETTINGS_SCHEMA } from "./constants"
-import { resolveCurrentRound, isComplete, isFullyComplete, computePlacements, resolveConsolationRound, generateConsolationForRound, buildSchedule } from "./BracketEngine"
+import { resolveCurrentRound, isComplete, isFullyComplete, computePlacements, generateConsolationForRound, buildSchedule } from "./BracketEngine"
 import { randomResolver } from "./MatchResolver"
 import { validateScoreTable } from "./validateScoreTable"
 
@@ -314,13 +314,17 @@ export const playcallerPlugin: GamePlugin<PlaycallerPick, PlaycallerRoundResult>
       const consolationRound = bracketState.consolationRounds[cIdx]
       if (!consolationRound || consolationRound.resolved) continue
 
-      // Skip rounds with empty matchup slots (mini-bracket finals waiting for semi-final winners)
+      // Skip rounds with empty players (shouldn't happen with flat matchups, but defensive)
       const hasReadyMatchup = consolationRound.matchups.some((m) => m.playerA !== "" && m.playerB !== "")
       if (!hasReadyMatchup) continue
 
-      // Align currentConsolationIndex with the round we are resolving
-      bracketState.currentConsolationIndex = cIdx
-      bracketState = resolveConsolationRound(bracketState, randomResolver)
+      // Resolve each matchup with random resolver
+      for (const matchup of consolationRound.matchups) {
+        if (matchup.playerA && matchup.playerB) {
+          matchup.winner = randomResolver(matchup.playerA, matchup.playerB)
+        }
+      }
+      consolationRound.resolved = true
 
       consolationMatchupsResolved.push(...consolationRound.matchups)
       consolationContext.push({
@@ -341,19 +345,8 @@ export const playcallerPlugin: GamePlugin<PlaycallerPick, PlaycallerRoundResult>
     // Rebuild schedule to include newly generated consolation rounds
     bracketState.schedule = buildSchedule(bracketState)
 
-    // Check if the consolation entry still has unresolved matchups with players ready
-    const updatedEntry = bracketState.schedule[bracketState.currentScheduleIndex]
-    const hasMoreConsolation = updatedEntry && updatedEntry.mainBracketRoundIndex === null &&
-      updatedEntry.consolationRoundIndices.some((cIdx) => {
-        const cRound = bracketState!.consolationRounds[cIdx]
-        return cRound && !cRound.resolved &&
-          cRound.matchups.some((m) => m.playerA !== "" && m.playerB !== "")
-      })
-
-    // Advance currentScheduleIndex (unless consolation still has ready matchups)
-    if (!hasMoreConsolation) {
-      bracketState.currentScheduleIndex++
-    }
+    // Advance currentScheduleIndex
+    bracketState.currentScheduleIndex++
 
     return {
       bracketRound: resultBracketRound,
@@ -464,24 +457,50 @@ export const playcallerPlugin: GamePlugin<PlaycallerPick, PlaycallerRoundResult>
 // ── Spectator / Active Competitor Helpers ───────────────────────────────────
 
 /**
- * Returns the current spectators (eliminated + bye players for current round)
+ * Returns the current spectators — players NOT in an active matchup this round.
+ * During main bracket rounds: eliminated + bye players.
+ * During consolation: finalists + anyone not in a consolation matchup.
  */
 export function getSpectators(): string[] {
   if (!bracketState) return []
-  const eliminated = Object.keys(bracketState.eliminated)
-  const currentRound = bracketState.rounds[bracketState.currentRoundIndex]
-  const currentByes = currentRound ? currentRound.byes : []
-  return [...eliminated, ...currentByes]
+
+  const allPlayerIds = Object.keys(bracketState.seeds)
+  const activeCompetitors = new Set(getActiveCompetitors())
+
+  // Spectators are everyone NOT actively competing
+  return allPlayerIds.filter(id => !activeCompetitors.has(id))
 }
 
 /**
- * Returns the active competitors for the current round
+ * Returns the active competitors for the current schedule entry.
+ * During main bracket rounds: players in the current round's matchups.
+ * During consolation: players in the consolation matchups.
  */
 export function getActiveCompetitors(): string[] {
   if (!bracketState) return []
-  const currentRound = bracketState.rounds[bracketState.currentRoundIndex]
-  if (!currentRound) return []
-  return currentRound.matchups.flatMap(m => [m.playerA, m.playerB]).filter(p => p !== "")
+
+  const scheduleEntry = bracketState.schedule[bracketState.currentScheduleIndex]
+  if (!scheduleEntry) return []
+
+  if (scheduleEntry.mainBracketRoundIndex !== null) {
+    // Main bracket round
+    const currentRound = bracketState.rounds[scheduleEntry.mainBracketRoundIndex]
+    if (!currentRound) return []
+    return currentRound.matchups.flatMap(m => [m.playerA, m.playerB]).filter(p => p !== "")
+  } else {
+    // Consolation round — active competitors are those in consolation matchups
+    const competitors: string[] = []
+    for (const cIdx of scheduleEntry.consolationRoundIndices) {
+      const cRound = bracketState.consolationRounds[cIdx]
+      if (cRound) {
+        for (const matchup of cRound.matchups) {
+          if (matchup.playerA) competitors.push(matchup.playerA)
+          if (matchup.playerB) competitors.push(matchup.playerB)
+        }
+      }
+    }
+    return competitors
+  }
 }
 
 // Register the plugin in the global GameRegistry
