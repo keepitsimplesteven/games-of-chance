@@ -6,13 +6,13 @@ Implement the Playcaller Lottery Mode feature: a fantasy football draft lottery 
 
 ## Tasks
 
-- [ ] 1. Add consolation/placement games to the bracket system
-  - [ ] 1.1 Extend shared types with consolation bracket structures
+- [x] 1. Add consolation/placement games to the bracket system
+  - [x] 1.1 Extend shared types with consolation bracket structures
     - Add `ConsolationRound` interface to `packages/shared/src/types.ts` with fields: `roundIndex`, `matchups: Matchup[]`, `resolved: boolean`, `sourceRoundIndex: number`, `placementStart: number`
     - Extend `Bracket` interface with `consolationRounds: ConsolationRound[]` and `currentConsolationIndex: number`
     - _Requirements: 1.1, 1.2, 1.3_
 
-  - [ ] 1.2 Implement consolation round generation in BracketEngine
+  - [x] 1.2 Implement consolation round generation in BracketEngine
     - Add `generateConsolationRounds(bracket: Bracket): ConsolationRound[]` to `BracketEngine.ts`
     - Group eliminated players by the round they were eliminated in
     - For each group of 2 players: create 1 matchup
@@ -20,40 +20,40 @@ Implement the Playcaller Lottery Mode feature: a fantasy football draft lottery 
     - Assign `placementStart` based on group position (semi-final losers start at 3, quarter-final losers at 5, play-in losers at 9, etc.)
     - _Requirements: 1.1, 1.2, 1.7, 1.8_
 
-  - [ ] 1.3 Implement consolation round resolution in BracketEngine
+  - [x] 1.3 Implement consolation round resolution in BracketEngine
     - Add `resolveConsolationRound(bracket: Bracket, resolver: MatchResolver): Bracket` — resolves the current consolation round's matchups, marks resolved, advances `currentConsolationIndex`
     - Add `isFullyComplete(bracket: Bracket): boolean` — true when main bracket is complete AND all consolation rounds are resolved
     - _Requirements: 1.2, 1.3, 1.5_
 
-  - [ ] 1.4 Update computePlacements to use consolation results
+  - [x] 1.4 Update computePlacements to use consolation results
     - Modify `computePlacements(bracket: Bracket): Map<string, number>` to check for consolation round data
     - When consolation data exists and is resolved: use matchup winners/losers to assign unique placements within each group
     - When no consolation data exists: fall back to existing shared-placement behavior (backwards compatible)
     - _Requirements: 1.3, 1.4_
 
-  - [ ] 1.5 Wire consolation rounds into the room game loop
+  - [x] 1.5 Wire consolation rounds into the room game loop
     - In `room.ts` / `roomHandlers.ts`: after the main bracket's final round resolves, call `generateConsolationRounds(bracket)` and store the result
     - Continue the bracket play loop (drive gameplay or SKIP_GAMEPLAY resolution) through consolation rounds before transitioning to END_GAME/END_TOURNAMENT
     - For SKIP_GAMEPLAY: auto-resolve consolation rounds using the same resolver as main bracket
     - For interactive gameplay: use the same drive loop (beginPlaycallerDown → drives → advancePlaycallerBracket) for consolation matchups
     - _Requirements: 1.4, 1.5_
 
-- [ ] 2. Define the Lottery Odds Table and draw function
-  - [ ] 2.1 Create lottery odds module
+- [x] 2. Define the Lottery Odds Table and draw function
+  - [x] 2.1 Create lottery odds module
     - Create `packages/server/src/games/playcaller/lottery/odds.ts`
     - Export `LotteryOddsTable` type alias (`number[][]`)
     - Export `DEFAULT_LOTTERY_ODDS: LotteryOddsTable` — the 10×10 table populated with the user's probability values
     - Validate table structure: 10 rows, 10 columns, each row sums to ~1.0, each column sums to ~1.0
     - _Requirements: 3.6_
 
-  - [ ] 2.2 Implement the drawPlacements function
+  - [x] 2.2 Implement the drawPlacements function
     - Export `drawPlacements(playerCount: number, rng: () => number): number[]` in `odds.ts`
     - Algorithm: sequential weighted sampling without replacement — for each placement column (0 through N-1), draw which remaining seed gets it using column probabilities normalized over remaining seeds
     - Returns array where `result[seedIndex] = placement (1-based)`
     - Handle playerCount < 10 by using the first N rows/columns of the table
     - _Requirements: 3.1, 3.2, 3.3_
 
-  - [ ] 2.3 Create barrel export for lottery module
+  - [x] 2.3 Create barrel export for lottery module
     - Create `packages/server/src/games/playcaller/lottery/index.ts`
     - Re-export all public APIs from odds.ts (and future files in this module)
     - _Requirements: N/A (code organization)_

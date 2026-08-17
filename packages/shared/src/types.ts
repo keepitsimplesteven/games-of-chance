@@ -327,6 +327,30 @@ export interface BracketRound {
   resolved: boolean
 }
 
+/** A consolation round — placement games between players eliminated in the same main bracket round */
+export interface ConsolationRound {
+  /** Index of this consolation round within the consolation bracket */
+  roundIndex: number
+  /** Matchups in this consolation round */
+  matchups: Matchup[]
+  /** Whether this consolation round has been resolved */
+  resolved: boolean
+  /** Which main bracket round's losers are playing in this consolation round */
+  sourceRoundIndex: number
+  /** Starting placement position for the winner of the top matchup in this group */
+  placementStart: number
+}
+
+/** A schedule entry mapping a game round to its main-bracket and consolation matchups */
+export interface GameRoundSchedule {
+  /** Index into bracket.rounds for the main-bracket matchups this game round, or null if no main-bracket matchups */
+  mainBracketRoundIndex: number | null
+  /** Indices into bracket.consolationRounds for consolation matchups running concurrently */
+  consolationRoundIndices: number[]
+  /** Human-readable description of this game round (e.g., "Quarterfinals + 9th/10th") */
+  description: string
+}
+
 /** Complete bracket state */
 export interface Bracket {
   /** All rounds in the bracket */
@@ -339,6 +363,14 @@ export interface Bracket {
   seeds: Record<string, number>
   /** Eliminated players and the round they were eliminated in */
   eliminated: Record<string, number>
+  /** Consolation rounds for determining unique placements among tied players */
+  consolationRounds: ConsolationRound[]
+  /** Index of the current active consolation round */
+  currentConsolationIndex: number
+  /** Game round schedule mapping each game round to its main-bracket + consolation matchups */
+  schedule: GameRoundSchedule[]
+  /** Index of the current active schedule entry */
+  currentScheduleIndex: number
 }
 
 /** Result of resolving a bracket round */
@@ -349,6 +381,15 @@ export interface PlaycallerRoundResult {
   matchups: Matchup[]
   /** Whether the tournament is complete (champion found) */
   isComplete: boolean
+  /** Consolation matchups resolved this round (if any) */
+  consolationMatchups?: Matchup[]
+  /** Context for consolation matchups resolved this round (for UI rendering) */
+  consolationContext?: {
+    /** Starting placement position for winners in this consolation group */
+    placementStart: number
+    /** Description of the consolation group (e.g., "5th-8th Semifinals") */
+    description: string
+  }[]
 }
 
 // ── Playcaller Drive State ─────────────────────────────────────────────────

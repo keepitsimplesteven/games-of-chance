@@ -1,0 +1,199 @@
+{
+  "pbtResults": {
+    "2.2 Write property tests for getConsolationLabel()": {
+      "status": "passed",
+      "lastRunTimestamp": 1786991977759
+    },
+    "1.2 Write property tests for buildSchedule()": {
+      "status": "passed",
+      "lastRunTimestamp": 1786991998642
+    },
+    "5.2 Write property tests for PlayerSlot styling behavior": {
+      "status": "passed",
+      "lastRunTimestamp": 1786992358750
+    },
+    "4.3 Write property test for consolation row column alignment": {
+      "status": "passed",
+      "lastRunTimestamp": 1786992531192
+    }
+  },
+  "executionHistory": {
+    "1.1 Rewrite `buildSchedule()` in `packages/server/src/games/playcaller/BracketEngine.ts`": [
+      {
+        "executionId": "2e9406d5-833e-4f63-8e0e-dfb3b6528377",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786989965940
+      },
+      {
+        "executionId": "2e9406d5-833e-4f63-8e0e-dfb3b6528377",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786989975104
+      },
+      {
+        "executionId": "0a6e0467-cc6a-46e5-a2c1-7a7804e14809",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786991543848
+      },
+      {
+        "executionId": "0a6e0467-cc6a-46e5-a2c1-7a7804e14809",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786991547689
+      },
+      {
+        "executionId": "0a6e0467-cc6a-46e5-a2c1-7a7804e14809",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786991576955
+      }
+    ],
+    "1.2 Write property tests for buildSchedule()": [
+      {
+        "executionId": "2e9406d5-833e-4f63-8e0e-dfb3b6528377",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786989965983
+      },
+      {
+        "executionId": "0a6e0467-cc6a-46e5-a2c1-7a7804e14809",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786991543881
+      },
+      {
+        "executionId": "0a6e0467-cc6a-46e5-a2c1-7a7804e14809",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786991583486
+      }
+    ],
+    "2.1 Extract `getConsolationLabel()` as an exported utility in `BracketEngine.ts`": [
+      {
+        "executionId": "2e9406d5-833e-4f63-8e0e-dfb3b6528377",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786989966045
+      },
+      {
+        "executionId": "2e9406d5-833e-4f63-8e0e-dfb3b6528377",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786989975681
+      },
+      {
+        "executionId": "0a6e0467-cc6a-46e5-a2c1-7a7804e14809",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786991543911
+      },
+      {
+        "executionId": "0a6e0467-cc6a-46e5-a2c1-7a7804e14809",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786991548608
+      },
+      {
+        "executionId": "0a6e0467-cc6a-46e5-a2c1-7a7804e14809",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786991577791
+      }
+    ],
+    "2.2 Write property tests for getConsolationLabel()": [
+      {
+        "executionId": "2e9406d5-833e-4f63-8e0e-dfb3b6528377",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786989966078
+      },
+      {
+        "executionId": "0a6e0467-cc6a-46e5-a2c1-7a7804e14809",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786991543945
+      },
+      {
+        "executionId": "0a6e0467-cc6a-46e5-a2c1-7a7804e14809",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786991584091
+      }
+    ],
+    "3. Checkpoint": [
+      {
+        "executionId": "2e9406d5-833e-4f63-8e0e-dfb3b6528377",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786989966112
+      },
+      {
+        "executionId": "0a6e0467-cc6a-46e5-a2c1-7a7804e14809",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786991543982
+      }
+    ],
+    "4.1 Create ConsolationRow component in `packages/client/src/games/playcaller/BracketVisualization.tsx`": [
+      {
+        "executionId": "2e9406d5-833e-4f63-8e0e-dfb3b6528377",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786989966148
+      },
+      {
+        "executionId": "0a6e0467-cc6a-46e5-a2c1-7a7804e14809",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786991544006
+      }
+    ],
+    "4.2 Refactor BracketVisualization layout to two-row structure": [
+      {
+        "executionId": "2e9406d5-833e-4f63-8e0e-dfb3b6528377",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786989966176
+      },
+      {
+        "executionId": "0a6e0467-cc6a-46e5-a2c1-7a7804e14809",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786991544035
+      }
+    ],
+    "4.3 Write property test for consolation row column alignment": [
+      {
+        "executionId": "2e9406d5-833e-4f63-8e0e-dfb3b6528377",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786989966216
+      },
+      {
+        "executionId": "0a6e0467-cc6a-46e5-a2c1-7a7804e14809",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786991544063
+      }
+    ],
+    "5.1 Add `isConsolation` prop to MatchupCard and PlayerSlot components": [
+      {
+        "executionId": "2e9406d5-833e-4f63-8e0e-dfb3b6528377",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786989966253
+      },
+      {
+        "executionId": "0a6e0467-cc6a-46e5-a2c1-7a7804e14809",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786991544091
+      },
+      {
+        "executionId": "0a6e0467-cc6a-46e5-a2c1-7a7804e14809",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786991585057
+      }
+    ],
+    "5.2 Write property tests for PlayerSlot styling behavior": [
+      {
+        "executionId": "2e9406d5-833e-4f63-8e0e-dfb3b6528377",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786989966291
+      },
+      {
+        "executionId": "0a6e0467-cc6a-46e5-a2c1-7a7804e14809",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786991544119
+      }
+    ],
+    "6. Final checkpoint": [
+      {
+        "executionId": "2e9406d5-833e-4f63-8e0e-dfb3b6528377",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786989966329
+      },
+      {
+        "executionId": "0a6e0467-cc6a-46e5-a2c1-7a7804e14809",
+        "chatSessionId": "sess_ef7b4146-e98c-4c6d-baf0-5a2a647a33a2",
+        "timestamp": 1786991544159
+      }
+    ]
+  }
+}

@@ -23,7 +23,7 @@ import {
   fillMissingPicks,
   initializeDrives,
 } from "./PlaycallerPlugin"
-import { resolveCurrentRound, isComplete } from "./BracketEngine"
+import { resolveCurrentRound, isFullyComplete, resolveConsolationRound, generateConsolationForRound, buildSchedule, getActiveMatchupsForSchedule } from "./BracketEngine"
 import { registry } from "../GameRegistry"
 import { PLAYCALLER, COIN_TOSS_CEREMONY } from "./constants"
 import {
@@ -113,18 +113,18 @@ function clearAllCeremonyTimers(): void {
  * Creates ceremony states for all active matchups (excluding byes),
  * transitions phase to COIN_TOSS, starts per-matchup coin call timers,
  * and broadcasts STATE_SYNC.
+ *
+ * Handles both main bracket rounds and consolation rounds.
  */
 export function beginCoinTossPhase(ctx: PlaycallerRoomContext): void {
   const bracket = getPlaycallerState()
   if (!bracket) return
 
-  const currentRound = bracket.rounds[bracket.currentRoundIndex]
-  if (!currentRound) return
-
-  // Only create ceremonies for active matchups (not byes)
-  const activeMatchups = currentRound.matchups.filter(
-    (m) => m.playerA !== "" && m.playerB !== ""
-  )
+  // Use schedule-based lookup for active matchups (main + consolation combined)
+  const scheduleEntry = bracket.schedule[bracket.currentScheduleIndex]
+  if (!scheduleEntry) return
+  const activeMatchups = getActiveMatchupsForSchedule(bracket, scheduleEntry)
+  if (activeMatchups.length === 0) return
 
   // Create ceremony states
   ceremonyStates = createCeremonyStates(activeMatchups)
@@ -507,6 +507,7 @@ function checkCeremonyCompletion(ctx: PlaycallerRoomContext): void {
 /**
  * Transition from COIN_TOSS to PICKING phase.
  * Initializes drives with the ceremony assignments and begins the first down.
+ * Handles both main bracket rounds and consolation rounds.
  */
 function transitionToPicking(ctx: PlaycallerRoomContext): void {
   if (!ceremonyStates) return
@@ -514,16 +515,16 @@ function transitionToPicking(ctx: PlaycallerRoomContext): void {
   const bracket = getPlaycallerState()
   if (!bracket) return
 
-  const currentRound = bracket.rounds[bracket.currentRoundIndex]
-  if (!currentRound) return
-
   // Get assignments from completed ceremonies
   const assignments = getAssignments(ceremonyStates)
 
+  // Use schedule-based lookup for active matchups (main + consolation combined)
+  const scheduleEntry = bracket.schedule[bracket.currentScheduleIndex]
+  if (!scheduleEntry) return
+  const activeMatchups = getActiveMatchupsForSchedule(bracket, scheduleEntry)
+  if (activeMatchups.length === 0) return
+
   // Initialize drives with explicit offense/defense assignments
-  const activeMatchups = currentRound.matchups.filter(
-    (m) => m.playerA !== "" && m.playerB !== ""
-  )
   initializeDrives(activeMatchups, assignments)
 
   // Clear ceremony states (phase is done)
@@ -625,8 +626,14 @@ export function handlePlaySelection(
 
 /**
  * Advance the bracket after all drives in the round complete.
- * Determines winners from drive completions, advances the bracket,
- * transitions to RESULT phase, and scores if tournament is complete.
+ * Determines winners from drive completions, advances the bracket using
+ * schedule-based advancement, transitions to RESULT phase, and scores
+ * if tournament is fully complete (main bracket + all consolation rounds).
+ *
+ * Uses the bracket's schedule to determine which matchups were active in
+ * the current game round (both main-bracket and consolation). Resolves
+ * each type appropriately, generates new consolation rounds for newly
+ * eliminated players, rebuilds the schedule, and advances currentScheduleIndex.
  */
 export function advancePlaycallerBracket(ctx: PlaycallerRoomContext): void {
   // Determine winners from drive completions
@@ -637,47 +644,130 @@ export function advancePlaycallerBracket(ctx: PlaycallerRoomContext): void {
     winners[matchupId] = drive.completion!.winner
   }
 
-  // Advance bracket using the drive winners
   const bracket = getPlaycallerState()!
-  const currentRound = bracket.rounds[bracket.currentRoundIndex]
 
-  // Stamp endingType onto each matchup before resolving (persists in bracket state)
-  for (const matchup of currentRound.matchups) {
-    const drive = drives[matchup.matchupId]
-    if (drive?.completion) {
-      matchup.endingType = drive.completion.endingType
+  // Look up the current schedule entry to determine which matchups were active
+  const scheduleEntry = bracket.schedule[bracket.currentScheduleIndex]
+
+  // Collect all resolved matchups for the RESULT payload
+  let resultMatchups: typeof bracket.rounds[0]["matchups"] = []
+  let resultBracketRound = -1
+  let consolationMatchupsResolved: typeof bracket.rounds[0]["matchups"] = []
+  let consolationContext: { placementStart: number; description: string }[] = []
+
+  // ── Resolve main-bracket matchups (if schedule entry has a mainBracketRoundIndex) ──
+  if (scheduleEntry.mainBracketRoundIndex !== null) {
+    const currentRound = bracket.rounds[scheduleEntry.mainBracketRoundIndex]
+
+    // Stamp endingType onto each matchup before resolving
+    for (const matchup of currentRound.matchups) {
+      const drive = drives[matchup.matchupId]
+      if (drive?.completion) {
+        matchup.endingType = drive.completion.endingType
+      }
+    }
+
+    // Build a resolver that returns the pre-determined winner from drives
+    const driveResolver = (playerA: string, playerB: string): string => {
+      const matchup = currentRound.matchups.find(
+        m => (m.playerA === playerA && m.playerB === playerB) ||
+             (m.playerA === playerB && m.playerB === playerA)
+      )
+      return matchup ? winners[matchup.matchupId] : playerA
+    }
+
+    resolveCurrentRound(bracket, driveResolver)
+    resultBracketRound = scheduleEntry.mainBracketRoundIndex
+    resultMatchups = currentRound.matchups
+  }
+
+  // ── Resolve consolation matchups (for each consolation round index in the schedule entry) ──
+  for (const cIdx of scheduleEntry.consolationRoundIndices) {
+    const consolationRound = bracket.consolationRounds[cIdx]
+    if (!consolationRound || consolationRound.resolved) continue
+
+    // Skip rounds that were not actually played (empty players, no drive completions)
+    const hasCompletedDrive = consolationRound.matchups.some((m) => drives[m.matchupId]?.completion)
+    if (!hasCompletedDrive) continue
+
+    // Stamp endingType onto consolation matchups
+    for (const matchup of consolationRound.matchups) {
+      const drive = drives[matchup.matchupId]
+      if (drive?.completion) {
+        matchup.endingType = drive.completion.endingType
+      }
+    }
+
+    // Build resolver from drive winners for this consolation round
+    const consolationResolver = (playerA: string, playerB: string): string => {
+      const matchup = consolationRound.matchups.find(
+        m => (m.playerA === playerA && m.playerB === playerB) ||
+             (m.playerA === playerB && m.playerB === playerA)
+      )
+      return matchup ? winners[matchup.matchupId] : playerA
+    }
+
+    // Align currentConsolationIndex with the round we're actually resolving
+    bracket.currentConsolationIndex = cIdx
+
+    // Resolve the consolation round (handles mini-bracket winner propagation)
+    resolveConsolationRound(bracket, consolationResolver)
+
+    // Track resolved consolation matchups for the result
+    consolationMatchupsResolved.push(...consolationRound.matchups)
+    consolationContext.push({
+      placementStart: consolationRound.placementStart,
+      description: `${consolationRound.placementStart}th place consolation`,
+    })
+  }
+
+  // ── Generate new consolation rounds for newly eliminated players ──
+  if (scheduleEntry.mainBracketRoundIndex !== null) {
+    const resolvedRoundIndex = scheduleEntry.mainBracketRoundIndex
+    // Find players eliminated in this round (they were just added to bracket.eliminated by resolveCurrentRound)
+    const newConsolation = generateConsolationForRound(bracket, resolvedRoundIndex)
+    if (newConsolation.length > 0) {
+      bracket.consolationRounds.push(...newConsolation)
     }
   }
 
-  // Build a resolver that returns the pre-determined winner from drives
-  const driveResolver = (playerA: string, playerB: string): string => {
-    const matchup = currentRound.matchups.find(
-      m => (m.playerA === playerA && m.playerB === playerB) ||
-           (m.playerA === playerB && m.playerB === playerA)
-    )
-    return matchup ? winners[matchup.matchupId] : playerA
+  // ── Rebuild the schedule to include newly generated consolation rounds ──
+  bracket.schedule = buildSchedule(bracket)
+
+  // -- Check if the consolation entry still has unresolved matchups with players ready --
+  // (e.g., mini-bracket final now has players populated after semi-finals resolved)
+  const updatedEntry = bracket.schedule[bracket.currentScheduleIndex]
+  const hasMoreConsolation = updatedEntry && updatedEntry.mainBracketRoundIndex === null &&
+    updatedEntry.consolationRoundIndices.some((cIdx) => {
+      const cRound = bracket.consolationRounds[cIdx]
+      return cRound && !cRound.resolved &&
+        cRound.matchups.some((m) => m.playerA !== "" && m.playerB !== "")
+    })
+
+  // -- Advance currentScheduleIndex (unless consolation still has ready matchups) --
+  if (!hasMoreConsolation) {
+    bracket.currentScheduleIndex++
   }
 
-  const updatedBracket = resolveCurrentRound(bracket, driveResolver)
-  setPlaycallerState(updatedBracket)
+  // Persist the updated bracket state
+  setPlaycallerState(bracket)
 
   // Reset drive states
   resetDriveStates()
 
-  // Transition to RESULT
-  const resolvedRoundIndex = updatedBracket.currentRoundIndex - 1
-  const resolvedRound = updatedBracket.rounds[resolvedRoundIndex]
-  
+  // ── Transition to RESULT phase ──
   ctx.state.round.phase = "RESULT"
   ctx.state.round.result = {
-    bracketRound: resolvedRoundIndex,
-    matchups: resolvedRound.matchups,
-    isComplete: isComplete(updatedBracket),
+    bracketRound: resultBracketRound,
+    matchups: resultMatchups.length > 0 ? resultMatchups : consolationMatchupsResolved,
+    isComplete: isFullyComplete(bracket),
+    ...(consolationMatchupsResolved.length > 0 && { consolationMatchups: consolationMatchupsResolved }),
+    ...(consolationContext.length > 0 && { consolationContext }),
   }
   ctx.state.round.resolvedAt = Date.now()
 
-  // Score if tournament complete
-  if (isComplete(updatedBracket)) {
+  // Score if fully complete (main bracket + all consolation rounds resolved)
+  if (isFullyComplete(bracket)) {
     const plugin = registry.lookup("playcaller")
     const scoreResult = plugin.scoreRound(
       {},
@@ -707,16 +797,28 @@ export function advancePlaycallerBracket(ctx: PlaycallerRoomContext): void {
  * - If SKIP_GAMEPLAY is false: routes through the coin toss ceremony phase,
  *   which will initialize drives and call beginPlaycallerDown again once complete.
  * - If SKIP_GAMEPLAY is true: initializes drives with random assignments and continues.
+ *
+ * Also handles consolation rounds: when the main bracket is complete but consolation
+ * rounds remain, initializes drives for the current consolation round's matchups.
  */
 export function beginPlaycallerDown(ctx: PlaycallerRoomContext): void {
   clearDownPicks()
 
   const activeDrives = getDriveStates()
 
-  // If no drives exist yet, this is the start of a new bracket round.
+  // If no drives exist yet, this is the start of a new bracket round (or consolation round).
   // Route through coin toss ceremony or initialize drives with random assignments.
   if (!activeDrives) {
     const skipGameplay = ctx.state.gameSettings.tuning?.SKIP_GAMEPLAY === true
+
+    const bracket = getPlaycallerState()
+    if (!bracket) return
+
+    // Use schedule-based lookup for active matchups (main + consolation combined)
+    const scheduleEntry = bracket.schedule[bracket.currentScheduleIndex]
+    if (!scheduleEntry) return
+    const activeMatchups = getActiveMatchupsForSchedule(bracket, scheduleEntry)
+    if (activeMatchups.length === 0) return
 
     if (!skipGameplay) {
       // Route through coin toss ceremony — it will initialize drives and
@@ -726,13 +828,6 @@ export function beginPlaycallerDown(ctx: PlaycallerRoomContext): void {
     }
 
     // SKIP_GAMEPLAY is true — initialize drives with random assignments
-    const bracket = getPlaycallerState()
-    if (!bracket) return
-    const currentRound = bracket.rounds[bracket.currentRoundIndex]
-    if (!currentRound) return
-    const activeMatchups = currentRound.matchups.filter(
-      (m) => m.playerA !== "" && m.playerB !== ""
-    )
     initializeDrives(activeMatchups)
   }
 

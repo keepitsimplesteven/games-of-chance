@@ -128,8 +128,10 @@ export function PlaycallerContainer() {
     (m) => m.playerA !== playerId && m.playerB !== playerId
   )
 
-  // Derive round name for Phase 2 DriveView
-  const roundName = getRoundName(bracket.currentRoundIndex, bracket.totalRounds)
+  // Derive round name from the current schedule entry (not raw currentRoundIndex)
+  // During consolation, currentRoundIndex points to finals but schedule says "Consolation"
+  const currentScheduleEntry = bracket.schedule?.[bracket.currentScheduleIndex]
+  const roundName = currentScheduleEntry?.description ?? getRoundName(bracket.currentRoundIndex, bracket.totalRounds)
 
   // ═══════════════════════════════════════════════════════════════════════════
   // Phase 2: Drive states present — render interactive drive experience

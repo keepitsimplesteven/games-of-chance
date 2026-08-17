@@ -31,7 +31,7 @@ import {
   setBigWheelState,
   resetBigWheelState,
 } from "./games/big-wheel/BigWheelPlugin"
-import { generateBracket, isComplete } from "./games/playcaller/BracketEngine"
+import { generateBracket, isComplete, isFullyComplete, generateConsolationRounds } from "./games/playcaller/BracketEngine"
 import { setPlaycallerState, resetPlaycallerState, getPlaycallerState, getSpectators, getActiveCompetitors, getDriveStates, resetDriveStates } from "./games/playcaller/PlaycallerPlugin"
 import { PLAYCALLER } from "./games/playcaller/constants"
 import {
@@ -550,12 +550,12 @@ export class GameRoom extends Server {
       this.state.gameSettings.tuning?.SKIP_GAMEPLAY === false
     ) {
       const bracket = getPlaycallerState()!
-      if (!isComplete(bracket)) {
+      if (!isFullyComplete(bracket)) {
         this.state.round.roundNumber++
         this.beginPlaycallerDown()
         return
       } else {
-        // Bracket is fully complete — end the game
+        // Bracket is fully complete (main + consolation) — end the game
         this.autoEndGame()
         return
       }
@@ -563,15 +563,30 @@ export class GameRoom extends Server {
 
     // If the last round just completed, transition to END_GAME instead of starting a new round
     // (Big Wheel manages its own game end — skip this check for big-wheel)
+    // (Playcaller manages its own game end via isFullyComplete — skip this check for playcaller)
     const maxRounds = this.getMaxRounds()
     if (
       this.state.config.gameType !== "big-wheel" &&
+      this.state.config.gameType !== "playcaller" &&
       this.state.round.phase === "RESULT" &&
       maxRounds > 0 &&
       this.state.round.roundNumber >= maxRounds
     ) {
       this.autoEndGame()
       return
+    }
+
+    // Playcaller (SKIP_GAMEPLAY=true): check if bracket + consolation is fully complete
+    if (
+      this.state.config.gameType === "playcaller" &&
+      this.state.round.phase === "RESULT" &&
+      this.state.gameSettings.tuning?.SKIP_GAMEPLAY !== false
+    ) {
+      const bracket = getPlaycallerState()!
+      if (isFullyComplete(bracket)) {
+        this.autoEndGame()
+        return
+      }
     }
 
     // Big Wheel: advance turn index after spin 2 before starting next round
@@ -1501,8 +1516,8 @@ export class GameRoom extends Server {
     // ── Playcaller: start down loop if SKIP_GAMEPLAY is false ──────────
     if (this.state.config.gameType === "playcaller" && this.state.gameSettings.tuning?.SKIP_GAMEPLAY === false) {
       const bracket = getPlaycallerState()!
-      if (isComplete(bracket)) {
-        // Bracket is done — end the game
+      if (isFullyComplete(bracket)) {
+        // Bracket is done (main + consolation) — end the game
         this.autoEndGame()
         return
       }

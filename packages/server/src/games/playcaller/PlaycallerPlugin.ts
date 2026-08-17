@@ -13,7 +13,7 @@ import { createDriveState, resolveDown, selectRandomPlay, DEFAULT_PLAY_CONFIG, D
 import type { GamePlugin } from "../GamePlugin"
 import { registry } from "../GameRegistry"
 import { PLAYCALLER, PLAYCALLER_SETTINGS_SCHEMA } from "./constants"
-import { resolveCurrentRound, isComplete, computePlacements } from "./BracketEngine"
+import { resolveCurrentRound, isComplete, isFullyComplete, computePlacements, resolveConsolationRound, generateConsolationForRound, buildSchedule } from "./BracketEngine"
 import { randomResolver } from "./MatchResolver"
 import { validateScoreTable } from "./validateScoreTable"
 
@@ -288,23 +288,79 @@ export const playcallerPlugin: GamePlugin<PlaycallerPick, PlaycallerRoundResult>
 
   resolveRound(
     _picks: Record<string, PlaycallerPick>,
-    settings: GameSettings
+    _settings: GameSettings
   ): PlaycallerRoundResult {
     if (!bracketState) {
       throw new Error("Playcaller bracket state not initialized")
     }
 
-    // When SKIP_GAMEPLAY is true (or Phase 2 not yet implemented), use random resolver.
-    // Phase 2 will check `settings.tuning.SKIP_GAMEPLAY === false` to run play-calling mechanics.
-    bracketState = resolveCurrentRound(bracketState, randomResolver)
+    // Schedule-based resolution: resolve the current schedule entry (main + consolation)
+    const scheduleEntry = bracketState.schedule[bracketState.currentScheduleIndex]
 
-    const currentRoundIndex = bracketState.currentRoundIndex - 1 // just resolved (index was incremented)
-    const resolvedRound = bracketState.rounds[currentRoundIndex]
+    let resultMatchups: Matchup[] = []
+    let resultBracketRound = -1
+    let consolationMatchupsResolved: Matchup[] = []
+    let consolationContext: { placementStart: number; description: string }[] = []
+
+    // Resolve main-bracket matchups (if schedule entry has a mainBracketRoundIndex)
+    if (scheduleEntry.mainBracketRoundIndex !== null) {
+      bracketState = resolveCurrentRound(bracketState, randomResolver)
+      resultBracketRound = scheduleEntry.mainBracketRoundIndex
+      resultMatchups = bracketState.rounds[scheduleEntry.mainBracketRoundIndex].matchups
+    }
+
+    // Resolve consolation matchups (for each consolation round index in the schedule entry)
+    for (const cIdx of scheduleEntry.consolationRoundIndices) {
+      const consolationRound = bracketState.consolationRounds[cIdx]
+      if (!consolationRound || consolationRound.resolved) continue
+
+      // Skip rounds with empty matchup slots (mini-bracket finals waiting for semi-final winners)
+      const hasReadyMatchup = consolationRound.matchups.some((m) => m.playerA !== "" && m.playerB !== "")
+      if (!hasReadyMatchup) continue
+
+      // Align currentConsolationIndex with the round we are resolving
+      bracketState.currentConsolationIndex = cIdx
+      bracketState = resolveConsolationRound(bracketState, randomResolver)
+
+      consolationMatchupsResolved.push(...consolationRound.matchups)
+      consolationContext.push({
+        placementStart: consolationRound.placementStart,
+        description: `${consolationRound.placementStart}th place consolation`,
+      })
+    }
+
+    // Generate new consolation rounds for newly eliminated players
+    if (scheduleEntry.mainBracketRoundIndex !== null) {
+      const resolvedRoundIndex = scheduleEntry.mainBracketRoundIndex
+      const newConsolation = generateConsolationForRound(bracketState, resolvedRoundIndex)
+      if (newConsolation.length > 0) {
+        bracketState.consolationRounds.push(...newConsolation)
+      }
+    }
+
+    // Rebuild schedule to include newly generated consolation rounds
+    bracketState.schedule = buildSchedule(bracketState)
+
+    // Check if the consolation entry still has unresolved matchups with players ready
+    const updatedEntry = bracketState.schedule[bracketState.currentScheduleIndex]
+    const hasMoreConsolation = updatedEntry && updatedEntry.mainBracketRoundIndex === null &&
+      updatedEntry.consolationRoundIndices.some((cIdx) => {
+        const cRound = bracketState!.consolationRounds[cIdx]
+        return cRound && !cRound.resolved &&
+          cRound.matchups.some((m) => m.playerA !== "" && m.playerB !== "")
+      })
+
+    // Advance currentScheduleIndex (unless consolation still has ready matchups)
+    if (!hasMoreConsolation) {
+      bracketState.currentScheduleIndex++
+    }
 
     return {
-      bracketRound: currentRoundIndex,
-      matchups: resolvedRound.matchups,
-      isComplete: isComplete(bracketState),
+      bracketRound: resultBracketRound,
+      matchups: resultMatchups.length > 0 ? resultMatchups : consolationMatchupsResolved,
+      isComplete: isFullyComplete(bracketState),
+      ...(consolationMatchupsResolved.length > 0 && { consolationMatchups: consolationMatchupsResolved }),
+      ...(consolationContext.length > 0 && { consolationContext }),
     }
   },
 
