@@ -375,7 +375,7 @@ describe("simulateFFA", () => {
     }
   })
 
-  it("damage values are within [1, maxHit] when hit, 0 when miss", () => {
+  it("damage values are within [1, maxHit] when hit, 0 when miss or GSR-negated", () => {
     const robots = [
       makeFFARobot("p1", { maxHit: 6 }),
       makeFFARobot("p2", { maxHit: 8 }),
@@ -388,8 +388,12 @@ describe("simulateFFA", () => {
     for (const entry of result.tickLog) {
       for (const attack of entry.attacks) {
         if (attack.hit) {
-          expect(attack.damage).toBeGreaterThanOrEqual(1)
-          expect(attack.damage).toBeLessThanOrEqual(maxHitByOwner[attack.attackerId])
+          // Damage can be 0 if GSR negated damage to the target (Guaranteed Survivor Rule)
+          // Otherwise must be in [1, maxHit]
+          if (attack.damage > 0) {
+            expect(attack.damage).toBeGreaterThanOrEqual(1)
+            expect(attack.damage).toBeLessThanOrEqual(maxHitByOwner[attack.attackerId])
+          }
         } else {
           expect(attack.damage).toBe(0)
         }

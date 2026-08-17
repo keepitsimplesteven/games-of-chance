@@ -40,14 +40,20 @@ export function computeProjectilePhases(gameSpeed: number): ProjectilePhases {
 
 /**
  * Compute projectile origin/exit for attacker.
- * 1v1: departs from center-right edge → moves rightward off bounds
- * FFA: departs from bottom center → moves downward off bounds
+ *
+ * Direction is determined by `side`:
+ * - 'left': departs from center-right edge → moves rightward (attacking toward right column)
+ * - 'right': departs from center-left edge → moves leftward (attacking toward left column)
+ *
+ * In 1v1 mode, side defaults to 'left' for backward compatibility.
  */
 export function computeAttackerPoints(
   attackerBounds: { x: number; y: number; width: number; height: number },
-  mode: '1v1' | 'ffa'
+  mode: '1v1' | 'ffa',
+  side: 'left' | 'right' = 'left'
 ): { origin: { x: number; y: number }; exit: { x: number; y: number } } {
-  if (mode === '1v1') {
+  if (side === 'left') {
+    // Shoot rightward
     const origin = {
       x: attackerBounds.x + attackerBounds.width,
       y: attackerBounds.y + attackerBounds.height / 2,
@@ -58,35 +64,42 @@ export function computeAttackerPoints(
     }
     return { origin, exit }
   }
-  // FFA: bottom center
+  // side === 'right' → Shoot leftward
   const origin = {
-    x: attackerBounds.x + attackerBounds.width / 2,
-    y: attackerBounds.y + attackerBounds.height,
+    x: attackerBounds.x,
+    y: attackerBounds.y + attackerBounds.height / 2,
   }
   const exit = {
-    x: origin.x,
-    y: origin.y + attackerBounds.height * 0.3,
+    x: origin.x - attackerBounds.width * 0.3,
+    y: origin.y,
   }
   return { origin, exit }
 }
 
 /**
  * Compute projectile entry point for target (150% away from target bounds).
- * 1v1: enters from left at 150% of target SVG width
- * FFA: enters from above at 150% of target SVG height
+ *
+ * Direction is determined by `side` (the TARGET's side):
+ * - 'left': projectile enters from the left (attacker is on the right, shooting left)
+ * - 'right': projectile enters from the right (attacker is on the left, shooting right)
+ *
+ * In 1v1 mode, side defaults to 'right' (target is on the right, enters from left).
  */
 export function computeTargetEntry(
   targetBounds: { x: number; y: number; width: number; height: number },
-  mode: '1v1' | 'ffa'
+  mode: '1v1' | 'ffa',
+  side: 'left' | 'right' = 'right'
 ): { x: number; y: number } {
-  if (mode === '1v1') {
+  if (side === 'right') {
+    // Target is on the right, projectile enters from the left
     return {
       x: targetBounds.x - targetBounds.width * 1.5,
       y: targetBounds.y + targetBounds.height / 2,
     }
   }
+  // side === 'left' → Target is on the left, projectile enters from the right
   return {
-    x: targetBounds.x + targetBounds.width / 2,
-    y: targetBounds.y - targetBounds.height * 1.5,
+    x: targetBounds.x + targetBounds.width + targetBounds.width * 1.5,
+    y: targetBounds.y + targetBounds.height / 2,
   }
 }

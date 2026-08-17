@@ -43,7 +43,7 @@ export const BATTLE_BOTS_SETTINGS_SCHEMA: SettingsSchema = [
     key: "GAME_SPEED",
     label: "Game speed (ms per tick)",
     type: "number",
-    defaultValue: 100,
-    constraints: { min: 50, max: 250, step: 10 },
+    defaultValue: 500,
+    constraints: { min: 50, max: 500, step: 10 },
   },
 ]

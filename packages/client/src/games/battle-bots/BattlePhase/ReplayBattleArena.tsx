@@ -123,6 +123,15 @@ export function ReplayBattleArena({
     return colors
   }, [robots])
 
+  // Column assignments for directional projectiles (2-column grid: index % 2)
+  const robotColumns = useMemo(() => {
+    const cols: Record<string, number> = {}
+    for (let i = 0; i < robots.length; i++) {
+      cols[robots[i].ownerId] = i % 2 // 0 = left column, 1 = right column
+    }
+    return cols
+  }, [robots])
+
   // Determine winner from the final state of the tick log
   const determineWinner = useCallback(
     (states: Record<string, RobotHpState>): string | null => {
@@ -295,6 +304,7 @@ export function ReplayBattleArena({
             mode="1v1"
             robotRefs={robotRefs}
             robotSvgRefs={robotSvgRefs}
+            robotColumns={robotColumns}
           />
         </div>
       ) : (
@@ -321,6 +331,7 @@ export function ReplayBattleArena({
             mode="ffa"
             robotRefs={robotRefs}
             robotSvgRefs={robotSvgRefs}
+            robotColumns={robotColumns}
           />
         </div>
       )}
@@ -402,7 +413,7 @@ function Layout1v1({ robots, hpStates, energyStates, gameSpeed, playerNames, win
 
 function LayoutFFA({ robots, hpStates, energyStates, gameSpeed, playerNames, winnerId, isComplete, robotRefs, robotSvgRefs }: LayoutProps) {
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:gap-4">
+    <div className="grid grid-cols-2 gap-2 lg:gap-4">
       {robots.map((robot, index) => (
         <ReplayRobotFighter
           key={robot.ownerId}

@@ -63,4 +63,6 @@ export interface AnimationLayerProps {
   robotRefs: Record<string, React.RefObject<HTMLDivElement>>
   /** Refs specifically to the robot SVG container divs (for constraining hit effects) */
   robotSvgRefs?: Record<string, React.RefObject<HTMLDivElement>>
+  /** Maps ownerId to grid column index (0 = left, 1 = right). Used for directional projectiles. */
+  robotColumns?: Record<string, number>
 }

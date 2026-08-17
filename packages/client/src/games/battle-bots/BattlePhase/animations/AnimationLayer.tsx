@@ -71,6 +71,7 @@ export function AnimationLayer({
   mode,
   robotRefs,
   robotSvgRefs,
+  robotColumns,
 }: AnimationLayerProps) {
   const [activeProjectiles, setActiveProjectiles] = useState<ActiveProjectile[]>([])
   const [activeHitEffects, setActiveHitEffects] = useState<ActiveHitEffect[]>([])
@@ -248,11 +249,18 @@ export function AnimationLayer({
       // Compute projectile phases
       const phases = computeProjectilePhases(gameSpeed)
 
-      // Compute attacker origin and exit points
-      const { origin: attackerOrigin, exit: attackerExit } = computeAttackerPoints(attackerBounds, mode)
+      // Determine attacker's side from column position (0 = left, 1 = right)
+      const attackerCol = robotColumns?.[attackerId] ?? 0
+      const attackerSide: 'left' | 'right' = attackerCol === 0 ? 'left' : 'right'
+      // Target side is the opposite of attacker's side for incoming direction
+      const targetCol = robotColumns?.[targetId] ?? 1
+      const targetSide: 'left' | 'right' = targetCol === 0 ? 'left' : 'right'
 
-      // Compute target entry point
-      const targetEntry = computeTargetEntry(targetBounds, mode)
+      // Compute attacker origin and exit points (shoots toward opponent's side)
+      const { origin: attackerOrigin, exit: attackerExit } = computeAttackerPoints(attackerBounds, mode, attackerSide)
+
+      // Compute target entry point (arrives from attacker's direction)
+      const targetEntry = computeTargetEntry(targetBounds, mode, targetSide)
 
       // Compute target impact point using hit position logic
       const effectIndex = effectsPerTarget.get(targetId) ?? 0

@@ -130,6 +130,15 @@ export function ReplayFFAArena({
     return colors
   }, [robots])
 
+  // Column assignments for directional projectiles (2-column grid: index % 2)
+  const robotColumns = useMemo(() => {
+    const cols: Record<string, number> = {}
+    for (let i = 0; i < robots.length; i++) {
+      cols[robots[i].ownerId] = i % 2 // 0 = left column, 1 = right column
+    }
+    return cols
+  }, [robots])
+
   // Determine winner from the final state of the tick log
   const determineWinner = useCallback(
     (states: Record<string, RobotHpState>): string | null => {
@@ -370,7 +379,7 @@ export function ReplayFFAArena({
       {/* Robot grid — scrollable on mobile for 5+ players */}
       <div className="min-h-0 flex-0 overflow-y-auto">
         <div className="relative">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:gap-4">
+          <div className="grid grid-cols-2 gap-2 lg:gap-4">
             {robots.map((robot, index) => (
               <FFARobotFighter
                 key={robot.ownerId}
@@ -397,6 +406,7 @@ export function ReplayFFAArena({
             mode="ffa"
             robotRefs={robotRefs.current}
             robotSvgRefs={robotSvgRefs.current}
+            robotColumns={robotColumns}
           />
         </div>
 

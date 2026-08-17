@@ -1,39 +1,57 @@
 /**
- * Balance tuning script for Battle Bots energy meter system.
+ * Battle Bots — Fairness Simulator (Combat Rebalance)
  *
- * Simulates all 48 valid build configurations (star distributions summing to 9,
- * each star in [1, 7]) against a deterministic 3-3-3 reference bot.
+ * Dual-pass balance validation:
+ *   Pass 1: Every build vs a deterministic reference bot (1 dmg/tick, guaranteed hit, no energy).
+ *   Pass 2: All-vs-all random mirror matches (secondary validation).
  *
- * The reference bot uses deterministic combat:
- *   - Accuracy always hits (no accuracy roll)
- *   - Damage = arithmetic mean of 1 to maxHit each attack: (1 + maxHit) / 2
+ * The reference bot is NOT a CombatRobot. It is modeled directly in the simulation loop
+ * with hardcoded deterministic behavior:
+ *   - hp: 100 (BASE_HP)
+ *   - damagePerTick: 1 (always deals exactly 1)
+ *   - alwaysHits: true (no accuracy roll)
+ *   - bypassesEnergy: true (not subject to energy accumulation)
  *
- * Challenger bots use normal random combat via the existing simulate1v1 engine.
+ * On every tick it is alive, the reference bot deals 1 damage to the challenger.
+ * It kills any 100 HP bot in exactly 100 ticks (10 seconds at 100ms ticks).
  *
- * Reports win rates and flags builds outside the 48%–52% balance band.
+ * Balance band: 49%–51%.
  *
  * Usage: npx tsx packages/server/src/games/battle-bots/scripts/tuneEnergyValues.ts
  */
 
-import { deriveCombatStats } from "../ModifierTable"
+import { deriveCombatStats, BASE_HP } from "../ModifierTable"
 import type { CombatRobot } from "../types"
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const TICK_LIMIT = 1000
+const TRIALS_PER_BUILD = 100_000
+const BALANCE_LOW = 0.49
+const BALANCE_HIGH = 0.51
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface TuningResult {
+export interface TuningResult {
   stars: { damage: number; accuracy: number; speed: number }
   winRate: number
   matchesPlayed: number
   inBand: boolean
 }
 
+export interface SimulatorReport {
+  pass1Results: TuningResult[] // vs reference bot
+  pass2Results: TuningResult[] // mirror matches (added in Task 1.2)
+  allInBand: boolean
+}
+
 // ─── Build Enumeration ────────────────────────────────────────────────────────
 
 /**
  * Enumerate all valid star distributions where damage + accuracy + speed = 9
- * and each value is in [1, 7]. This yields exactly 48 builds.
+ * and each value is in [1, 7]. Yields exactly 28 configurations.
  */
-function allBuilds(): Array<{ damage: number; accuracy: number; speed: number }> {
+export function allBuilds(): Array<{ damage: number; accuracy: number; speed: number }> {
   const builds: Array<{ damage: number; accuracy: number; speed: number }> = []
 
   for (let damage = 1; damage <= 7; damage++) {
@@ -48,46 +66,17 @@ function allBuilds(): Array<{ damage: number; accuracy: number; speed: number }>
   return builds
 }
 
+// ─── Bot Construction ─────────────────────────────────────────────────────────
 
-// ─── Reference Bot ────────────────────────────────────────────────────────────
-
-/**
- * Build the 3-3-3 reference bot with deterministic combat stats.
- * This bot's combat is handled specially in simulate1v1Deterministic —
- * accuracy always hits, damage = mean of (1, maxHit).
- */
-function buildReferenceBot(): CombatRobot {
-  const stats = deriveCombatStats({ damage: 3, accuracy: 3, speed: 3 })
-
-  return {
-    ownerId: "reference",
-    name: "Reference-3-3-3",
-    maxHit: stats.maxHit,
-    accuracy: stats.accuracy,
-    energyPerTick: stats.energyPerTick,
-    currentEnergy: 0,
-    currentHp: stats.hp,
-    maxHp: stats.hp,
-    stars: { damage: 3, accuracy: 3, speed: 3 },
-    visual: {},
-  }
-}
-
-// ─── Challenger Bot ───────────────────────────────────────────────────────────
-
-/**
- * Build a combat robot for a given star distribution (uses normal random combat).
- */
-function buildCombatRobot(stars: {
-  damage: number
-  accuracy: number
-  speed: number
-}): CombatRobot {
+function buildCombatRobot(
+  stars: { damage: number; accuracy: number; speed: number },
+  ownerId: string
+): CombatRobot {
   const stats = deriveCombatStats(stars)
 
   return {
-    ownerId: "challenger",
-    name: `Challenger-${stars.damage}-${stars.accuracy}-${stars.speed}`,
+    ownerId,
+    name: `Bot-${stars.damage}-${stars.accuracy}-${stars.speed}`,
     maxHit: stats.maxHit,
     accuracy: stats.accuracy,
     energyPerTick: stats.energyPerTick,
@@ -99,164 +88,182 @@ function buildCombatRobot(stars: {
   }
 }
 
-// ─── Deterministic 1v1 Simulation ────────────────────────────────────────────
+// ─── Reference Bot Simulation ─────────────────────────────────────────────────
 
 /**
- * Simulate a 1v1 match where the reference bot uses deterministic combat:
- *   - Accuracy: always hits (no roll)
- *   - Damage: arithmetic mean of 1 to maxHit = (1 + maxHit) / 2
+ * Simulate a single trial: challenger vs deterministic reference bot.
  *
- * The challenger bot uses normal random combat (random accuracy/damage rolls).
- * This isolates the effect of star distribution on win rate.
+ * Reference bot behavior (hardcoded, NOT a CombatRobot):
+ *   - Deals exactly 1 damage per tick (guaranteed hit, no accuracy roll)
+ *   - Bypasses energy accumulation (attacks every tick unconditionally)
+ *   - Has `referenceHp` HP (default BASE_HP = 100)
+ *
+ * Challenger uses normal combat mechanics:
+ *   - Accumulates energy via energyPerTick
+ *   - Attacks when energy >= 100 (subtracts 100)
+ *   - Rolls accuracy, then rolls damage on hit
  */
-function simulate1v1Deterministic(
+export function simulateVsReference(
   challenger: CombatRobot,
-  reference: CombatRobot
-): { winnerId: string } {
-  const TICK_LIMIT = 1000
-
-  const hp: Record<string, number> = {
-    [challenger.ownerId]: challenger.currentHp,
-    [reference.ownerId]: reference.currentHp,
-  }
-
-  const energy: Record<string, number> = {
-    [challenger.ownerId]: 0,
-    [reference.ownerId]: 0,
-  }
-
-  const robots = [challenger, reference]
+  referenceHp: number
+): { winnerId: "challenger" | "reference" } {
+  let challengerHp = challenger.currentHp
+  let refHp = referenceHp
+  let energy = 0
 
   for (let tick = 1; tick <= TICK_LIMIT; tick++) {
-    // Snapshot HP at tick start
-    const snapshot: Record<string, number> = {
-      [challenger.ownerId]: hp[challenger.ownerId],
-      [reference.ownerId]: hp[reference.ownerId],
-    }
+    // Reference bot always deals 1 damage to challenger (guaranteed hit, no energy system)
+    challengerHp = Math.max(0, challengerHp - 1)
+    if (challengerHp <= 0) return { winnerId: "reference" }
 
-    // Determine living bots
-    const livingIds = robots
-      .filter((r) => snapshot[r.ownerId] > 0)
-      .map((r) => r.ownerId)
-
-    if (livingIds.length <= 1) break
-
-    // Accumulate energy for living bots
-    for (const robot of robots) {
-      if (snapshot[robot.ownerId] > 0) {
-        energy[robot.ownerId] += robot.energyPerTick
+    // Challenger accumulates energy normally
+    energy += challenger.energyPerTick
+    if (energy >= 100) {
+      energy -= 100
+      // Roll accuracy
+      const hit = Math.floor(Math.random() * 100) + 1 <= challenger.accuracy
+      if (hit) {
+        const damage = Math.floor(Math.random() * challenger.maxHit) + 1
+        refHp = Math.max(0, refHp - damage)
       }
+      if (refHp <= 0) return { winnerId: "challenger" }
     }
-
-    // Determine attackers (energy >= 100)
-    const attackers = robots.filter(
-      (r) => snapshot[r.ownerId] > 0 && energy[r.ownerId] >= 100
-    )
-
-    // Process attacks — accumulate damage per target
-    const damageAccumulator: Record<string, number> = {
-      [challenger.ownerId]: 0,
-      [reference.ownerId]: 0,
-    }
-
-    for (const attacker of attackers) {
-      const target = robots.find((r) => r.ownerId !== attacker.ownerId)!
-
-      if (attacker.ownerId === reference.ownerId) {
-        // Reference bot: deterministic — always hits, damage = mean
-        const meanDamage = (1 + attacker.maxHit) / 2
-        damageAccumulator[target.ownerId] += meanDamage
-      } else {
-        // Challenger bot: normal random rolls
-        const accuracyRoll = Math.floor(Math.random() * 100) + 1
-        const hit = accuracyRoll <= attacker.accuracy
-
-        if (hit) {
-          const damage = Math.floor(Math.random() * attacker.maxHit) + 1
-          damageAccumulator[target.ownerId] += damage
-        }
-      }
-    }
-
-    // Calculate tentative HP
-    const tentativeHp: Record<string, number> = {}
-    for (const id of livingIds) {
-      tentativeHp[id] = Math.max(0, snapshot[id] - damageAccumulator[id])
-    }
-
-    // Guaranteed Survivor Rule: if all would die, one survives
-    const allWouldDie = livingIds.every((id) => tentativeHp[id] <= 0)
-    if (allWouldDie) {
-      const survivorIndex = Math.floor(Math.random() * livingIds.length)
-      tentativeHp[livingIds[survivorIndex]] = snapshot[livingIds[survivorIndex]]
-    }
-
-    // Finalize HP
-    for (const id of livingIds) {
-      hp[id] = tentativeHp[id]
-    }
-
-    // Subtract 100 from each attacker's energy (preserve overflow)
-    for (const attacker of attackers) {
-      energy[attacker.ownerId] -= 100
-      if (attacker.energyPerTick >= 100) {
-        energy[attacker.ownerId] = Math.min(energy[attacker.ownerId], 99)
-      }
-    }
-
-    // Check termination
-    const remainingAlive = robots.filter((r) => hp[r.ownerId] > 0)
-    if (remainingAlive.length <= 1) break
   }
 
-  // Determine winner: highest HP, or random if tied
-  const aliveRobots = robots.filter((r) => hp[r.ownerId] > 0)
-  if (aliveRobots.length === 1) {
-    return { winnerId: aliveRobots[0].ownerId }
-  }
-
-  // Timeout — highest HP wins
-  const sorted = robots.sort((a, b) => hp[b.ownerId] - hp[a.ownerId])
-  if (hp[sorted[0].ownerId] > hp[sorted[1].ownerId]) {
-    return { winnerId: sorted[0].ownerId }
-  }
-
-  // Tied — pick randomly
-  return { winnerId: robots[Math.floor(Math.random() * robots.length)].ownerId }
+  // Timeout: whoever has more HP wins
+  return { winnerId: challengerHp >= refHp ? "challenger" : "reference" }
 }
 
-// ─── Main Tuning Function ─────────────────────────────────────────────────────
+// ─── Balance Band Classification ──────────────────────────────────────────────
 
-function tuneEnergyValues(): TuningResult[] {
-  const reference = buildReferenceBot()
+/**
+ * Returns true if win rate is within the 49%–51% balance band.
+ */
+export function isInBand(winRate: number): boolean {
+  return winRate >= BALANCE_LOW && winRate <= BALANCE_HIGH
+}
+
+// ─── Pass 1: Reference Bot Validation ─────────────────────────────────────────
+
+/**
+ * Run Pass 1: simulate each of the 28 builds against the deterministic reference bot.
+ * Returns per-build win rates and flags any outside 49%–51%.
+ */
+function runPass1(): TuningResult[] {
   const builds = allBuilds()
   const results: TuningResult[] = []
-  const TRIALS = 10_000
-
-  console.log(`\n🤖 Battle Bots Energy Meter — Balance Tuning`)
-  console.log(`${"─".repeat(60)}`)
-  console.log(`Reference bot: 3-3-3 (deterministic: always hits, damage = mean)`)
-  console.log(`Trials per build: ${TRIALS.toLocaleString()}`)
-  console.log(`Total builds: ${builds.length}`)
-  console.log(`Balance band: 48% – 52%\n`)
 
   for (const build of builds) {
     let wins = 0
 
-    for (let i = 0; i < TRIALS; i++) {
-      const challenger = buildCombatRobot(build)
-      const result = simulate1v1Deterministic(challenger, reference)
-      if (result.winnerId === challenger.ownerId) wins++
+    for (let i = 0; i < TRIALS_PER_BUILD; i++) {
+      const challenger = buildCombatRobot(build, "challenger")
+      const result = simulateVsReference(challenger, BASE_HP)
+      if (result.winnerId === "challenger") wins++
     }
 
-    const winRate = wins / TRIALS
-    const inBand = winRate >= 0.48 && winRate <= 0.52
-
+    const winRate = wins / TRIALS_PER_BUILD
     results.push({
       stars: build,
       winRate,
-      matchesPlayed: TRIALS,
-      inBand,
+      matchesPlayed: TRIALS_PER_BUILD,
+      inBand: isInBand(winRate),
+    })
+  }
+
+  return results
+}
+
+// ─── Mirror Match Simulation ──────────────────────────────────────────────────
+
+/** Number of mirror matches each build plays in Pass 2 */
+const MIRROR_MATCHES_PER_BUILD = 200
+
+/**
+ * Simulate a single mirror match between two bots using normal combat mechanics.
+ *
+ * Both bots use the standard energy accumulation → attack cycle:
+ *   - Accumulate energyPerTick each tick
+ *   - When energy >= 100, attack (subtract 100 energy)
+ *   - Roll accuracy to determine hit
+ *   - Roll damage on hit
+ *
+ * Returns the winning bot identifier ("bot1" or "bot2").
+ */
+export function simulateMirrorMatch(
+  bot1: CombatRobot,
+  bot2: CombatRobot
+): { winnerId: "bot1" | "bot2" } {
+  let hp1 = bot1.currentHp
+  let hp2 = bot2.currentHp
+  let energy1 = 0
+  let energy2 = 0
+
+  for (let tick = 1; tick <= TICK_LIMIT; tick++) {
+    // Bot 1 accumulates energy and attacks
+    energy1 += bot1.energyPerTick
+    if (energy1 >= 100) {
+      energy1 -= 100
+      const hit = Math.floor(Math.random() * 100) + 1 <= bot1.accuracy
+      if (hit) {
+        const damage = Math.floor(Math.random() * bot1.maxHit) + 1
+        hp2 = Math.max(0, hp2 - damage)
+      }
+      if (hp2 <= 0) return { winnerId: "bot1" }
+    }
+
+    // Bot 2 accumulates energy and attacks
+    energy2 += bot2.energyPerTick
+    if (energy2 >= 100) {
+      energy2 -= 100
+      const hit = Math.floor(Math.random() * 100) + 1 <= bot2.accuracy
+      if (hit) {
+        const damage = Math.floor(Math.random() * bot2.maxHit) + 1
+        hp1 = Math.max(0, hp1 - damage)
+      }
+      if (hp1 <= 0) return { winnerId: "bot2" }
+    }
+  }
+
+  // Timeout: whoever has more HP wins; tiebreak favours bot1
+  return { winnerId: hp1 >= hp2 ? "bot1" : "bot2" }
+}
+
+// ─── Pass 2: All-vs-All Mirror Matches ───────────────────────────────────────
+
+/**
+ * Run Pass 2: for each of the 28 builds, play random mirror matches against
+ * randomly selected opponents from the other 27 builds.
+ *
+ * Both sides use normal combat mechanics (energy accumulation, accuracy rolls,
+ * damage rolls). Reports per-build aggregate win rates as secondary validation.
+ */
+function runPass2(): TuningResult[] {
+  const builds = allBuilds()
+  const results: TuningResult[] = []
+
+  for (let i = 0; i < builds.length; i++) {
+    const build = builds[i]
+    let wins = 0
+
+    for (let m = 0; m < MIRROR_MATCHES_PER_BUILD; m++) {
+      // Pick a random opponent from the other 27 builds
+      let opponentIdx = Math.floor(Math.random() * (builds.length - 1))
+      if (opponentIdx >= i) opponentIdx++ // skip self
+
+      const bot1 = buildCombatRobot(build, "bot1")
+      const bot2 = buildCombatRobot(builds[opponentIdx], "bot2")
+
+      const result = simulateMirrorMatch(bot1, bot2)
+      if (result.winnerId === "bot1") wins++
+    }
+
+    const winRate = wins / MIRROR_MATCHES_PER_BUILD
+    results.push({
+      stars: build,
+      winRate,
+      matchesPlayed: MIRROR_MATCHES_PER_BUILD,
+      inBand: isInBand(winRate),
     })
   }
 
@@ -265,17 +272,18 @@ function tuneEnergyValues(): TuningResult[] {
 
 // ─── Report Output ────────────────────────────────────────────────────────────
 
-function printResults(results: TuningResult[]): void {
+function printPass2Results(results: TuningResult[]): void {
   const outOfBand = results.filter((r) => !r.inBand)
   const inBand = results.filter((r) => r.inBand)
 
-  console.log(`\n📊 Results Summary`)
+  console.log(`\n📊 Pass 2 Results — Mirror Matches (Secondary Validation)`)
   console.log(`${"─".repeat(60)}`)
-  console.log(`  In band (48-52%): ${inBand.length} / ${results.length} builds`)
+  console.log(`  Matches per build: ${MIRROR_MATCHES_PER_BUILD}`)
+  console.log(`  In band (49-51%): ${inBand.length} / ${results.length} builds`)
   console.log(`  Out of band:      ${outOfBand.length} / ${results.length} builds`)
 
   if (outOfBand.length > 0) {
-    console.log(`\n⚠️  Builds Outside 48%–52% Band:`)
+    console.log(`\n⚠️  Builds Outside Balance Band (Mirror Matches):`)
     console.log(`${"─".repeat(60)}`)
     console.log(`  ${"Stars (D-A-S)".padEnd(16)} ${"Win Rate".padEnd(12)} ${"Status"}`)
     console.log(`  ${"─".repeat(44)}`)
@@ -283,7 +291,50 @@ function printResults(results: TuningResult[]): void {
     for (const r of outOfBand.sort((a, b) => a.winRate - b.winRate)) {
       const starsStr = `${r.stars.damage}-${r.stars.accuracy}-${r.stars.speed}`
       const winPct = `${(r.winRate * 100).toFixed(1)}%`
-      const status = r.winRate < 0.48 ? "🔻 TOO LOW" : "🔺 TOO HIGH"
+      const status = r.winRate < BALANCE_LOW ? "🔻 TOO LOW" : "🔺 TOO HIGH"
+      console.log(`  ${starsStr.padEnd(16)} ${winPct.padEnd(12)} ${status}`)
+    }
+  }
+
+  console.log(`\n📋 All Builds (Mirror Matches):`)
+  console.log(`${"─".repeat(60)}`)
+  console.log(`  ${"Stars (D-A-S)".padEnd(16)} ${"Win Rate".padEnd(12)} ${"Status"}`)
+  console.log(`  ${"─".repeat(44)}`)
+
+  for (const r of results.sort(
+    (a, b) =>
+      a.stars.damage - b.stars.damage ||
+      a.stars.accuracy - b.stars.accuracy ||
+      a.stars.speed - b.stars.speed
+  )) {
+    const starsStr = `${r.stars.damage}-${r.stars.accuracy}-${r.stars.speed}`
+    const winPct = `${(r.winRate * 100).toFixed(1)}%`
+    const status = r.inBand ? "✅" : r.winRate < BALANCE_LOW ? "🔻" : "🔺"
+    console.log(`  ${starsStr.padEnd(16)} ${winPct.padEnd(12)} ${status}`)
+  }
+
+  console.log("")
+}
+
+function printPass1Results(results: TuningResult[]): void {
+  const outOfBand = results.filter((r) => !r.inBand)
+  const inBand = results.filter((r) => r.inBand)
+
+  console.log(`\n📊 Pass 1 Results — vs Reference Bot`)
+  console.log(`${"─".repeat(60)}`)
+  console.log(`  In band (49-51%): ${inBand.length} / ${results.length} builds`)
+  console.log(`  Out of band:      ${outOfBand.length} / ${results.length} builds`)
+
+  if (outOfBand.length > 0) {
+    console.log(`\n⚠️  Builds Outside Balance Band:`)
+    console.log(`${"─".repeat(60)}`)
+    console.log(`  ${"Stars (D-A-S)".padEnd(16)} ${"Win Rate".padEnd(12)} ${"Status"}`)
+    console.log(`  ${"─".repeat(44)}`)
+
+    for (const r of outOfBand.sort((a, b) => a.winRate - b.winRate)) {
+      const starsStr = `${r.stars.damage}-${r.stars.accuracy}-${r.stars.speed}`
+      const winPct = `${(r.winRate * 100).toFixed(1)}%`
+      const status = r.winRate < BALANCE_LOW ? "🔻 TOO LOW" : "🔺 TOO HIGH"
       console.log(`  ${starsStr.padEnd(16)} ${winPct.padEnd(12)} ${status}`)
     }
   }
@@ -301,14 +352,46 @@ function printResults(results: TuningResult[]): void {
   )) {
     const starsStr = `${r.stars.damage}-${r.stars.accuracy}-${r.stars.speed}`
     const winPct = `${(r.winRate * 100).toFixed(1)}%`
-    const status = r.inBand ? "✅" : r.winRate < 0.48 ? "🔻" : "🔺"
+    const status = r.inBand ? "✅" : r.winRate < BALANCE_LOW ? "🔻" : "🔺"
     console.log(`  ${starsStr.padEnd(16)} ${winPct.padEnd(12)} ${status}`)
   }
 
   console.log("")
 }
 
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
+function main(): SimulatorReport {
+  console.log(`\n🤖 Battle Bots — Fairness Simulator (Combat Rebalance)`)
+  console.log(`${"─".repeat(60)}`)
+  console.log(`Reference bot: deterministic (1 dmg/tick, guaranteed hit, no energy)`)
+  console.log(`Reference bot HP: ${BASE_HP}`)
+  console.log(`Trials per build: ${TRIALS_PER_BUILD.toLocaleString()}`)
+  console.log(`Total builds: 28`)
+  console.log(`Balance band: ${BALANCE_LOW * 100}% – ${BALANCE_HIGH * 100}%\n`)
+
+  // Pass 1: vs reference bot
+  console.log(`⏳ Running Pass 1: Reference Bot Validation...`)
+  const pass1Results = runPass1()
+  printPass1Results(pass1Results)
+
+  // Pass 2: all-vs-all mirror matches (secondary validation)
+  console.log(`⏳ Running Pass 2: All-vs-All Mirror Matches...`)
+  const pass2Results = runPass2()
+  printPass2Results(pass2Results)
+
+  const allInBand = pass1Results.every((r) => r.inBand)
+
+  if (allInBand) {
+    console.log(`\n✅ All 28 builds are within the 49%–51% balance band!`)
+  } else {
+    const count = pass1Results.filter((r) => !r.inBand).length
+    console.log(`\n❌ ${count} build(s) are outside the balance band. Tuning needed.`)
+  }
+
+  return { pass1Results, pass2Results, allInBand }
+}
+
 // ─── Entry Point ──────────────────────────────────────────────────────────────
 
-const results = tuneEnergyValues()
-printResults(results)
+main()
