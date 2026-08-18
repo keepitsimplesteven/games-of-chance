@@ -120,9 +120,9 @@ export function PlayByPlayAnnouncer({
     }
   }, [phase])
 
-  // No commentary — render empty spacer
+  // No commentary — render scrollable empty spacer (maintains layout)
   if (!commentary) {
-    return <div className="shrink-0 h-[52px]" />
+    return <div ref={scrollRef} className="shrink-0 min-h-[52px] max-h-[80px] overflow-y-auto px-1 scrollbar-thin scrollbar-thumb-white/20" />
   }
 
   const lines: Array<{ text: string; visible: boolean }> = [
@@ -137,9 +137,9 @@ export function PlayByPlayAnnouncer({
   return (
     <div
       ref={scrollRef}
-      className="shrink-0 min-h-[52px] max-h-[80px] overflow-y-auto flex flex-col justify-end px-1 scrollbar-thin scrollbar-thumb-white/20"
+      className="shrink-0 min-h-[52px] max-h-[96px] overflow-y-auto px-1 scrollbar-thin scrollbar-thumb-white/20"
     >
-      <div className="flex flex-col gap-0.5">
+      <div className="flex flex-col gap-0.5 py-0.5">
         {lines.map((line, i) => (
           <motion.div
             key={`${playKey}-${i}`}

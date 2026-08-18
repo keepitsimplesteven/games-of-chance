@@ -112,7 +112,14 @@ export function PlaycallerContainer() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (phase === "COIN_TOSS") {
-    return <CoinTossCeremony />
+    return (
+      <div className="flex flex-col items-center h-full overflow-hidden">
+        <div className="shrink-0 pt-4">
+          <RoundHeader roundIndex={bracket.currentRoundIndex} totalRounds={bracket.totalRounds} />
+        </div>
+        <CoinTossCeremony />
+      </div>
+    )
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
