@@ -26,25 +26,29 @@ export function LotteryRevealScreen({ staticMode = false }: { staticMode?: boole
     (s) => s.roomState?.room.draftPickEnabled ?? false
   )
   const players = useGameStore((s) => s.roomState?.players ?? [])
+  const playerSeeds = useGameStore((s) => s.roomState?.playerSeeds ?? {})
   const role = useGameStore((s) => s.role)
 
-  // Build seed-ordered player list from placements
-  // Seed 1 = best lottery odds = worst session rank (first row)
-  // We derive seed order from the placements map:
-  // The player with placement drawn from row 0 is seed 1, etc.
-  // Since placements maps playerId → final placement, we need to figure out
-  // the original seed order. The placements are drawn by seed index, so
-  // we can reconstruct seed ordering from how the table was applied.
-  // The server stores players in session-list order where index 0 = seed 1.
-  // We use the players array order as the seed order (same as session list).
+  // Build seed-ordered player list from placements.
+  // When host-assigned seeds exist, use them to determine row order
+  // (seed 1 = best lottery odds = row 0 of odds table).
+  // Otherwise fall back to the players array order (join order).
   const playerCount = players.length
   const oddsTable = lotteryState?.oddsTable ?? []
   const placements = lotteryState?.placements ?? {}
 
-  // Build seed-to-player mapping.
-  // Players are ordered by session list (seed 1 = worst performer = first in list).
-  // The odds table rows correspond 1:1 with the players array order.
-  const seedPlayers = players.map((p, idx) => ({
+  const hasHostSeeds = Object.keys(playerSeeds).length > 0
+
+  // Sort players by seed: seed 1 first (index 0), seed 2 second (index 1), etc.
+  const seedOrderedPlayers = hasHostSeeds
+    ? [...players].sort(
+        (a, b) => (playerSeeds[a.id] ?? Infinity) - (playerSeeds[b.id] ?? Infinity)
+      )
+    : players
+
+  // Build seed-to-player mapping using the seed-sorted order.
+  // The odds table rows correspond 1:1 with the seed order (row 0 = seed 1).
+  const seedPlayers = seedOrderedPlayers.map((p, idx) => ({
     playerId: p.id,
     playerName: p.name,
     seedIndex: idx,
