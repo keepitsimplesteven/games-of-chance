@@ -17,9 +17,12 @@ export default function PlayerList() {
   const roomState = useGameStore((s) => s.roomState)
   const playerId = useGameStore((s) => s.playerId)
   const phase = useGameStore((s) => s.roomState?.round.phase)
+  const progressionMode = useGameStore((s) => s.roomState?.room.progressionMode)
+  const playerSeeds = useGameStore((s) => s.roomState?.playerSeeds)
   const theme = useTheme()
 
   const isLobby = !phase || phase === "LOBBY"
+  const isLotteryMode = progressionMode === "lottery"
 
   // Expanded in lobby, collapsed during game
   const [open, setOpen] = useState(isLobby)
@@ -41,11 +44,17 @@ export default function PlayerList() {
     deferredLeaderboard.map((entry) => [entry.playerId, entry])
   )
 
-  // Sort: by session score descending, then humans before bots
+  // Sort: lottery mode by seed ascending, otherwise by session score descending; then humans before bots
   const sortedPlayers = [...players].sort((a, b) => {
-    const aScore = sessionDataMap.get(a.id)?.sessionPoints ?? 0
-    const bScore = sessionDataMap.get(b.id)?.sessionPoints ?? 0
-    if (bScore !== aScore) return bScore - aScore
+    if (isLotteryMode) {
+      const aSeed = playerSeeds?.[a.id] ?? Infinity
+      const bSeed = playerSeeds?.[b.id] ?? Infinity
+      if (aSeed !== bSeed) return aSeed - bSeed
+    } else {
+      const aScore = sessionDataMap.get(a.id)?.sessionPoints ?? 0
+      const bScore = sessionDataMap.get(b.id)?.sessionPoints ?? 0
+      if (bScore !== aScore) return bScore - aScore
+    }
     // Tie-break: humans before bots
     const aIsBot = isBot(a.id)
     const bIsBot = isBot(b.id)
@@ -96,7 +105,7 @@ export default function PlayerList() {
               >
                 <div className="flex items-center gap-2">
                   {/* Rank badge */}
-                  <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${theme.listItem}`}>
+                  <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${theme.bodyText} ${theme.listItem}`}>
                     {rank}
                   </span>
 
@@ -131,9 +140,11 @@ export default function PlayerList() {
                   )}
                 </div>
 
-                {/* Score */}
+                {/* Score or Seed */}
                 <span className={`text-sm font-semibold ${theme.accentText}`}>
-                  {sessionScore} pts
+                  {isLotteryMode
+                    ? `#${playerSeeds?.[player.id] ?? "—"} seed`
+                    : `${sessionScore} pts`}
                 </span>
               </li>
             )

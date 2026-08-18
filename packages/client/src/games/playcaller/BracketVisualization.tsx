@@ -297,6 +297,18 @@ interface PlayerSlotProps {
   isConsolation?: boolean
 }
 
+/** Returns text size class and whether to truncate based on character count.
+ *  Gradually scales down from text-sm (< 12 chars) to text-xs (≥ 25 chars).
+ *  Only applies truncate (ellipsis) at 25+ characters. */
+function getNameSizeClasses(name: string): { sizeClass: string; truncate: boolean } {
+  const len = name.length
+  if (len >= 25) return { sizeClass: "text-[9px]", truncate: true }
+  if (len >= 20) return { sizeClass: "text-[11px] leading-tight", truncate: false }
+  if (len >= 15) return { sizeClass: "text-[12px] leading-tight", truncate: false }
+  if (len >= 12) return { sizeClass: "text-[13px] leading-snug", truncate: false }
+  return { sizeClass: "text-sm", truncate: false }
+}
+
 function PlayerSlot({
   playerId,
   display,
@@ -306,7 +318,8 @@ function PlayerSlot({
   isConsolation,
 }: PlayerSlotProps) {
   // Build class names based on state — using retro-casino palette
-  const baseClasses = "px-3 py-2 text-sm truncate"
+  const { sizeClass, truncate } = getNameSizeClasses(display)
+  const baseClasses = `px-3 py-2 ${sizeClass}${truncate ? " truncate" : ""}`
 
   const state = getPlayerSlotState({ playerId, isWinner, isLoser, isEliminated, isConsolation })
 
@@ -333,10 +346,11 @@ interface ByeCardProps {
 }
 
 function ByeCard({ playerDisplay }: ByeCardProps) {
+  const { sizeClass, truncate } = getNameSizeClasses(playerDisplay)
   return (
     <div className="w-44 border-2 border-dashed border-[#f5c542]/50 bg-[#1b5e2a]/50 px-3 py-2">
       <div className="flex items-center justify-between">
-        <span className="text-sm text-[#f5c542] truncate">{playerDisplay}</span>
+        <span className={`${sizeClass} text-[#f5c542]${truncate ? " truncate" : ""}`}>{playerDisplay}</span>
         <span className="ml-2 text-xs font-medium uppercase text-[#f5c542]/70">
           BYE
         </span>

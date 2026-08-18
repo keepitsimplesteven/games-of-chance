@@ -39,26 +39,26 @@ export const CircumstanceCommentary: Record<
   short_yardage: {
     preSnap: [
       "They just need a yard or two here.",
-      "Short yardage situation — the big guys up front will earn their paycheck.",
+      "The big guys up front will earn their paycheck.",
       "Less than three yards to go, they're loading up the box.",
     ],
     activePlay: [
       "He lowers his shoulder and attacks the line!",
       "The offensive line fires off the ball!",
-      "A quick push up the middle — fighting for every inch.",
+      "A quick push up the middle, fighting for every inch.",
     ],
     outcome: [
       "Tough, physical football right there.",
       "That's the kind of gritty play that wins games.",
-      "Short and sweet — exactly what they needed.",
+      "Short and sweet. Exactly what they needed.",
     ],
   },
 
   medium_yardage: {
     preSnap: [
-      "A manageable distance here — three to five yards needed.",
+      "A manageable distance here. Three to five yards needed.",
       "They've got options with this kind of yardage to cover.",
-      "Not too long, not too short — a play-caller's sweet spot.",
+      "Not too long, not too short. A play-caller's sweet spot.",
     ],
     activePlay: [
       "The play develops behind a solid pocket.",
@@ -75,7 +75,7 @@ export const CircumstanceCommentary: Record<
   long_yardage: {
     preSnap: [
       "A lot of ground to cover on this play.",
-      "Third and long — they'll need a big play here.",
+      "Long way to go. They'll need a big play here.",
       "The defense is sitting back, daring them to earn it.",
     ],
     activePlay: [

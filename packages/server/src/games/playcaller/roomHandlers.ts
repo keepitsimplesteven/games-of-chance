@@ -229,6 +229,15 @@ export function handleCoinTossCall(
   // Broadcast updated state
   ctx.broadcastState()
 
+  // If the chooser is a bot, schedule its side choice automatically
+  const chooserId = ceremonyStates[payload.matchupId].chooserId
+  if (chooserId) {
+    const botIds = ctx.botManager.getBotIds()
+    if (botIds.includes(chooserId)) {
+      scheduleBotSideChoice(ctx, payload.matchupId, chooserId)
+    }
+  }
+
   // Check if all ceremonies are complete (unlikely here since we just moved to AWAITING_CHOICE)
   checkCeremonyCompletion(ctx)
 }

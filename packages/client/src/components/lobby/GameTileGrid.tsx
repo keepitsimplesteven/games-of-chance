@@ -37,7 +37,7 @@ const games = [
     id: "playcaller",
     name: "Playcaller",
     emoji: "🏈",
-    description: "Single-elimination bracket tournament. May the best play caller win!",
+    description: "Tecmo Bowl-style play calling!",
     active: true,
     isFinale: true,
     // Poker chip color: black

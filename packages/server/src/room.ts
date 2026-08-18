@@ -566,6 +566,7 @@ export class GameRoom extends Server {
     if (
       this.state.round.phase !== "LOBBY" &&
       this.state.round.phase !== "SPLASH" &&
+      this.state.round.phase !== "BRACKET_PREVIEW" &&
       this.state.round.phase !== "RESULT"
     ) {
       this.sendError(
@@ -582,6 +583,29 @@ export class GameRoom extends Server {
       this.state.settingsLocked = true
       this.state.gameVotes = {}
       this.broadcastState()
+      return
+    }
+
+    // BRACKET_PREVIEW → start first round: host clicks to begin gameplay
+    if (this.state.round.phase === "BRACKET_PREVIEW") {
+      if (this.state.gameSettings.tuning?.SKIP_GAMEPLAY === false) {
+        // Drive-based gameplay: start the down loop
+        this.state.round.roundNumber = 1
+        this.beginPlaycallerDown()
+      } else {
+        // SKIP_GAMEPLAY mode: proceed with standard PICKING phase for round 1
+        this.state.round = {
+          phase: "PICKING",
+          roundNumber: 1,
+          picks: {},
+          result: null,
+          pickDeadlineMs: Date.now() + this.state.gameSettings.pickWindowMs,
+          resolvedAt: null,
+        }
+        this.broadcastState()
+        this.scheduleBotPicks()
+        this.scheduleResolve(this.state.gameSettings.pickWindowMs)
+      }
       return
     }
 
@@ -1850,6 +1874,19 @@ export class GameRoom extends Server {
         this.autoEndGame()
         return
       }
+
+      // First round: show bracket preview before starting gameplay.
+      // The host will send another START_ROUND to advance from BRACKET_PREVIEW.
+      if (roundNumber === 1) {
+        this.state.round = {
+          ...this.state.round,
+          phase: "BRACKET_PREVIEW",
+          roundNumber,
+        }
+        this.broadcastState()
+        return
+      }
+
       this.state.round.roundNumber = roundNumber
       this.beginPlaycallerDown()
       return
@@ -1880,6 +1917,17 @@ export class GameRoom extends Server {
           return
         }
       }
+    }
+
+    // ── Playcaller (SKIP_GAMEPLAY=true): show bracket preview on first round ──
+    if (this.state.config.gameType === "playcaller" && roundNumber === 1) {
+      this.state.round = {
+        ...this.state.round,
+        phase: "BRACKET_PREVIEW",
+        roundNumber,
+      }
+      this.broadcastState()
+      return
     }
 
     // Battle-bots rounds 2 and 3 skip PICKING — no player input needed

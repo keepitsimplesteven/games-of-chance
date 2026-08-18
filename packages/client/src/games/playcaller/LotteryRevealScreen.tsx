@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useGameStore } from "../../store/useGameStore"
 import { useTheme } from "../../theme"
 import type { LotteryState } from "@games-of-chance/shared"
@@ -61,6 +61,17 @@ export function LotteryRevealScreen() {
   // revealedCount tracks how many placements have been revealed (from last to first)
   const [revealedCount, setRevealedCount] = useState(0)
 
+  // Ref map for result cells — keyed by placement column (1-based)
+  const resultCellRefs = useRef<Record<number, HTMLTableCellElement | null>>({})
+
+  // Callback ref setter for result cells
+  const setResultCellRef = useCallback(
+    (placement: number) => (el: HTMLTableCellElement | null) => {
+      resultCellRefs.current[placement] = el
+    },
+    []
+  )
+
   useEffect(() => {
     if (draftPickEnabled) {
       // Instant reveal — show all at once
@@ -80,6 +91,19 @@ export function LotteryRevealScreen() {
     }, 1500)
     return () => clearInterval(timer)
   }, [draftPickEnabled, playerCount])
+
+  // Scroll the newly revealed result cell into view
+  useEffect(() => {
+    if (draftPickEnabled || revealedCount === 0) return
+
+    // The most recently revealed placement: reveal from last place down
+    // revealedCount=1 → placement=playerCount, revealedCount=N → placement=playerCount-N+1
+    const revealedPlacement = playerCount - revealedCount + 1
+    const cell = resultCellRefs.current[revealedPlacement]
+    if (cell) {
+      cell.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" })
+    }
+  }, [revealedCount, playerCount, draftPickEnabled])
 
   const animationComplete = revealedCount >= playerCount
 
@@ -156,12 +180,14 @@ export function LotteryRevealScreen() {
                 <tr key={seed.playerId}>
                   {/* Seed label — sticky left on mobile scroll */}
                   <td
-                    className={`sticky left-0 z-10 border border-white/10 px-2 py-1.5 text-left font-medium whitespace-nowrap ${theme.bodyText} ${theme.card}`}
+                    className={`sticky left-0 z-10 border border-white/10 px-2 py-1.5 text-left font-medium max-w-[7rem] sm:max-w-[10rem] ${theme.bodyText} ${theme.card}`}
                   >
-                    <span className={`mr-1 text-[10px] ${theme.mutedText}`}>
-                      {seed.seedIndex + 1}.
-                    </span>
-                    {seed.playerName}
+                    <div className="flex items-baseline gap-0.5 overflow-hidden">
+                      <span className={`shrink-0 text-[10px] ${theme.mutedText}`}>
+                        {seed.seedIndex + 1}.
+                      </span>
+                      <span className="truncate">{seed.playerName}</span>
+                    </div>
                   </td>
                   {/* Odds cells */}
                   {Array.from({ length: columnCount }, (_, colIdx) => {
@@ -173,6 +199,7 @@ export function LotteryRevealScreen() {
                     return (
                       <td
                         key={colIdx}
+                        ref={isResult ? setResultCellRef(placementCol) : undefined}
                         className={`border border-white/10 px-2 py-1.5 text-center tabular-nums ${
                           isResult && revealed
                             ? "bg-amber-500/30 ring-2 ring-inset ring-amber-400 font-bold text-amber-200"

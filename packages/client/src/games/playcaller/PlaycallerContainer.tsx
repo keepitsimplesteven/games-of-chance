@@ -115,6 +115,33 @@ export function PlaycallerContainer() {
     return <CoinTossCeremony />
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BRACKET_PREVIEW phase: show the initial bracket before gameplay starts.
+  // Host sees a "Start First Round" button; players just view the bracket.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  if (phase === "BRACKET_PREVIEW") {
+    return (
+      <div className="flex flex-col h-full overflow-hidden">
+        <div className="shrink-0 flex flex-col items-center gap-2 pt-4">
+          <RoundHeader
+            roundIndex={0}
+            totalRounds={bracket.totalRounds}
+          />
+          <div className="text-sm text-[#f5c542] font-medium uppercase tracking-wider">
+            Starting Bracket
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 overflow-auto py-2">
+          <BracketVisualization bracket={bracket} />
+        </div>
+        <div className="shrink-0 w-full max-w-sm mx-auto px-4 pb-4 pt-2">
+          <RoundControls />
+        </div>
+      </div>
+    )
+  }
+
   // Derive current schedule entry (handles both main bracket and consolation rounds)
   const currentScheduleEntry = bracket.schedule?.[bracket.currentScheduleIndex]
 
