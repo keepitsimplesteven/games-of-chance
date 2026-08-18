@@ -66,6 +66,7 @@ import { validateSettingsUpdate } from "./settings/validateSettings"
 import { evaluateAvailability } from "./tournament/UnlockCriteriaHarness"
 import { FastPlayAdapter } from "./simulation/FastPlayAdapter"
 import { BotManager } from "./bots/BotManager"
+import { getBotDecisionDelay } from "./bots/botTiming"
 // Side-effect import: registers coin-toss pick generator in the simulation registry
 import "@games-of-chance/simulation/src/pick-generators/coin-toss"
 
@@ -1425,7 +1426,7 @@ export class GameRoom extends Server {
     if (!draftState) return
     const currentPicker = draftState.pickOrder[draftState.currentPickIndex]
     const isBot = this.botManager.isBot(currentPicker) || currentPicker in this.state.vacatedSlots
-    const delay = isBot ? (2000 + Math.random() * 2000) : 30000
+    const delay = isBot ? getBotDecisionDelay() : 30000
     this.draftPickTimerId = setTimeout(() => {
       this.autoDraftPick()
     }, delay)
@@ -1983,9 +1984,9 @@ export class GameRoom extends Server {
   }
 
   /**
-   * Schedule bot picks with random delays (500–2000ms per bot).
-   * Bots submit picks instantly so that the round resolves as soon as all
-   * HUMAN players have made their choices.
+   * Schedule bot picks with randomized delays from the global bot timing config.
+   * Each bot submits its pick after a random thinking delay, simulating human
+   * decision speed.
    */
   private scheduleBotPicks() {
     this.cancelBotPickTimers()
@@ -2026,7 +2027,7 @@ export class GameRoom extends Server {
 
     const allPicks = { ...picks, ...vacatedPicks }
 
-    // Submit all bot-controlled picks immediately (no delay)
+    // Submit bot-controlled picks with a randomized delay to simulate thinking
     for (const id of allBotControlled) {
       const pick = allPicks[id]
       if (pick === undefined) continue
@@ -2035,14 +2036,22 @@ export class GameRoom extends Server {
       // Validate pick via plugin (same validation as human picks)
       if (!plugin.validatePick(pick)) continue
 
-      // Record the bot-controlled pick instantly
-      this.state.round.picks[id] = pick
-    }
+      const timerId = setTimeout(() => {
+        // Guard: round may have resolved while we waited
+        if (this.state.round.phase !== "PICKING") return
+        if (id in this.state.round.picks) return
 
-    // After all bot picks are in, check if all players have picked → early resolution
-    if (this.allPlayersHavePicked()) {
-      this.cancelDeadlineTimer()
-      this.scheduleResolve(0)
+        this.state.round.picks[id] = pick
+        this.broadcastState()
+
+        // Check if all players have now picked → early resolution
+        if (this.allPlayersHavePicked()) {
+          this.cancelDeadlineTimer()
+          this.scheduleResolve(0)
+        }
+      }, getBotDecisionDelay())
+
+      this.botPickTimerIds.push(timerId)
     }
   }
 

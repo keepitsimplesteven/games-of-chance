@@ -1,6 +1,8 @@
+import { useState } from "react"
 import { useGameStore } from "../../store/useGameStore"
 import { useTheme } from "../../theme"
 import type { GameLeaderboardEntry } from "@games-of-chance/shared"
+import { LotteryRevealScreen } from "../../games/playcaller/LotteryRevealScreen"
 
 /**
  * CongratulationsScreen — shown after the final game in a tournament session
@@ -19,6 +21,8 @@ export default function CongratulationsScreen() {
     (s) => s.roomState?.sessionLeaderboard ?? []
   )
   const role = useGameStore((s) => s.role)
+  const lotteryState = useGameStore((s) => s.roomState?.lotteryState)
+  const [showLotteryModal, setShowLotteryModal] = useState(false)
 
   const handleReturnToLobby = () => {
     const send = useGameStore.getState()._socketSend
@@ -105,6 +109,16 @@ export default function CongratulationsScreen() {
         </div>
       )}
 
+      {/* View Lottery Odds — shown in lottery mode */}
+      {lotteryState && (
+        <button
+          onClick={() => setShowLotteryModal(true)}
+          className={`rounded-lg px-6 py-3 text-sm font-semibold shadow-sm transition ${theme.btnGhost}`}
+        >
+          View Lottery Odds
+        </button>
+      )}
+
       {/* Return to Lobby — host only */}
       {role === "host" && (
         <button
@@ -113,6 +127,29 @@ export default function CongratulationsScreen() {
         >
           Return to Lobby
         </button>
+      )}
+
+      {/* Lottery Odds Modal */}
+      {showLotteryModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setShowLotteryModal(false)}
+        >
+          <div
+            className="relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-xl shadow-xl bg-[#0a2a12]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setShowLotteryModal(false)}
+              className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition"
+              aria-label="Close"
+            >
+              &times;
+            </button>
+            <LotteryRevealScreen staticMode />
+          </div>
+        </div>
       )}
     </div>
   )

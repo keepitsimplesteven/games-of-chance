@@ -19,7 +19,7 @@ import type { LotteryState } from "@games-of-chance/shared"
  *
  * Validates: Requirements 6.2, 6.3, 6.4, 6.5, 6.6, 3.8
  */
-export function LotteryRevealScreen() {
+export function LotteryRevealScreen({ staticMode = false }: { staticMode?: boolean } = {}) {
   const theme = useTheme()
   const lotteryState = useGameStore((s) => s.roomState?.lotteryState)
   const draftPickEnabled = useGameStore(
@@ -73,7 +73,7 @@ export function LotteryRevealScreen() {
   )
 
   useEffect(() => {
-    if (draftPickEnabled) {
+    if (staticMode || draftPickEnabled) {
       // Instant reveal — show all at once
       setRevealedCount(playerCount)
       return
@@ -90,7 +90,7 @@ export function LotteryRevealScreen() {
       })
     }, 1500)
     return () => clearInterval(timer)
-  }, [draftPickEnabled, playerCount])
+  }, [staticMode, draftPickEnabled, playerCount])
 
   // Scroll the newly revealed result cell into view
   useEffect(() => {
@@ -218,7 +218,7 @@ export function LotteryRevealScreen() {
       </div>
 
       {/* Host advance button */}
-      {role === "host" && animationComplete && (
+      {!staticMode && role === "host" && animationComplete && (
         <button
           onClick={handleAdvance}
           className={`rounded-lg px-6 py-3 text-sm font-semibold shadow-sm transition ${theme.btnPrimary}`}
