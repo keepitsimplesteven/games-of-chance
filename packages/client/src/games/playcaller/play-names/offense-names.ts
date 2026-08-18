@@ -42,7 +42,6 @@ const runSafe: PlayDefinition[] = [
       activePlay: ["Handoff. He hits the hole!"],
       matchupOutcome: {
         offense_fooled: [
-          "Truck-sized hole. {yards} easy yards!",
           "Nobody home in the box. {yards} yards!",
           "The run game feasts on pass coverage. {yards}!",
         ],

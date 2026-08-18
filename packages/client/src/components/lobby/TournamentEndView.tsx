@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useGameStore } from "../../store/useGameStore"
 import { useTheme } from "../../theme"
+import { LotteryRevealScreen } from "../../games/playcaller/LotteryRevealScreen"
 
 /**
  * TournamentEndView — displayed when round.phase === "END_TOURNAMENT".
@@ -18,6 +19,7 @@ export default function TournamentEndView() {
   const players = useGameStore((s) => s.roomState?.players ?? [])
   const progressionMode = useGameStore((s) => s.roomState?.room.progressionMode)
   const theme = useTheme()
+  const [showLotteryModal, setShowLotteryModal] = useState(false)
 
   const isLotteryMode = progressionMode === "lottery"
 
@@ -125,6 +127,39 @@ export default function TournamentEndView() {
                 </div>
               )
             })}
+          </div>
+        </div>
+      )}
+
+      {/* View Lottery Odds — shown in lottery mode */}
+      {isLotteryMode && lotteryState && (
+        <button
+          onClick={() => setShowLotteryModal(true)}
+          className={`rounded-lg px-6 py-3 text-sm font-semibold shadow-sm transition ${theme.btnPrimary}`}
+        >
+          View Lottery Odds
+        </button>
+      )}
+
+      {/* Lottery Odds Modal */}
+      {showLotteryModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setShowLotteryModal(false)}
+        >
+          <div
+            className="relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-xl shadow-xl bg-[#0a2a12]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setShowLotteryModal(false)}
+              className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition"
+              aria-label="Close"
+            >
+              &times;
+            </button>
+            <LotteryRevealScreen staticMode />
           </div>
         </div>
       )}

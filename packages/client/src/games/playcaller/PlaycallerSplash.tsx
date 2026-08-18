@@ -70,7 +70,7 @@ export function PlaycallerSplash() {
           </ul>
           <br />
           <p className={`${theme.mutedText}`}>
-            The offensive play call is <span className="text-white font-medium">less effective</span> if the defense<span className="text-white font-medium"> calls the matching play type</span>!
+            The offensive play call is <span className="text-white font-medium">less effective</span> if the defense<span className="text-white font-medium"> guards the matching play</span>. Offense is more likely to <span className="text-white font-medium">pop off</span> if the defense guesses <span className="text-white font-medium">completely wrong</span>!
           </p>
         </div>
 
