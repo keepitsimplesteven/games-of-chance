@@ -31,6 +31,9 @@ export interface GameStore {
   // Connection
   connectionStatus: ConnectionStatus
 
+  // Server error — set when server rejects a join (e.g. ROOM_NAME_TAKEN)
+  serverError: { code: string; message: string } | null
+
   // Server state mirror
   roomState: RoomState | null
 
@@ -89,6 +92,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   draftPickEnabled: undefined,
   skipGameplay: undefined,
   connectionStatus: "disconnected",
+  serverError: null,
   roomState: null,
   pickSubmitted: false,
   currentPick: null,

@@ -429,6 +429,15 @@ export class GameRoom extends Server {
     }
 
     // ── New player join ──────────────────────────────────────────────────
+
+    // ── Room name collision check ────────────────────────────────────────
+    // If someone is trying to create (host) a room that already has active players,
+    // reject — the room name is already in use.
+    if (payload.role === "host" && this.hasConnectedHost()) {
+      this.sendError(connection, "ROOM_NAME_TAKEN", "A room with this name is already active")
+      return
+    }
+
     // Check capacity: room is FULL if all slots have been claimed by a human at some point.
     // A "claimed" slot is either an active human OR a vacated slot (bot holding a human's place).
     const vacatedCount = Object.keys(this.state.vacatedSlots).length

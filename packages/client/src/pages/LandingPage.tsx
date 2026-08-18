@@ -1,21 +1,48 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useLocation } from "react-router-dom"
 import type { ScoringMode, ProgressionMode } from "@games-of-chance/shared"
 import { useTheme } from "../theme"
 
 export default function LandingPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const theme = useTheme()
   const [roomCode, setRoomCode] = useState("")
+  const [roomName, setRoomName] = useState("")
+  const [roomNameError, setRoomNameError] = useState<string | null>(
+    (location.state as { roomNameError?: string } | null)?.roomNameError ?? null
+  )
   const [scoringMode, setScoringMode] = useState<ScoringMode>("chips")
   const [progressionMode, setProgressionMode] = useState<ProgressionMode>("lottery")
   const [roomSize, setRoomSize] = useState(10)
   const [draftPickEnabled, setDraftPickEnabled] = useState(false)
   const [skipGameplay, setSkipGameplay] = useState(false)
 
+  function sanitizeRoomName(name: string): string {
+    return name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "-") // replace non-alphanumeric with hyphens
+      .replace(/-+/g, "-")          // collapse multiple hyphens
+      .replace(/^-|-$/g, "")        // trim leading/trailing hyphens
+  }
+
   function handleCreateRoom() {
-    const roomId = crypto.randomUUID()
-    navigate(`/${roomId}`, { state: { scoringMode, progressionMode, roomSize, draftPickEnabled: progressionMode === "lottery" ? draftPickEnabled : undefined, skipGameplay: progressionMode === "lottery" ? skipGameplay : undefined } })
+    const sanitized = sanitizeRoomName(roomName)
+    if (!sanitized) {
+      setRoomNameError("Enter a room name (letters, numbers, hyphens)")
+      return
+    }
+    if (sanitized.length < 2) {
+      setRoomNameError("Room name must be at least 2 characters")
+      return
+    }
+    if (sanitized.length > 40) {
+      setRoomNameError("Room name must be 40 characters or less")
+      return
+    }
+    setRoomNameError(null)
+    navigate(`/${sanitized}`, { state: { scoringMode, progressionMode, roomSize, draftPickEnabled: progressionMode === "lottery" ? draftPickEnabled : undefined, skipGameplay: progressionMode === "lottery" ? skipGameplay : undefined } })
   }
 
   function handleJoinRoom(e: React.FormEvent) {
@@ -181,9 +208,31 @@ export default function LandingPage() {
           </p>
         </div>
 
+        {/* Room name input */}
+        <div className="space-y-2">
+          <label className={`block text-sm font-bold uppercase tracking-wider ${theme.headingText}`}>
+            Room Name
+          </label>
+          <input
+            type="text"
+            value={roomName}
+            onChange={(e) => { setRoomName(e.target.value); setRoomNameError(null) }}
+            placeholder="e.g. friday-night-games"
+            maxLength={40}
+            className={`w-full px-4 py-3 border-2 bg-transparent placeholder:opacity-50 focus:outline-none ${theme.bodyText} ${theme.listItem}`}
+          />
+          {roomNameError && (
+            <p className={`text-xs ${theme.statusDanger}`}>{roomNameError}</p>
+          )}
+          <p className={`text-xs ${theme.mutedText}`}>
+            Letters, numbers, and hyphens only. This becomes the room URL.
+          </p>
+        </div>
+
         <button
           onClick={handleCreateRoom}
-          className={`w-full px-4 py-3 text-lg font-bold uppercase tracking-wider ${theme.btnPrimary}`}
+          disabled={!roomName.trim()}
+          className={`w-full px-4 py-3 text-lg font-bold uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed ${theme.btnPrimary}`}
         >
           Create Room
         </button>

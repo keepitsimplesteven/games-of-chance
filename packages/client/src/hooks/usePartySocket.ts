@@ -106,6 +106,10 @@ export function usePartySocket(
         case "ERROR":
           // Dispatch to error handler — update connection status for critical errors
           console.error("[PartySocket] Server error:", msg.payload.code, msg.payload.message)
+          if (msg.payload.code === "ROOM_NAME_TAKEN") {
+            useGameStore.setState({ serverError: { code: msg.payload.code, message: msg.payload.message } })
+            setJoinState("NAME_ENTRY")
+          }
           break
       }
     })
