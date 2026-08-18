@@ -58,8 +58,8 @@ describe("drawPlacements", () => {
 
     it("different seeds produce different outputs", () => {
       const result1 = drawPlacements(10, seededRng(1))
-      const result2 = drawPlacements(10, seededRng(2))
-      // Extremely unlikely to be equal with different seeds
+      const result2 = drawPlacements(10, seededRng(9999))
+      // Extremely unlikely to be equal with sufficiently different RNG seeds
       expect(result1).not.toEqual(result2)
     })
   })

@@ -29,7 +29,7 @@ export default function SessionLeaderboard() {
             >
               <div className="flex items-center gap-2">
                 {/* Rank badge */}
-                <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${theme.listItem}`}>
+                <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${theme.bodyText} ${theme.listItem}`}>
                   {entry.rank}
                 </span>
 

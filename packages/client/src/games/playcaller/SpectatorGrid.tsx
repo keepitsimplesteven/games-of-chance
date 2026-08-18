@@ -43,6 +43,14 @@ export function SpectatorGrid({ matchups, onSelectMatchup }: SpectatorGridProps)
       <div className={`text-center text-m uppercase tracking-wide ${theme.mutedText}`}>
         Tap on a matchup to spectate
       </div>
+      <div className="flex w-full justify-between">
+        <p className={`${theme.mutedText}`}>
+        Offense
+      </p>
+        <p className={`${theme.mutedText}`}>
+        Defense
+      </p>
+      </div>
       <div className="flex flex-col gap-2">
         {matchups.map(({ matchupId, driveState }) => (
           <SpectatorMatchupCard
@@ -134,13 +142,12 @@ function SpectatorMatchupCard({ matchupId, driveState, onSelect }: SpectatorMatc
       {/* Player names */}
       <div className="flex justify-between items-center">
         <span
-          className={`text-[18px] font-bold ${
-            displayIsComplete && winnerId !== driveState.offensePlayerId
+          className={`text-[18px] font-bold ${displayIsComplete && winnerId !== driveState.offensePlayerId
               ? "line-through text-gray-500"
               : displayIsComplete && winnerId === driveState.offensePlayerId
                 ? theme.statusSuccess
                 : theme.bodyText
-          }`}
+            }`}
         >
           {seeds[driveState.offensePlayerId] ? `(${seeds[driveState.offensePlayerId]}) ` : ""}{getPlayerName(driveState.offensePlayerId)}
         </span>
@@ -148,13 +155,12 @@ function SpectatorMatchupCard({ matchupId, driveState, onSelect }: SpectatorMatc
           vs
         </span>
         <span
-          className={`text-[18px] font-bold  ${
-            displayIsComplete && winnerId !== driveState.defensePlayerId
+          className={`text-[18px] font-bold  ${displayIsComplete && winnerId !== driveState.defensePlayerId
               ? "line-through text-gray-500"
               : displayIsComplete && winnerId === driveState.defensePlayerId
                 ? theme.statusSuccess
                 : theme.bodyText
-          }`}
+            }`}
         >
           {seeds[driveState.defensePlayerId] ? `(${seeds[driveState.defensePlayerId]}) ` : ""}{getPlayerName(driveState.defensePlayerId)}
         </span>
@@ -163,9 +169,8 @@ function SpectatorMatchupCard({ matchupId, driveState, onSelect }: SpectatorMatc
       {/* Status: outcome when complete, down/distance when active */}
       <div className="text-center mt-4">
         {displayIsComplete && endingType ? (
-          <span className={`text-[18px] font-bold ${
-            endingType === "touchdown" ? theme.statusSuccess : theme.statusDanger
-          }`}>
+          <span className={`text-[18px] font-bold ${endingType === "touchdown" ? theme.statusSuccess : theme.statusDanger
+            }`}>
             {formatEndingType(endingType)}
           </span>
         ) : (

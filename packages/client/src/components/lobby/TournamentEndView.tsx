@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useGameStore } from "../../store/useGameStore"
 import { useTheme } from "../../theme"
+import { LotteryRevealScreen } from "../../games/playcaller/LotteryRevealScreen"
 
 /**
  * TournamentEndView — displayed when round.phase === "END_TOURNAMENT".
@@ -18,6 +19,7 @@ export default function TournamentEndView() {
   const players = useGameStore((s) => s.roomState?.players ?? [])
   const progressionMode = useGameStore((s) => s.roomState?.room.progressionMode)
   const theme = useTheme()
+  const [showLotteryModal, setShowLotteryModal] = useState(false)
 
   const isLotteryMode = progressionMode === "lottery"
 
@@ -60,7 +62,7 @@ export default function TournamentEndView() {
         <span className="text-5xl" role="img" aria-label="trophy">🏆</span>
       </div>
       <h2 className={`text-2xl font-bold ${theme.titleText}`}>Tournament Complete!</h2>
-      <p className={`text-sm ${theme.mutedText}`}>Final standings are in — congratulations to all players!</p>
+      <p className={`text-sm ${theme.mutedText}`}>Final standings are in. Congratulations to all players!</p>
 
       {/* Podium */}
       <div className="flex w-full max-w-md items-end justify-center gap-3 px-4 pt-4">
@@ -98,9 +100,6 @@ export default function TournamentEndView() {
       {/* Remaining players */}
       {rest.length > 0 && (
         <div className="w-full max-w-md px-4">
-          <h3 className={`mb-2 text-xs font-semibold uppercase tracking-wide ${theme.mutedText}`}>
-            Other Finishers
-          </h3>
           <div className="space-y-1">
             {rest.map((entry) => {
               const isCurrentPlayer = entry.playerId === playerId
@@ -110,7 +109,7 @@ export default function TournamentEndView() {
                   className={`flex items-center justify-between rounded-md px-3 py-2 ${theme.listItem}`}
                 >
                   <div className="flex items-center gap-2">
-                    <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${theme.listItem}`}>
+                    <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${theme.bodyText} ${theme.listItem}`}>
                       {entry.rank}
                     </span>
                     <span className={`text-sm font-medium ${theme.bodyText}`}>
@@ -128,6 +127,39 @@ export default function TournamentEndView() {
                 </div>
               )
             })}
+          </div>
+        </div>
+      )}
+
+      {/* View Lottery Odds — shown in lottery mode */}
+      {isLotteryMode && lotteryState && (
+        <button
+          onClick={() => setShowLotteryModal(true)}
+          className={`rounded-lg px-6 py-3 text-sm font-semibold shadow-sm transition ${theme.btnPrimary}`}
+        >
+          View Lottery Odds
+        </button>
+      )}
+
+      {/* Lottery Odds Modal */}
+      {showLotteryModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setShowLotteryModal(false)}
+        >
+          <div
+            className="relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-xl shadow-xl bg-[#0a2a12]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setShowLotteryModal(false)}
+              className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition"
+              aria-label="Close"
+            >
+              &times;
+            </button>
+            <LotteryRevealScreen staticMode />
           </div>
         </div>
       )}

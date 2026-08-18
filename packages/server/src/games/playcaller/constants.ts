@@ -40,9 +40,6 @@ export const COIN_TOSS_CEREMONY = {
   PHASE_TIMEOUT_MS: 45_000,
   /** Minimum hold time after all ceremonies complete before advancing (ms) */
   RESULT_HOLD_MS: 2_000,
-  /** Bot action delay range (ms) */
-  BOT_DELAY_MIN_MS: 1_500,
-  BOT_DELAY_MAX_MS: 3_500,
 } as const
 
 export const PLAYCALLER_SETTINGS_SCHEMA: SettingsSchema = [

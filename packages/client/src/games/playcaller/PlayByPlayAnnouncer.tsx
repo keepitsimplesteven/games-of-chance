@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { motion } from "framer-motion"
 import type { CommentaryLines } from "./play-by-play/selectCommentary"
+import type { MatchupQuality } from "./play-by-play/types"
 
 /** Configurable timing for the play-by-play sequence (milliseconds) */
 export const PLAY_TIMELINE = {
@@ -21,6 +22,8 @@ export interface PlayByPlayAnnouncerProps {
   commentary: CommentaryLines | null
   /** Unique key to reset the animation sequence (e.g. play history length) */
   playKey: number
+  /** The viewer's role — determines whether matchup highlight is favorable or not */
+  role?: "offense" | "defense"
   /** Called when the outcome phase begins — trigger ball animation here */
   onOutcomeReveal?: () => void
   /** Called when the full sequence is done (after outcome linger) */
@@ -44,12 +47,14 @@ export interface PlayByPlayAnnouncerProps {
 export function PlayByPlayAnnouncer({
   commentary,
   playKey,
+  role,
   onOutcomeReveal,
   onSequenceDone,
 }: PlayByPlayAnnouncerProps) {
   const [phase, setPhase] = useState<PlayPhase>("idle")
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const lastPlayKeyRef = useRef<number>(-1)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   const clearTimers = useCallback(() => {
     timersRef.current.forEach((t) => clearTimeout(t))
@@ -108,9 +113,16 @@ export function PlayByPlayAnnouncer({
     return clearTimers
   }, [playKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // No commentary — render empty spacer
+  // Auto-scroll to the latest message when phase changes
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" })
+    }
+  }, [phase])
+
+  // No commentary — render scrollable empty spacer (maintains layout)
   if (!commentary) {
-    return <div className="shrink-0 h-[52px]" />
+    return <div ref={scrollRef} className="shrink-0 min-h-[52px] max-h-[80px] overflow-y-auto px-1 scrollbar-thin scrollbar-thumb-white/20" />
   }
 
   const lines: Array<{ text: string; visible: boolean }> = [
@@ -119,9 +131,15 @@ export function PlayByPlayAnnouncer({
     { text: commentary.outcome, visible: phase === "outcome" || phase === "done" },
   ]
 
+  // Determine outcome text color based on matchup highlight and viewer role
+  const outcomeColorClass = getOutcomeColorClass(commentary.matchupHighlight, role)
+
   return (
-    <div className="shrink-0 min-h-[52px] max-h-[64px] overflow-hidden flex flex-col justify-center px-1">
-      <div className="flex flex-col gap-0.5">
+    <div
+      ref={scrollRef}
+      className="shrink-0 min-h-[52px] max-h-[96px] overflow-y-auto px-1 scrollbar-thin scrollbar-thumb-white/20"
+    >
+      <div className="flex flex-col gap-0.5 py-0.5">
         {lines.map((line, i) => (
           <motion.div
             key={`${playKey}-${i}`}
@@ -132,7 +150,11 @@ export function PlayByPlayAnnouncer({
                 : { opacity: 0, y: 4 }
             }
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className="text-[12px] text-white/90 leading-snug"
+            className={`text-[12px] leading-snug ${
+              i === 2 && outcomeColorClass
+                ? outcomeColorClass
+                : "text-white/90"
+            }`}
           >
             {line.text}
           </motion.div>
@@ -140,4 +162,27 @@ export function PlayByPlayAnnouncer({
       </div>
     </div>
   )
+}
+
+/**
+ * Returns a Tailwind text color class for the outcome line based on
+ * matchup highlight and the viewer's role.
+ *
+ * - Gold (text-yellow-400): matchup was in the viewer's favor
+ *   (offense_fooled when viewing as offense, defense_read when viewing as defense)
+ * - Red (text-red-400): matchup went against the viewer
+ *   (defense_read when viewing as offense, offense_fooled when viewing as defense)
+ * - null: no matchup highlight, use default color
+ */
+function getOutcomeColorClass(
+  matchupHighlight: MatchupQuality | null | undefined,
+  role: "offense" | "defense" | undefined
+): string | null {
+  if (!matchupHighlight || !role) return null
+
+  const favorable =
+    (role === "offense" && matchupHighlight === "offense_fooled") ||
+    (role === "defense" && matchupHighlight === "defense_read")
+
+  return favorable ? "text-yellow-400 font-semibold" : "text-red-400 font-semibold"
 }

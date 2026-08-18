@@ -39,6 +39,13 @@ export interface CommentaryTiers {
 export type OutcomeMessages = Record<OutcomeCategory, string[]>
 
 /**
+ * Whether the defense correctly "read" the offense or got completely fooled.
+ * - defense_read: defense axis matched offense axis AND play had a non-positive result
+ * - offense_fooled: defense axis is opposite of offense axis AND play gained yards
+ */
+export type MatchupQuality = "defense_read" | "offense_fooled"
+
+/**
  * Play-by-play commentary definition for a single play name.
  * Each phase has an array of possible messages — one is randomly selected.
  * Keys align with CommentaryPhase values.
@@ -50,6 +57,12 @@ export interface PlayByPlayMessages {
   activePlay: string[]
   /** Outcome-specific lines keyed by category */
   outcome: Record<OutcomeCategory, string[]>
+  /**
+   * Optional play-specific messages for matchup-quality scenarios.
+   * These take highest priority when the matchup condition is met.
+   * e.g. Counter Run fooling pass defense → "The defense got pulled completely out of the way!"
+   */
+  matchupOutcome?: Partial<Record<MatchupQuality, string[]>>
 }
 
 /**

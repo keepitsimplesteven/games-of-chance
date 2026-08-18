@@ -129,7 +129,9 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
         entry.down,
         circ,
         selectedPlay.messages,
-        axis
+        axis,
+        entry.offensivePlay,
+        entry.defensivePlay
       ),
     }
   }

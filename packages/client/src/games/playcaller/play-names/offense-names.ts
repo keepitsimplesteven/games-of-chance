@@ -38,8 +38,14 @@ const runSafe: PlayDefinition[] = [
       lineOfScrimmage: 50,
     },
     messages: {
-      preSnap: ["The fullback lines up in front of the tailback..."],
-      activePlay: ["He takes the handoff and hits the hole!"],
+      preSnap: ["Fullback lines up in front of the tailback..."],
+      activePlay: ["Handoff. He hits the hole!"],
+      matchupOutcome: {
+        offense_fooled: [
+          "Nobody home in the box. {yards} yards!",
+          "The run game feasts on pass coverage. {yards}!",
+        ],
+      },
     },
   },
   {
@@ -64,8 +70,8 @@ const runSafe: PlayDefinition[] = [
       lineOfScrimmage: 50,
     },
     messages: {
-      preSnap: ["Quarterback under center, the line tightens up."],
-      activePlay: ["He lunges forward behind the center!"],
+      preSnap: ["QB under center. The line tightens..."],
+      activePlay: ["He lunges forward!"],
     },
   },
   {
@@ -151,8 +157,19 @@ const runSafe: PlayDefinition[] = [
       lineOfScrimmage: 50,
     },
     messages: {
-      preSnap: ["Looks like a passing formation... but wait."],
-      activePlay: ["It's a draw! The defense bit on the pass look!"],
+      preSnap: ["Passing formation... but wait..."],
+      activePlay: ["It's a draw! Defense bit on the pass look!"],
+      matchupOutcome: {
+        offense_fooled: [
+          "They all dropped back. {yards} yards through the middle!",
+          "Pass coverage everywhere. {yards} on the draw!",
+          "The pass rush vanished. Draw rips through for {yards}!",
+        ],
+        defense_read: [
+          "They didn't bite. Linebackers filled every gap.",
+          "The defense read draw the whole way.",
+        ],
+      },
     },
   },
   {
@@ -294,7 +311,14 @@ const runAggressive: PlayDefinition[] = [
       lineOfScrimmage: 50,
     },
     messages: {
-      activePlay: ["He bounces it outside, looking for the edge!"],
+      activePlay: ["He bounces it outside!"],
+      matchupOutcome: {
+        offense_fooled: [
+          "Nobody on the perimeter! {yards} yards!",
+          "The outside is wide open. {yards}!",
+          "Corners dropped back. Sideline is free for {yards}!",
+        ],
+      },
     },
   },
   {
@@ -324,8 +348,15 @@ const runAggressive: PlayDefinition[] = [
       lineOfScrimmage: 50,
     },
     messages: {
-      preSnap: ["The guards are pulling — big play coming."],
-      activePlay: ["The pulling guard leads the way!"],
+      preSnap: ["The guards are pulling..."],
+      activePlay: ["Pulling guard leads the way!"],
+      matchupOutcome: {
+        offense_fooled: [
+          "Guards pulled into open space. {yards} yards!",
+          "Nobody in the box. Power wins for {yards}!",
+          "The sweep has a wall of blockers. {yards} gained!",
+        ],
+      },
     },
   },
   {
@@ -356,8 +387,19 @@ const runAggressive: PlayDefinition[] = [
       lineOfScrimmage: 50,
     },
     messages: {
-      preSnap: ["Something tricky is brewing on this one."],
-      activePlay: ["It's a reverse! The defense is caught flat-footed!"],
+      preSnap: ["Something tricky brewing..."],
+      activePlay: ["It's a reverse! Defense caught flat-footed!"],
+      matchupOutcome: {
+        offense_fooled: [
+          "Defense pulled the wrong way! {yards} yards!",
+          "Misdirection perfect. {yards} on the reverse!",
+          "Every defender flowing the wrong direction. {yards}!",
+        ],
+        defense_read: [
+          "The end held his ground. Reverse goes nowhere.",
+          "They didn't bite. Discipline wins.",
+        ],
+      },
     },
   },
   {
@@ -383,6 +425,15 @@ const runAggressive: PlayDefinition[] = [
         { from: { x: 50, y: 50 }, to: { x: 85, y: 38 }, style: "arrow" },
       ],
       lineOfScrimmage: 50,
+    },
+    messages: {
+      matchupOutcome: {
+        offense_fooled: [
+          "Jet motion had them lost. {yards} easy!",
+          "Too much speed to the edge. {yards} yards!",
+          "The defense couldn't adjust in time. {yards}!",
+        ],
+      },
     },
   },
   {
@@ -410,6 +461,19 @@ const runAggressive: PlayDefinition[] = [
         { from: { x: 42, y: 50 }, to: { x: 65, y: 43 }, style: "arrow" },
       ],
       lineOfScrimmage: 50,
+    },
+    messages: {
+      matchupOutcome: {
+        offense_fooled: [
+          "Counter froze the defense. {yards} yards!",
+          "They went left, runner cut right. {yards}!",
+          "The misdirection had them all going the wrong way. {yards}!",
+        ],
+        defense_read: [
+          "Backside LB tracked it perfectly. Nowhere to go.",
+          "They read the pulling guard and blew it up.",
+        ],
+      },
     },
   },
   {
@@ -493,7 +557,13 @@ const runAggressive: PlayDefinition[] = [
       lineOfScrimmage: 50,
     },
     messages: {
-      activePlay: ["He launches himself over the pile!"],
+      activePlay: ["He launches over the pile!"],
+      matchupOutcome: {
+        offense_fooled: [
+          "Defense spread for pass. No resistance! {yards}!",
+          "The goal line push had nothing in front of it. {yards}!",
+        ],
+      },
     },
   },
 ]
@@ -527,7 +597,13 @@ const passSafe: PlayDefinition[] = [
       lineOfScrimmage: 50,
     },
     messages: {
-      activePlay: ["Quick throw to the slant — it's on the way!"],
+      activePlay: ["Quick throw to the slant!"],
+      matchupOutcome: {
+        offense_fooled: [
+          "LBs crashed the line. Slant wide open for {yards}!",
+          "Everyone keying run. The slant finds daylight for {yards}!",
+        ],
+      },
     },
   },
   {
@@ -585,8 +661,19 @@ const passSafe: PlayDefinition[] = [
       lineOfScrimmage: 50,
     },
     messages: {
-      preSnap: ["The offensive line looks ready to let them in..."],
-      activePlay: ["Screen pass! Blockers out in front!"],
+      preSnap: ["The O-line looks ready to let them in..."],
+      activePlay: ["Screen pass! Blockers out front!"],
+      matchupOutcome: {
+        offense_fooled: [
+          "Blitzers flew past. Screen has a convoy! {yards}!",
+          "Run defense crashed. Screen wide open for {yards}!",
+          "The screen had three blockers and one defender. {yards}!",
+        ],
+        defense_read: [
+          "They sniffed the screen. Blown up at the line.",
+          "The defense played it perfectly. No chance.",
+        ],
+      },
     },
   },
   {
@@ -643,7 +730,13 @@ const passSafe: PlayDefinition[] = [
       lineOfScrimmage: 50,
     },
     messages: {
-      activePlay: ["Nothing deep — he looks to dump it off to the back."],
+      activePlay: ["Nothing deep. Dumps it to the back..."],
+      matchupOutcome: {
+        offense_fooled: [
+          "Defense crashed for run. Back alone in the flat for {yards}!",
+          "Nobody picked up the checkdown. {yards} free yards!",
+        ],
+      },
     },
   },
   {
@@ -753,8 +846,19 @@ const passAggressive: PlayDefinition[] = [
       lineOfScrimmage: 50,
     },
     messages: {
-      preSnap: ["Single high safety — this could be a deep shot."],
-      activePlay: ["He launches it deep! The receiver is streaking downfield!"],
+      preSnap: ["Single high safety. Could be a deep shot..."],
+      activePlay: ["He launches it deep!"],
+      matchupOutcome: {
+        offense_fooled: [
+          "Defense sold out for run. Wide open deep! {yards}!",
+          "Safety cheated up. Nobody over the top! {yards}!",
+          "Loaded box gave away the deep middle. {yards}!",
+        ],
+        defense_read: [
+          "Safety was sitting on this route. Perfect coverage.",
+          "Double coverage. They knew it was coming.",
+        ],
+      },
     },
   },
   {
@@ -786,8 +890,14 @@ const passAggressive: PlayDefinition[] = [
       lineOfScrimmage: 50,
     },
     messages: {
-      preSnap: ["Everyone is going deep. This is all or nothing."],
-      activePlay: ["He heaves it! The ball is in the air!"],
+      preSnap: ["Everyone going deep. All or nothing..."],
+      activePlay: ["He heaves it!"],
+      matchupOutcome: {
+        offense_fooled: [
+          "Defense loaded the box. Receivers running free! {yards}!",
+          "Nobody deep. The desperation heave has a chance! {yards}!",
+        ],
+      },
     },
   },
   {
@@ -814,7 +924,13 @@ const passAggressive: PlayDefinition[] = [
       lineOfScrimmage: 50,
     },
     messages: {
-      activePlay: ["Lobs it to the corner of the end zone!"],
+      activePlay: ["Lobs it to the corner!"],
+      matchupOutcome: {
+        offense_fooled: [
+          "Corner cheated up for run. Fade is 1-on-none! {yards}!",
+          "No safety help over the top. Easy fade for {yards}!",
+        ],
+      },
     },
   },
   {
@@ -899,7 +1015,13 @@ const passAggressive: PlayDefinition[] = [
       lineOfScrimmage: 50,
     },
     messages: {
-      activePlay: ["Screen to the wide side! Blockers setting up!"],
+      activePlay: ["Screen to the wide side!"],
+      matchupOutcome: {
+        offense_fooled: [
+          "Run D crashed inside. Perimeter open! {yards}!",
+          "The WR screen has a clean runway. {yards} yards!",
+        ],
+      },
     },
   },
   {
@@ -956,8 +1078,18 @@ const passAggressive: PlayDefinition[] = [
       lineOfScrimmage: 50,
     },
     messages: {
-      preSnap: ["The receiver is in motion — watch for a route combo."],
-      activePlay: ["Double move! He fakes the out and breaks deep!"],
+      preSnap: ["Receiver in motion. Watch for a route combo..."],
+      activePlay: ["Double move! Fakes out, breaks deep!"],
+      matchupOutcome: {
+        offense_fooled: [
+          "Defense playing run. Double move creates a void! {yards}!",
+          "LBs bit forward. The fake opened up the deep shot. {yards}!",
+        ],
+        defense_read: [
+          "Corner stayed patient. Double move fooled nobody.",
+          "Textbook discipline. The fake didn't sell.",
+        ],
+      },
     },
   },
 ]

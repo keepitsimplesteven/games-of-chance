@@ -103,6 +103,7 @@ export default function RoomPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Enter your name"
+            maxLength={30}
             className={`w-full rounded border-2 bg-transparent px-3 py-2 ${theme.bodyText} ${theme.listItem} focus:outline-none focus:ring-1`}
             autoFocus
           />

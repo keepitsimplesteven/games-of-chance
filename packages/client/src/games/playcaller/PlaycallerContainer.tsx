@@ -112,11 +112,57 @@ export function PlaycallerContainer() {
   // ═══════════════════════════════════════════════════════════════════════════
 
   if (phase === "COIN_TOSS") {
-    return <CoinTossCeremony />
+    const scheduleEntry = bracket.schedule?.[bracket.currentScheduleIndex]
+    const isConsolation = scheduleEntry?.mainBracketRoundIndex === null
+    const roundLabel = isConsolation ? (scheduleEntry?.description ?? "Consolation") : undefined
+
+    return (
+      <div className="flex flex-col items-center h-full overflow-hidden">
+        <div className="shrink-0 pt-4">
+          <RoundHeader
+            roundIndex={bracket.currentRoundIndex}
+            totalRounds={bracket.totalRounds}
+            label={roundLabel}
+          />
+        </div>
+        <CoinTossCeremony />
+      </div>
+    )
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BRACKET_PREVIEW phase: show the initial bracket before gameplay starts.
+  // Host sees a "Start First Round" button; players just view the bracket.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  if (phase === "BRACKET_PREVIEW") {
+    return (
+      <div className="flex flex-col h-full overflow-hidden">
+        <div className="shrink-0 flex flex-col items-center gap-2 pt-4">
+          <RoundHeader
+            roundIndex={0}
+            totalRounds={bracket.totalRounds}
+          />
+          <div className="text-sm text-[#f5c542] font-medium uppercase tracking-wider">
+            Starting Bracket
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 overflow-auto py-2">
+          <BracketVisualization bracket={bracket} />
+        </div>
+        <div className="shrink-0 w-full max-w-sm mx-auto px-4 pb-4 pt-2">
+          <RoundControls />
+        </div>
+      </div>
+    )
   }
 
   // Derive current schedule entry (handles both main bracket and consolation rounds)
   const currentScheduleEntry = bracket.schedule?.[bracket.currentScheduleIndex]
+
+  // Determine if this is a consolation-only round and compute a label override
+  const isConsolationRound = currentScheduleEntry?.mainBracketRoundIndex === null
+  const consolationLabel = isConsolationRound ? (currentScheduleEntry?.description ?? "Consolation") : undefined
 
   // Get active matchups from the current schedule entry (handles both main bracket and consolation)
   let activeMatchups: Matchup[] = []
@@ -228,17 +274,7 @@ export function PlaycallerContainer() {
             )
           }
 
-          // Show DriveCompletionOverlay, then switch to spectator after 5s
-          // if (otherActiveDrives.length > 0 && !showSpectator) {
-          //   return (
-          //     <DriveCompletionOverlayWithTimer
-          //       driveState={matchupDriveState}
-          //       onTransitionToSpectator={() => setShowSpectator(true)}
-          //     />
-          //   )
-          // }
-
-          // All drives complete — just show completion overlay (server will advance soon)
+          // All drives complete or player hasn't opted into spectating — fall through to DriveView
         }
 
         // Build list of other drives for the side panel
@@ -331,12 +367,18 @@ export function PlaycallerContainer() {
     // Show the just-resolved round's matchups (currentRoundIndex was already incremented)
     const resolvedRoundIndex = bracket.currentRoundIndex - 1
 
+    // Check if the just-resolved schedule entry was consolation-only
+    const prevScheduleEntry = bracket.schedule?.[bracket.currentScheduleIndex - 1]
+    const resolvedWasConsolation = prevScheduleEntry?.mainBracketRoundIndex === null
+    const resolvedLabel = resolvedWasConsolation ? (prevScheduleEntry?.description ?? "Consolation") : undefined
+
     return (
       <div className="flex flex-col h-full overflow-hidden">
         <div className="shrink-0 flex flex-col items-center gap-2 pt-4">
           <RoundHeader
             roundIndex={resolvedRoundIndex}
             totalRounds={bracket.totalRounds}
+            label={resolvedLabel}
           />
           <div className="text-sm text-[#f5c542] font-medium uppercase tracking-wider">
             Round Complete
@@ -359,6 +401,7 @@ export function PlaycallerContainer() {
         <RoundHeader
           roundIndex={bracket.currentRoundIndex}
           totalRounds={bracket.totalRounds}
+          label={consolationLabel}
         />
         <div className="flex flex-col items-center gap-6 w-full max-w-2xl md:flex-row md:items-start md:justify-center">
           {/* Main matchup panel */}
@@ -387,6 +430,7 @@ export function PlaycallerContainer() {
         <RoundHeader
           roundIndex={bracket.currentRoundIndex}
           totalRounds={bracket.totalRounds}
+          label={consolationLabel}
         />
         <SpectatorView
           matchups={activeMatchups}
@@ -404,6 +448,7 @@ export function PlaycallerContainer() {
       <RoundHeader
         roundIndex={bracket.currentRoundIndex}
         totalRounds={bracket.totalRounds}
+        label={consolationLabel}
       />
       <SpectatorView
         matchups={activeMatchups}
@@ -415,29 +460,3 @@ export function PlaycallerContainer() {
 }
 
 // ── Helper: Shows completion overlay, then transitions to spectator after 5s ──
-
-interface DriveCompletionOverlayWithTimerProps {
-  driveState: import("./field-utils.types").DriveState
-  onTransitionToSpectator: () => void
-}
-
-function DriveCompletionOverlayWithTimer({
-  driveState,
-  onTransitionToSpectator,
-}: DriveCompletionOverlayWithTimerProps) {
-  useEffect(() => {
-    const timer = setTimeout(onTransitionToSpectator, 5_000)
-    return () => clearTimeout(timer)
-  }, [onTransitionToSpectator])
-
-  return (
-    <div className="flex items-center justify-center h-full">
-      <DriveCompletionOverlay
-        driveState={driveState}
-        onAnimationDone={() => {
-          // Animation done — timer will handle the transition to spectator
-        }}
-      />
-    </div>
-  )
-}

@@ -32,6 +32,21 @@ export default function RoundControls() {
   // No buttons during PICKING or RESOLVING
   if (phase === "PICKING" || phase === "RESOLVING") return null
 
+  // BRACKET_PREVIEW phase: show "Start First Round" button (host only)
+  if (phase === "BRACKET_PREVIEW") {
+    return (
+      <div className="flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={startRound}
+          className={`w-full px-4 py-3 text-base font-bold uppercase tracking-wider active:scale-[0.98] ${theme.btnPrimary}`}
+        >
+          Start First Round
+        </button>
+      </div>
+    )
+  }
+
   // LOBBY phase: show "Start Round" only
   if (phase === "LOBBY") {
     return (

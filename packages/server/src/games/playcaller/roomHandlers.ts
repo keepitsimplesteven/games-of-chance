@@ -26,6 +26,7 @@ import {
 import { resolveCurrentRound, isFullyComplete, generateConsolationForRound, buildSchedule, getActiveMatchupsForSchedule } from "./BracketEngine"
 import { registry } from "../GameRegistry"
 import { PLAYCALLER, COIN_TOSS_CEREMONY } from "./constants"
+import { getBotDecisionDelay } from "../../bots/botTiming"
 import {
   createCeremonyStates,
   handleCoinCall,
@@ -229,6 +230,15 @@ export function handleCoinTossCall(
   // Broadcast updated state
   ctx.broadcastState()
 
+  // If the chooser is a bot, schedule its side choice automatically
+  const chooserId = ceremonyStates[payload.matchupId].chooserId
+  if (chooserId) {
+    const botIds = ctx.botManager.getBotIds()
+    if (botIds.includes(chooserId)) {
+      scheduleBotSideChoice(ctx, payload.matchupId, chooserId)
+    }
+  }
+
   // Check if all ceremonies are complete (unlikely here since we just moved to AWAITING_CHOICE)
   checkCeremonyCompletion(ctx)
 }
@@ -340,8 +350,7 @@ export function scheduleCoinTossBotActions(ctx: PlaycallerRoomContext): void {
 
     // If the caller is a bot and step is AWAITING_CALL, schedule coin call
     if (state.step === "AWAITING_CALL" && botIds.includes(state.callerId)) {
-      const delay = COIN_TOSS_CEREMONY.BOT_DELAY_MIN_MS +
-        Math.random() * (COIN_TOSS_CEREMONY.BOT_DELAY_MAX_MS - COIN_TOSS_CEREMONY.BOT_DELAY_MIN_MS)
+      const delay = getBotDecisionDelay()
 
       const timerId = setTimeout(() => {
         if (!ceremonyStates || !ceremonyStates[matchupId]) return
@@ -400,8 +409,7 @@ export function scheduleCoinTossBotActions(ctx: PlaycallerRoomContext): void {
  * Schedule a bot's side choice for a specific matchup.
  */
 function scheduleBotSideChoice(ctx: PlaycallerRoomContext, matchupId: string, chooserId: string): void {
-  const delay = COIN_TOSS_CEREMONY.BOT_DELAY_MIN_MS +
-    Math.random() * (COIN_TOSS_CEREMONY.BOT_DELAY_MAX_MS - COIN_TOSS_CEREMONY.BOT_DELAY_MIN_MS)
+  const delay = getBotDecisionDelay()
 
   const timerId = setTimeout(() => {
     if (!ceremonyStates || !ceremonyStates[matchupId]) return
@@ -871,7 +879,7 @@ export function schedulePlaycallerBotPicks(ctx: PlaycallerRoomContext): void {
       if (botId !== drive.offensePlayerId && botId !== drive.defensePlayerId) continue
 
       const isOffense = botId === drive.offensePlayerId
-      const delay = 1500 + Math.random() * 2000 // 1.5–3.5s delay (gives humans time to see UI)
+      const delay = getBotDecisionDelay()
 
       const timerId = setTimeout(() => {
         const play = isOffense

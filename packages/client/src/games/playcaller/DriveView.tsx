@@ -206,7 +206,9 @@ export function DriveView({
         lastEntry.down,
         circ,
         selectedPlay.messages,
-        axis
+        axis,
+        lastEntry.offensivePlay,
+        lastEntry.defensivePlay
       ),
     }
   }
@@ -298,6 +300,7 @@ export function DriveView({
       <PlayByPlayAnnouncer
         commentary={commentary}
         playKey={driveState.playHistory.length}
+        role={role}
         onOutcomeReveal={handleOutcomeReveal}
       />
 
