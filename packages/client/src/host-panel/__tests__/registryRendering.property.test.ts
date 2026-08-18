@@ -96,6 +96,7 @@ const roomStateArb: fc.Arbitrary<RoomState> = fc.record({
   }),
   settingsLocked: fc.boolean(),
   preGameRanks: fc.constant({}),
+  playerSeeds: fc.constant({}),
 })
 
 /**

@@ -6,36 +6,23 @@ import { actionRegistry } from "./ActionRegistry"
 import "./actions/kickPlayer"
 import "./actions/reassignHost"
 import "./actions/adjustScore"
+import "./actions/renamePlayer"
 
 export default function HostControlPanel() {
   const role = useGameStore((s) => s.role)
   const roomState = useGameStore((s) => s.roomState)
   const playerId = useGameStore((s) => s.playerId)
-  const [isOpen, setIsOpen] = useState(false)
+  const isOpen = useGameStore((s) => s.hostPanelOpen)
+  const setHostPanelOpen = useGameStore((s) => s.setHostPanelOpen)
   const [activeAction, setActiveAction] = useState<string | null>(null)
 
   // Auto-close when demoted from host
   if (role !== "host") {
-    if (isOpen) setIsOpen(false)
+    if (isOpen) setHostPanelOpen(false)
     return null
   }
 
-  if (!isOpen) {
-    return (
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        className="fixed z-40 flex h-12 w-12 items-center justify-center rounded-full bg-gray-800 text-white shadow-lg"
-        style={{
-          bottom: 'calc(1rem + var(--safe-area-bottom, 0px))',
-          right: 'calc(1rem + var(--safe-area-right, 0px))',
-        }}
-        aria-label="Open Host Control Panel"
-      >
-        ⚙️
-      </button>
-    )
-  }
+  if (!isOpen) return null
 
   const actions = actionRegistry.getAll()
   const ActiveComponent = activeAction
@@ -56,7 +43,7 @@ export default function HostControlPanel() {
         <h2 className="text-lg font-bold">Host Controls</h2>
         <button
           type="button"
-          onClick={() => { setIsOpen(false); setActiveAction(null) }}
+          onClick={() => { setHostPanelOpen(false); setActiveAction(null) }}
           className="text-2xl text-zinc-400"
           aria-label="Close"
         >

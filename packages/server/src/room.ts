@@ -109,6 +109,8 @@ interface LiveRoomState {
   lotteryState: LotteryState | null
   /** Draft pick state — active during DRAFT_PICK phase */
   draftPickState: DraftPickState | null
+  /** Host-assigned seed overrides. Future intent: override default join-order seeding in Playcaller Lottery mode. */
+  playerSeeds: Record<string, number>
 }
 
 // ── Default configuration ──────────────────────────────────────────────────
@@ -211,6 +213,7 @@ export class GameRoom extends Server {
       preGameRanks: {},
       lotteryState: null,
       draftPickState: null,
+      playerSeeds: {},
     }
   }
 
@@ -262,6 +265,12 @@ export class GameRoom extends Server {
         break
       case "ADJUST_SCORE":
         this.handleAdjustScore(sender, msg.payload)
+        break
+      case "RENAME_PLAYER":
+        this.handleRenamePlayer(sender, msg.payload)
+        break
+      case "SET_PLAYER_SEEDS":
+        this.handleSetPlayerSeeds(sender, msg.payload)
         break
       case "UPDATE_SETTINGS":
         this.handleUpdateSettings(sender, msg.payload)
@@ -995,6 +1004,47 @@ export class GameRoom extends Server {
 
     // Reconcile bots after a player is kicked (add a bot to replace the kicked human)
     this.reconcileBots()
+  }
+
+  private handleRenamePlayer(
+    sender: Connection,
+    payload: { playerId: string; newName: string }
+  ) {
+    // Authorization: only host can rename players
+    const hostId = this.getHostId()
+    const senderId = this.getPlayerIdByConnectionId(sender.id)
+    if (senderId !== hostId) {
+      this.sendError(sender, "NOT_HOST", "Only the host can rename players")
+      return
+    }
+
+    // Validate target exists
+    const target = this.state.players[payload.playerId]
+    if (!target) {
+      this.sendError(sender, "INVALID_TARGET", "Player not found")
+      return
+    }
+
+    // Update name and broadcast
+    target.name = payload.newName
+    this.broadcastState()
+  }
+
+  private handleSetPlayerSeeds(
+    sender: Connection,
+    payload: { seeds: Record<string, number> }
+  ) {
+    // Authorization: only host can set player seeds
+    const hostId = this.getHostId()
+    const senderId = this.getPlayerIdByConnectionId(sender.id)
+    if (senderId !== hostId) {
+      this.sendError(sender, "NOT_HOST", "Only the host can set player seeds")
+      return
+    }
+
+    // Future intent: manual override of default join-order seeding in Playcaller Lottery mode
+    this.state.playerSeeds = payload.seeds
+    this.broadcastState()
   }
 
   private handleReassignHost(
@@ -2823,6 +2873,7 @@ export class GameRoom extends Server {
       lotteryState: this.state.lotteryState ?? null,
       draftPickState: this.state.draftPickState ?? null,
       preGameRanks: this.state.preGameRanks,
+      playerSeeds: this.state.playerSeeds ?? {},
     }
   }
 }

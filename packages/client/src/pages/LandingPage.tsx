@@ -8,10 +8,10 @@ export default function LandingPage() {
   const theme = useTheme()
   const [roomCode, setRoomCode] = useState("")
   const [scoringMode, setScoringMode] = useState<ScoringMode>("chips")
-  const [progressionMode, setProgressionMode] = useState<ProgressionMode>("tournament")
-  const [roomSize, setRoomSize] = useState(4)
+  const [progressionMode, setProgressionMode] = useState<ProgressionMode>("lottery")
+  const [roomSize, setRoomSize] = useState(10)
   const [draftPickEnabled, setDraftPickEnabled] = useState(false)
-  const [skipGameplay, setSkipGameplay] = useState(true)
+  const [skipGameplay, setSkipGameplay] = useState(false)
 
   function handleCreateRoom() {
     const roomId = crypto.randomUUID()
