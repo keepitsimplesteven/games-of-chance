@@ -7,23 +7,44 @@ import { useTheme } from "../../theme"
  * Shows the final session leaderboard as definitive tournament results
  * with a podium-style layout and celebratory visual treatment for the winner.
  *
+ * In lottery mode, uses lottery placements for rankings instead of session points.
+ *
  * Validates: Requirements 6.3, 6.4
  */
 export default function TournamentEndView() {
   const sessionLeaderboard = useGameStore((s) => s.roomState?.sessionLeaderboard)
   const playerId = useGameStore((s) => s.playerId)
+  const lotteryState = useGameStore((s) => s.roomState?.lotteryState)
+  const players = useGameStore((s) => s.roomState?.players ?? [])
+  const progressionMode = useGameStore((s) => s.roomState?.room.progressionMode)
   const theme = useTheme()
 
-  if (!sessionLeaderboard || sessionLeaderboard.length === 0) {
+  const isLotteryMode = progressionMode === "lottery"
+
+  // Build sorted entries: lottery mode uses placements, normal mode uses session leaderboard
+  let sorted: Array<{ playerId: string; playerName: string; sessionPoints: number; rank: number }>
+
+  if (isLotteryMode && lotteryState?.placements) {
+    // Use lottery placements as final rankings
+    sorted = players.map((p) => ({
+      playerId: p.id,
+      playerName: p.name,
+      sessionPoints: 0,
+      rank: lotteryState.placements[p.id] ?? players.length,
+    })).sort((a, b) => a.rank - b.rank)
+  } else if (sessionLeaderboard && sessionLeaderboard.length > 0) {
+    sorted = [...sessionLeaderboard].sort((a, b) => a.rank - b.rank)
+  } else {
+    sorted = []
+  }
+
+  if (sorted.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <p className={theme.mutedText}>No results available.</p>
       </div>
     )
   }
-
-  // Sort by rank to ensure correct ordering
-  const sorted = [...sessionLeaderboard].sort((a, b) => a.rank - b.rank)
   const winner = sorted[0]
   const second = sorted[1]
   const third = sorted[2]
@@ -49,6 +70,7 @@ export default function TournamentEndView() {
             entry={second}
             position={2}
             isCurrentPlayer={second.playerId === playerId}
+            isLotteryMode={isLotteryMode}
           />
         )}
 
@@ -58,6 +80,7 @@ export default function TournamentEndView() {
             entry={winner}
             position={1}
             isCurrentPlayer={winner.playerId === playerId}
+            isLotteryMode={isLotteryMode}
           />
         )}
 
@@ -67,6 +90,7 @@ export default function TournamentEndView() {
             entry={third}
             position={3}
             isCurrentPlayer={third.playerId === playerId}
+            isLotteryMode={isLotteryMode}
           />
         )}
       </div>
@@ -96,9 +120,11 @@ export default function TournamentEndView() {
                       )}
                     </span>
                   </div>
-                  <span className={`text-sm font-semibold ${theme.accentText}`}>
-                    {entry.sessionPoints} pts
-                  </span>
+                  {!isLotteryMode && (
+                    <span className={`text-sm font-semibold ${theme.accentText}`}>
+                      {entry.sessionPoints} pts
+                    </span>
+                  )}
                 </div>
               )
             })}
@@ -210,9 +236,10 @@ interface PodiumSlotProps {
   entry: { playerId: string; playerName: string; sessionPoints: number; rank: number }
   position: 1 | 2 | 3
   isCurrentPlayer: boolean
+  isLotteryMode: boolean
 }
 
-function PodiumSlot({ entry, position, isCurrentPlayer }: PodiumSlotProps) {
+function PodiumSlot({ entry, position, isCurrentPlayer, isLotteryMode }: PodiumSlotProps) {
   const theme = useTheme()
   const isWinner = position === 1
 
@@ -232,10 +259,12 @@ function PodiumSlot({ entry, position, isCurrentPlayer }: PodiumSlotProps) {
         {isCurrentPlayer && <span className={`ml-0.5 ${theme.mutedText}`}>(you)</span>}
       </span>
 
-      {/* Points */}
-      <span className={`text-xs font-bold ${theme.accentText}`}>
-        {entry.sessionPoints} pts
-      </span>
+      {/* Points — hidden in lottery mode */}
+      {!isLotteryMode && (
+        <span className={`text-xs font-bold ${theme.accentText}`}>
+          {entry.sessionPoints} pts
+        </span>
+      )}
 
       {/* Podium block */}
       <div

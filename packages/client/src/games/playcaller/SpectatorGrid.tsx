@@ -134,7 +134,7 @@ function SpectatorMatchupCard({ matchupId, driveState, onSelect }: SpectatorMatc
       {/* Player names */}
       <div className="flex justify-between items-center">
         <span
-          className={`text-[12px] font-bold truncate ${
+          className={`text-[18px] font-bold ${
             displayIsComplete && winnerId !== driveState.offensePlayerId
               ? "line-through text-gray-500"
               : displayIsComplete && winnerId === driveState.offensePlayerId
@@ -144,11 +144,11 @@ function SpectatorMatchupCard({ matchupId, driveState, onSelect }: SpectatorMatc
         >
           {seeds[driveState.offensePlayerId] ? `(${seeds[driveState.offensePlayerId]}) ` : ""}{getPlayerName(driveState.offensePlayerId)}
         </span>
-        <span className={`text-[8px] ${theme.mutedText} opacity-60 mx-1`}>
+        <span className={`text-[14px] ${theme.mutedText} opacity-60 mx-1`}>
           vs
         </span>
         <span
-          className={`text-[12px] font-bold truncate ${
+          className={`text-[18px] font-bold  ${
             displayIsComplete && winnerId !== driveState.defensePlayerId
               ? "line-through text-gray-500"
               : displayIsComplete && winnerId === driveState.defensePlayerId
@@ -161,19 +161,19 @@ function SpectatorMatchupCard({ matchupId, driveState, onSelect }: SpectatorMatc
       </div>
 
       {/* Status: outcome when complete, down/distance when active */}
-      <div className="text-center mt-1">
+      <div className="text-center mt-4">
         {displayIsComplete && endingType ? (
-          <span className={`text-[10px] font-bold ${
+          <span className={`text-[18px] font-bold ${
             endingType === "touchdown" ? theme.statusSuccess : theme.statusDanger
           }`}>
             {formatEndingType(endingType)}
           </span>
         ) : (
           <>
-            <span className={`text-[10px] font-bold ${theme.accentText}`}>
+            <span className={`text-[18px] font-bold ${theme.accentText}`}>
               {formatDownDistance(displayDown, displayYardsToGo, displayYardLine)}
             </span>
-            <span className={`text-[9px] ${theme.mutedText} ml-1`}>
+            <span className={`text-[16px] ${theme.mutedText} ml-1`}>
               • Ball on {displayYardLine}
             </span>
           </>

@@ -14,7 +14,7 @@ export type GameType = string
 export type ScoringMode = "grand-prix" | "chips"
 
 /** Progression mode — selected by host at room creation, orthogonal to ScoringMode */
-export type ProgressionMode = "endless" | "tournament"
+export type ProgressionMode = "endless" | "tournament" | "lottery"
 
 /** Status of a game tile in tournament mode */
 export type TournamentTileStatus = "available" | "locked" | "unavailable"
@@ -82,6 +82,8 @@ export interface RoomConfig {
   roomSize: number
   /** Progression mode — "endless" (default) or "tournament" */
   progressionMode: ProgressionMode
+  /** Whether draft pick selection is enabled (lottery mode sub-toggle) */
+  draftPickEnabled?: boolean
 }
 
 export interface Player {
@@ -100,7 +102,7 @@ export interface Player {
  * Valid room phases. NO BETWEEN_ROUNDS phase exists.
  * RESULT transitions directly to PICKING (next round) or LOBBY (game ended).
  */
-export type RoundPhase = "LOBBY" | "SPLASH" | "COIN_TOSS" | "PICKING" | "RESOLVING" | "RESULT" | "END_GAME" | "END_TOURNAMENT"
+export type RoundPhase = "LOBBY" | "SPLASH" | "COIN_TOSS" | "PICKING" | "RESOLVING" | "RESULT" | "END_GAME" | "END_TOURNAMENT" | "LOTTERY_REVEAL" | "DRAFT_PICK"
 
 export interface RoundState {
   phase: RoundPhase
@@ -213,6 +215,10 @@ export interface RoomState {
   gameVotes?: Record<string, string[]>
   /** Tournament progress — present when progressionMode is "tournament" */
   tournamentProgress?: TournamentProgress | null
+  /** Lottery state — present during LOTTERY_REVEAL and DRAFT_PICK phases */
+  lotteryState?: LotteryState | null
+  /** Draft pick state — present during DRAFT_PICK phase */
+  draftPickState?: DraftPickState | null
   /** Pre-game session rank snapshot for risers/fallers display. Key = playerId, value = rank before game started. */
   preGameRanks: Record<string, number>
 }
@@ -264,7 +270,7 @@ export interface BigWheelGameState {
 
 /** Client → Server messages */
 export type ClientMessage =
-  | { type: "JOIN"; payload: { name: string; role: "host" | "player"; clientId: string; reconnectPlayerId?: string; scoringMode?: ScoringMode; roomSize?: number; progressionMode?: ProgressionMode } }
+  | { type: "JOIN"; payload: { name: string; role: "host" | "player"; clientId: string; reconnectPlayerId?: string; scoringMode?: ScoringMode; roomSize?: number; progressionMode?: ProgressionMode; draftPickEnabled?: boolean; skipGameplay?: boolean } }
   | { type: "SUBMIT_PICK"; payload: { pick: unknown } }
   | { type: "START_ROUND"; payload?: never }
   | { type: "END_GAME"; payload?: never }
@@ -284,6 +290,8 @@ export type ClientMessage =
   | { type: "PLAY_SELECTION"; payload: { matchupId: string; play: string } }
   | { type: "COIN_TOSS_CALL"; payload: { matchupId: string; side: CoinSide } }
   | { type: "COIN_TOSS_CHOICE"; payload: { matchupId: string; selection: SideSelection } }
+  | { type: "DRAFT_PICK_SELECTION"; payload: { position: number } }
+  | { type: "ADVANCE_LOTTERY_PHASE"; payload?: never }
 
 /** Server → Client messages */
 export type ServerMessage =
@@ -295,6 +303,21 @@ export type ServerMessage =
 
 
 // ── Playcaller Tournament ──────────────────────────────────────────────────
+
+/** Lottery state — present during LOTTERY_REVEAL and DRAFT_PICK phases */
+export interface LotteryState {
+  oddsTable: number[][]
+  placements: Record<string, number>
+  matchupWinners: Record<string, string>
+}
+
+/** Draft pick state — present during DRAFT_PICK phase */
+export interface DraftPickState {
+  pickOrder: string[]
+  currentPickIndex: number
+  selections: Record<string, number>
+  availablePositions: number[]
+}
 
 /** Playcaller pick — Phase 1: any value accepted (unused) */
 export interface PlaycallerPick {
@@ -327,6 +350,30 @@ export interface BracketRound {
   resolved: boolean
 }
 
+/** A consolation round — placement games between players eliminated in the same main bracket round */
+export interface ConsolationRound {
+  /** Index of this consolation round within the consolation bracket */
+  roundIndex: number
+  /** Matchups in this consolation round */
+  matchups: Matchup[]
+  /** Whether this consolation round has been resolved */
+  resolved: boolean
+  /** Which main bracket round's losers are playing in this consolation round */
+  sourceRoundIndex: number
+  /** Starting placement position for the winner of the top matchup in this group */
+  placementStart: number
+}
+
+/** A schedule entry mapping a game round to its main-bracket and consolation matchups */
+export interface GameRoundSchedule {
+  /** Index into bracket.rounds for the main-bracket matchups this game round, or null if no main-bracket matchups */
+  mainBracketRoundIndex: number | null
+  /** Indices into bracket.consolationRounds for consolation matchups running concurrently */
+  consolationRoundIndices: number[]
+  /** Human-readable description of this game round (e.g., "Quarterfinals + 9th/10th") */
+  description: string
+}
+
 /** Complete bracket state */
 export interface Bracket {
   /** All rounds in the bracket */
@@ -339,6 +386,14 @@ export interface Bracket {
   seeds: Record<string, number>
   /** Eliminated players and the round they were eliminated in */
   eliminated: Record<string, number>
+  /** Consolation rounds for determining unique placements among tied players */
+  consolationRounds: ConsolationRound[]
+  /** Index of the current active consolation round */
+  currentConsolationIndex: number
+  /** Game round schedule mapping each game round to its main-bracket + consolation matchups */
+  schedule: GameRoundSchedule[]
+  /** Index of the current active schedule entry */
+  currentScheduleIndex: number
 }
 
 /** Result of resolving a bracket round */
@@ -349,6 +404,15 @@ export interface PlaycallerRoundResult {
   matchups: Matchup[]
   /** Whether the tournament is complete (champion found) */
   isComplete: boolean
+  /** Consolation matchups resolved this round (if any) */
+  consolationMatchups?: Matchup[]
+  /** Context for consolation matchups resolved this round (for UI rendering) */
+  consolationContext?: {
+    /** Starting placement position for winners in this consolation group */
+    placementStart: number
+    /** Description of the consolation group (e.g., "5th-8th Semifinals") */
+    description: string
+  }[]
 }
 
 // ── Playcaller Drive State ─────────────────────────────────────────────────

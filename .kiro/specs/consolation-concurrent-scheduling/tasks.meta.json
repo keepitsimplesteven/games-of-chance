@@ -1,0 +1,268 @@
+{
+  "pbtResults": {
+    "1. Write bug condition exploration test": {
+      "status": "passed",
+      "failingExample": "Test FAILED as expected on unfixed code (confirming bug exists). 4 out of 5 tests failed:\n\n1. \"after play-in resolves (10 players), consolation rounds should exist for eliminated players\"\n   Counterexample: [[false,false]]\n   AssertionError: expected 0 to be greater than 0\n   → bracket.consolationRounds.length is 0 after play-in resolves (no incremental generation)\n\n2. \"active matchups for next game round should include BOTH quarterfinal AND consolation matchups\"\n   Counterexample: [[false,false]]\n   AssertionError: expected 0 to be greater than 0\n   → consolationMatchups.length is 0 (consolationRounds empty, so no consolation matchups exist)\n\n3. \"beginPlaycallerDown logic: isComplete gate prevents consolation from running concurrently\"\n   Counterexample: [[false,false]]\n   AssertionError: expected false to be true\n   → hasConsolationInActive is false (eliminated players never appear in active matchups because isComplete gate is mutually exclusive)\n\n4. \"sequential consolation after finals: system should NOT defer all consolation to post-finals\"\n   AssertionError: expected false to be true\n   → hasIncrementalGeneration is false (consolationCountAfterEachRound is [0, 0, 0, 0] — all rounds have 0 consolation rounds generated)\n\n1 test PASSED (confirming the hang mechanism):\n- \"consolation round with empty playerA/playerB should not be included in active matchups\"\n  → Confirms that filtering empty slots results in activeMatchups.length === 0 (the hang condition)",
+      "lastRunTimestamp": 1786962284333
+    },
+    "2. Write preservation property tests (BEFORE implementing fix)": {
+      "status": "passed",
+      "lastRunTimestamp": 1786962468166
+    },
+    "3.11 Verify preservation tests still pass": {
+      "status": "passed",
+      "lastRunTimestamp": 1786987078732
+    },
+    "3.10 Verify bug condition exploration test now passes": {
+      "status": "passed",
+      "lastRunTimestamp": 1786987286183
+    }
+  },
+  "executionHistory": {
+    "1. Write bug condition exploration test": [
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786962059961
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786962068482
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786962496067
+      }
+    ],
+    "2. Write preservation property tests (BEFORE implementing fix)": [
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786962060015
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786962069287
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786962497045
+      }
+    ],
+    "3.1 Add `GameRoundSchedule` type and update `Bracket` interface in shared types": [
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786962060065
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786962504706
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786985178984
+      }
+    ],
+    "3.2 Implement `generateConsolationForRound` in BracketEngine": [
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786962060100
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786985184244
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786985578412
+      }
+    ],
+    "3.3 Implement `buildSchedule` in BracketEngine": [
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786962060130
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786985185017
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786985579153
+      }
+    ],
+    "3.4 Implement `getActiveMatchupsForSchedule` in BracketEngine": [
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786962060170
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786985185884
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786985580107
+      }
+    ],
+    "3.5 Update `advancePlaycallerBracket` in roomHandlers to use schedule-based advancement": [
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786962060206
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786985590531
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786986539017
+      }
+    ],
+    "3.6 Update `beginPlaycallerDown`, `beginCoinTossPhase`, and `transitionToPicking` to use schedule-based matchup lookup": [
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786962060248
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786985591581
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786986540124
+      }
+    ],
+    "3.7 Update `PlaycallerPlugin.resolveRound` SKIP_GAMEPLAY path": [
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786962060287
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786986544429
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786987027328
+      }
+    ],
+    "3.8 Update `BracketVisualization.tsx` to render consolation matchups": [
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786962060323
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786985186781
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786985581065
+      }
+    ],
+    "3.9 Update `generateBracket` to initialize schedule": [
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786962060359
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786985187679
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786985582022
+      }
+    ],
+    "3.10 Verify bug condition exploration test now passes": [
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786962060399
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786987031340
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786987304997
+      }
+    ],
+    "3.11 Verify preservation tests still pass": [
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786962060439
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786987032105
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786987305796
+      }
+    ],
+    "4. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786962060475
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786987311092
+      },
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786987468293
+      }
+    ],
+    "3. Implement concurrent consolation scheduling fix": [
+      {
+        "executionId": "c321de68-f2a8-43a8-8798-13c0f6fbd93c",
+        "chatSessionId": "sess_407002a5-00ab-43f6-be12-2a9a6d2ab4e1",
+        "timestamp": 1786987305835
+      }
+    ]
+  }
+}

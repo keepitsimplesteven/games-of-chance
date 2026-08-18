@@ -115,9 +115,28 @@ export function PlaycallerContainer() {
     return <CoinTossCeremony />
   }
 
-  // Get current round's matchups for display
-  const currentRound = bracket.rounds[bracket.currentRoundIndex]
-  const activeMatchups: Matchup[] = currentRound?.matchups ?? []
+  // Derive current schedule entry (handles both main bracket and consolation rounds)
+  const currentScheduleEntry = bracket.schedule?.[bracket.currentScheduleIndex]
+
+  // Get active matchups from the current schedule entry (handles both main bracket and consolation)
+  let activeMatchups: Matchup[] = []
+  if (currentScheduleEntry) {
+    if (currentScheduleEntry.mainBracketRoundIndex !== null) {
+      // Main bracket round
+      const mainRound = bracket.rounds[currentScheduleEntry.mainBracketRoundIndex]
+      activeMatchups = mainRound?.matchups ?? []
+    } else {
+      // Consolation round — gather all matchups from referenced consolation rounds
+      for (const cIdx of currentScheduleEntry.consolationRoundIndices) {
+        const cRound = bracket.consolationRounds[cIdx]
+        if (cRound) {
+          activeMatchups.push(...cRound.matchups)
+        }
+      }
+    }
+  }
+  // Filter out empty matchups (TBD slots)
+  activeMatchups = activeMatchups.filter((m) => m.playerA !== "" && m.playerB !== "")
 
   // Find this player's matchup (if active competitor)
   const playerMatchup = activeMatchups.find(
@@ -128,8 +147,9 @@ export function PlaycallerContainer() {
     (m) => m.playerA !== playerId && m.playerB !== playerId
   )
 
-  // Derive round name for Phase 2 DriveView
-  const roundName = getRoundName(bracket.currentRoundIndex, bracket.totalRounds)
+  // Derive round name from the current schedule entry (not raw currentRoundIndex)
+  // During consolation, currentRoundIndex points to finals but schedule says "Consolation"
+  const roundName = currentScheduleEntry?.description ?? getRoundName(bracket.currentRoundIndex, bracket.totalRounds)
 
   // ═══════════════════════════════════════════════════════════════════════════
   // Phase 2: Drive states present — render interactive drive experience

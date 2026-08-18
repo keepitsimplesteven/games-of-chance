@@ -35,6 +35,13 @@ function buildMockBracket(overrides?: Partial<Bracket>): Bracket {
     totalRounds: 2,
     seeds: { p1: 1, p2: 2, p3: 3, p4: 4 },
     eliminated: {},
+    consolationRounds: [],
+    currentConsolationIndex: 0,
+    schedule: [
+      { mainBracketRoundIndex: 0, consolationRoundIndices: [], description: "Round 1" },
+      { mainBracketRoundIndex: 1, consolationRoundIndices: [], description: "Round 2" },
+    ],
+    currentScheduleIndex: 1,
     ...overrides,
   }
 }

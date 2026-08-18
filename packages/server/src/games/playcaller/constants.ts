@@ -15,7 +15,7 @@ export const PLAYCALLER = {
   ROUND_INTRO_DELAY_MS: 3_000,
 
   /** Default score table: placement position → points */
-  DEFAULT_SCORE_TABLE: [250, 125, 75, 50, 35, 25, 15, 10, 5, 5] as const,
+  DEFAULT_SCORE_TABLE: [250, 125, 75, 50, 35, 25, 15, 10, 5, 1] as const,
 
   /** Minimum players for a valid bracket */
   MIN_PLAYERS: 2,

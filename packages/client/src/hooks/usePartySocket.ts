@@ -59,10 +59,10 @@ export function usePartySocket(
       })
 
       // Send JOIN message upon connection with clientId for stable identity
-      const { clientId, reconnectPlayerId, scoringMode, progressionMode, roomSize } = useGameStore.getState()
+      const { clientId, reconnectPlayerId, scoringMode, progressionMode, roomSize, draftPickEnabled, skipGameplay } = useGameStore.getState()
       const joinMsg: ClientMessage = {
         type: "JOIN",
-        payload: { name: playerName, role: roleRef.current, clientId: clientId!, ...(reconnectPlayerId ? { reconnectPlayerId } : {}), ...(scoringMode ? { scoringMode } : {}), ...(roomSize ? { roomSize } : {}), ...(progressionMode ? { progressionMode } : {}) },
+        payload: { name: playerName, role: roleRef.current, clientId: clientId!, ...(reconnectPlayerId ? { reconnectPlayerId } : {}), ...(scoringMode ? { scoringMode } : {}), ...(roomSize ? { roomSize } : {}), ...(progressionMode ? { progressionMode } : {}), ...(draftPickEnabled !== undefined ? { draftPickEnabled } : {}), ...(skipGameplay !== undefined ? { skipGameplay } : {}) },
       }
       socket.send(JSON.stringify(joinMsg))
     })

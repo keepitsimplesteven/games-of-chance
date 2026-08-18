@@ -1,0 +1,1421 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Extend shared types with consolation bracket structures": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954581367
+      },
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954590714
+      },
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786955173491
+      }
+    ],
+    "1.2 Implement consolation round generation in BracketEngine": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954581422
+      },
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786955180244
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955553621
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955565819
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956006276
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956015271
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956964296
+      }
+    ],
+    "1.3 Implement consolation round resolution in BracketEngine": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954581499
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955553678
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956006331
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956972823
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786957165998
+      }
+    ],
+    "1.4 Update computePlacements to use consolation results": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954581548
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955553732
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956006379
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786957173643
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957778499
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957787448
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786958215476
+      }
+    ],
+    "1.5 Wire consolation rounds into the room game loop": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954581595
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955553787
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956006428
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957778556
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786958223022
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958741643
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958750172
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959087713
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959096870
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959360715
+      }
+    ],
+    "2.1 Create lottery odds module": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954581644
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955553850
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956006483
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957778624
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958741686
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959087779
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959368439
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959475414
+      }
+    ],
+    "2.2 Implement the drawPlacements function": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954581694
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955553922
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956006529
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957778675
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958741749
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959087822
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959482375
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959649745
+      }
+    ],
+    "2.3 Create barrel export for lottery module": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954581737
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955553996
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956006573
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957778722
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958741792
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959087869
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959657242
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959692635
+      }
+    ],
+    "3.1 Implement deriveMatchupWinners function": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954581791
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955554054
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956006611
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957778780
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958741832
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959087916
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959700335
+      }
+    ],
+    "3.2 Handle bracket advancement simulation in deriveWinners": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954581835
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955554108
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956006660
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957778828
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958741875
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959087960
+      }
+    ],
+    "4.1 Create suppressLoserVictory function": [
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955554164
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956006704
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957778869
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958741923
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959088016
+      },
+      {
+        "executionId": "bee3f9cb-eb0d-4fac-9bc8-33b39a688f4f",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003069114
+      },
+      {
+        "executionId": "bee3f9cb-eb0d-4fac-9bc8-33b39a688f4f",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003079587
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003383726
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003395598
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003666429
+      }
+    ],
+    "4.2 Implement defense-loser turnover suppression": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954581922
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955554224
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956006751
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957778930
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958741971
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959088064
+      },
+      {
+        "executionId": "bee3f9cb-eb0d-4fac-9bc8-33b39a688f4f",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003069168
+      },
+      {
+        "executionId": "bee3f9cb-eb0d-4fac-9bc8-33b39a688f4f",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003080342
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003383772
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003716886
+      }
+    ],
+    "4.3 Implement defense-loser turnover-on-downs suppression": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954581966
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955554294
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956006810
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957778969
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958742014
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959088116
+      },
+      {
+        "executionId": "bee3f9cb-eb0d-4fac-9bc8-33b39a688f4f",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003069245
+      },
+      {
+        "executionId": "bee3f9cb-eb0d-4fac-9bc8-33b39a688f4f",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003081202
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003383815
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003717747
+      }
+    ],
+    "5.1 Create resolveLotteryDown wrapper": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954582018
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955554368
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956006857
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957779015
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958742060
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959088174
+      },
+      {
+        "executionId": "bee3f9cb-eb0d-4fac-9bc8-33b39a688f4f",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003069293
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003383876
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787004219771
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787004592277
+      }
+    ],
+    "5.2 Create createLotteryDriveResolver": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954582083
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955554421
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956006906
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957779057
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958742103
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959088223
+      },
+      {
+        "executionId": "bee3f9cb-eb0d-4fac-9bc8-33b39a688f4f",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003069341
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003383920
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787004220561
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787004593021
+      }
+    ],
+    "5.3 Add lottery winners module state to PlaycallerPlugin": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954582134
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955554469
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956006946
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957779098
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958742145
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959088273
+      },
+      {
+        "executionId": "bee3f9cb-eb0d-4fac-9bc8-33b39a688f4f",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003069386
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003383972
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787004221473
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787004593998
+      }
+    ],
+    "6.1 Extend shared types for lottery mode": [
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955554537
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956006990
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957779142
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958742187
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959088327
+      },
+      {
+        "executionId": "bee3f9cb-eb0d-4fac-9bc8-33b39a688f4f",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003069434
+      },
+      {
+        "executionId": "bee3f9cb-eb0d-4fac-9bc8-33b39a688f4f",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003082016
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003384011
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003396447
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003667199
+      }
+    ],
+    "6.2 Wire lottery mode through server room": [
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955554582
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956007033
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957779183
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958742234
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959088371
+      },
+      {
+        "executionId": "bee3f9cb-eb0d-4fac-9bc8-33b39a688f4f",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003069484
+      },
+      {
+        "executionId": "bee3f9cb-eb0d-4fac-9bc8-33b39a688f4f",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003082900
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003384057
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003725714
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787004215346
+      }
+    ],
+    "6.3 Add Lottery toggle to client landing page": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954582295
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955554632
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956007080
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957779225
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958742282
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959088412
+      },
+      {
+        "executionId": "bee3f9cb-eb0d-4fac-9bc8-33b39a688f4f",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003069538
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003384098
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003397306
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003668266
+      }
+    ],
+    "7.1 Perform lottery draw during bracket initialization": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954582332
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955554682
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956007128
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957779269
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958742324
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959088455
+      },
+      {
+        "executionId": "bee3f9cb-eb0d-4fac-9bc8-33b39a688f4f",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003069580
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003384136
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787004778950
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787005080120
+      }
+    ],
+    "7.2 Wire lottery resolver for SKIP_GAMEPLAY mode": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954582382
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955554730
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956007169
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957779314
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958742366
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959088506
+      },
+      {
+        "executionId": "bee3f9cb-eb0d-4fac-9bc8-33b39a688f4f",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003069621
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003384181
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787004779721
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787005080847
+      }
+    ],
+    "7.3 Handle post-bracket lottery phase transitions": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954582429
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955554776
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956007214
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957779351
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958742415
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959088569
+      },
+      {
+        "executionId": "bee3f9cb-eb0d-4fac-9bc8-33b39a688f4f",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003069671
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003384224
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787004780628
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787005081746
+      }
+    ],
+    "8.1 Create LotteryRevealScreen component": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954582482
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955554824
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956007260
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957779397
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958742470
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959088618
+      },
+      {
+        "executionId": "bee3f9cb-eb0d-4fac-9bc8-33b39a688f4f",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003069717
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003384289
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787005088225
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787005440711
+      }
+    ],
+    "8.2 Add host advance button and phase routing": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954582526
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955554874
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956007328
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957779434
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958742513
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959088662
+      },
+      {
+        "executionId": "bee3f9cb-eb0d-4fac-9bc8-33b39a688f4f",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003069765
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003384330
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787005088951
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787005441648
+      }
+    ],
+    "9.1 Create DraftPickScreen component": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954582571
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955554936
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956007371
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957779481
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958742554
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959088704
+      },
+      {
+        "executionId": "bee3f9cb-eb0d-4fac-9bc8-33b39a688f4f",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003069814
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003384369
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787005089788
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787005442531
+      }
+    ],
+    "9.2 Wire DraftPickScreen into GameView routing": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954582624
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955554987
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956007415
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957779525
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958742597
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959088754
+      },
+      {
+        "executionId": "bee3f9cb-eb0d-4fac-9bc8-33b39a688f4f",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003069858
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003384406
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787005090642
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787005443339
+      }
+    ],
+    "10.1 Create lottery integration test suite": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954582668
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955555035
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956007460
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957779565
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958742639
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959088812
+      },
+      {
+        "executionId": "bee3f9cb-eb0d-4fac-9bc8-33b39a688f4f",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003069911
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003384446
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787005449905
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787006518540
+      }
+    ],
+    "10.2 Statistical validation of lottery draw": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954582723
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955555087
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956007505
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957779610
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958742685
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959088864
+      },
+      {
+        "executionId": "bee3f9cb-eb0d-4fac-9bc8-33b39a688f4f",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003069959
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003384488
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787005450673
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787006519411
+      }
+    ],
+    "10.3 Consolation bracket validation": [
+      {
+        "executionId": "970fab3e-61fe-4c62-9554-fa783bcfca2e",
+        "chatSessionId": "sess_30db2707-cb90-4f69-8b58-aedef4d4e2fe",
+        "timestamp": 1786954582767
+      },
+      {
+        "executionId": "fc34f9e5-b1a9-4698-b74e-faf3fe2ac39a",
+        "chatSessionId": "sess_2648a007-22aa-48e2-af52-f21bde9db90d",
+        "timestamp": 1786955555146
+      },
+      {
+        "executionId": "bcba1e4f-65e2-4c28-9c77-6c6f81a9e7ad",
+        "chatSessionId": "sess_3b41b2eb-4c36-4540-804b-17c498b7700a",
+        "timestamp": 1786956007551
+      },
+      {
+        "executionId": "2309971a-53f0-4444-a6dc-5808ba5a0cc0",
+        "chatSessionId": "sess_f3a9c663-0539-4b00-ad5f-336f69d756dd",
+        "timestamp": 1786957779648
+      },
+      {
+        "executionId": "3a235957-1bb3-4cbc-bfb7-9e15e27cdcd4",
+        "chatSessionId": "sess_a3757ff8-43a5-4cdd-84a3-0a4be0879720",
+        "timestamp": 1786958742729
+      },
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959088910
+      },
+      {
+        "executionId": "bee3f9cb-eb0d-4fac-9bc8-33b39a688f4f",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003070003
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003384523
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787005451502
+      },
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787006520201
+      }
+    ],
+    "1. Add consolation/placement games to the bracket system": [
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959360773
+      }
+    ],
+    "2. Define the Lottery Odds Table and draw function": [
+      {
+        "executionId": "91edd339-1008-4ec4-853c-91498ebdc8c9",
+        "chatSessionId": "sess_60df1ead-363a-40ce-87db-d5e89d5c0dc1",
+        "timestamp": 1786959692700
+      }
+    ],
+    "4. Implement suppressLoserVictory drive engine handler": [
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787003717789
+      }
+    ],
+    "6. Add Lottery Mode to session/room configuration": [
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787004215415
+      }
+    ],
+    "5. Integrate suppressLoserVictory into the drive resolution path": [
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787004594057
+      }
+    ],
+    "7. Execute the lottery draw at game start and wire into bracket resolution": [
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787005081825
+      }
+    ],
+    "8. Lottery Reveal screen (client)": [
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787005441714
+      }
+    ],
+    "9. Draft Pick Selection phase (client + server)": [
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787005443394
+      }
+    ],
+    "10. End-to-end integration and statistical validation": [
+      {
+        "executionId": "c9336b16-e0fb-4228-926d-d3835256ba8e",
+        "chatSessionId": "sess_7d495017-b447-4d5a-abb5-17f408a0113d",
+        "timestamp": 1787006520266
+      }
+    ]
+  }
+}
