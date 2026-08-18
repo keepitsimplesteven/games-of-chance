@@ -805,7 +805,6 @@ export class GameRoom extends Server {
     if (this.draftPickTimerId) { clearTimeout(this.draftPickTimerId); this.draftPickTimerId = null }
 
     // Reset lottery state
-    this.state.lotteryState = null
     this.state.draftPickState = null
 
     // Apply session scoring based on scoringMode

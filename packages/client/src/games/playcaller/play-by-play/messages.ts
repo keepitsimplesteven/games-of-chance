@@ -23,6 +23,8 @@ export const playByPlayRegistry: Record<string, PlayByPlayMessages> = {
       "Play clock winding down...",
       "The offense gets set...",
       "Checking the defense...",
+      "The quarterback barks out the cadence...",
+      "A quick check at the line before the snap...",
     ],
     activePlay: [
       "Snap is clean, play is live...",
@@ -31,6 +33,8 @@ export const playByPlayRegistry: Record<string, PlayByPlayMessages> = {
       "The play develops...",
       "The offense makes their move...",
       "Execution underway...",
+      "The blocking holds. The play takes shape...",
+      "Everything in motion. Let's see the result...",
     ],
     outcome: {
       big_gain: [
@@ -38,48 +42,64 @@ export const playByPlayRegistry: Record<string, PlayByPlayMessages> = {
         "Chunk play! {yards} yards gained!",
         "Great execution for {yards}!",
         "{yards} yards. That moves the chains!",
+        "Now that's what you draw up. {yards} yards!",
+        "The offense is rolling. {yards} on the play!",
       ],
       small_gain: [
         "A gain of {yards}.",
         "Picks up {yards} on the play.",
         "Short gain. {yards} yards.",
         "{yards} yards. Keeps it moving.",
+        "Not flashy but {yards} keeps the drive alive.",
+        "Small ball. {yards} yards, stay on schedule.",
       ],
       touchdown: [
         "TOUCHDOWN! They punch it in!",
         "Into the end zone! TOUCHDOWN!",
         "That's six! TOUCHDOWN!",
         "Score! They find the end zone!",
+        "TOUCHDOWN! The offense finishes the drive!",
+        "And that'll be six points! What a drive!",
       ],
       incomplete: [
         "Pass falls incomplete.",
         "No catch. Ball hits the ground.",
         "Incomplete. Defense holds.",
         "The pass is batted away!",
+        "Can't connect. The ball hits the turf.",
+        "Off target. Another incomplete pass.",
       ],
       negative: [
         "Loss on the play! Back {yards}.",
         "Stuffed! A {yards}-yard loss.",
         "The defense wins. Loss of {yards}.",
         "Behind the line. Minus {yards}.",
+        "Going backwards. A {yards}-yard setback.",
+        "The defense got there first. Minus {yards}.",
       ],
       turnover: [
         "TURNOVER! The defense has it!",
         "Takeaway! Drive is over!",
         "The defense comes up with the ball!",
         "Turnover! What a play by the defense!",
+        "That's a game-changing turnover!",
+        "The defense takes it away. Drive over.",
       ],
       turnover_on_downs: [
         "Turnover on downs!",
         "They come up short on 4th!",
         "The defense holds! Turnover on downs!",
         "Can't convert. Ball goes over.",
+        "Fourth down and they couldn't get it done.",
+        "The gamble doesn't pay off. Turnover on downs.",
       ],
       first_down: [
         "First down! {yards} yards, chains move.",
         "That's a first! {yards}-yard gain.",
         "They pick up the first. {yards} yards.",
         "{yards} yards. New set of downs.",
+        "The chains move. {yards} yards does the trick.",
+        "Fresh set of downs after a {yards}-yard gain.",
       ],
     },
   },
@@ -89,11 +109,13 @@ export const playByPlayRegistry: Record<string, PlayByPlayMessages> = {
       "Star WR in the slot...",
       "Receivers spread wide...",
       "Five wide. Single high safety...",
+      "The speedster lines up outside...",
     ],
     activePlay: [
       "He lets it fly deep!",
       "Launches it downfield!",
       "Ball in the air, beautiful spiral...",
+      "The receiver has a step. Here it comes!",
     ],
     outcome: {
       big_gain: [
@@ -121,6 +143,7 @@ export const playByPlayRegistry: Record<string, PlayByPlayMessages> = {
       turnover: [
         "INTERCEPTED! Defender read it all the way!",
         "Picked off! He jumped the route!",
+        "Into double coverage and it's picked!",
       ],
       turnover_on_downs: [
         "Can't connect deep. Turnover on downs.",
@@ -151,6 +174,8 @@ export const defaultMessages: Record<CommentaryPhase, string[]> = {
     "Play clock winding down...",
     "The offense gets set...",
     "Checking the defense...",
+    "The quarterback barks out the cadence...",
+    "A quick check at the line before the snap...",
   ],
   activePlay: [
     "Snap is clean, play is live...",
@@ -159,6 +184,8 @@ export const defaultMessages: Record<CommentaryPhase, string[]> = {
     "The play develops...",
     "The offense makes their move...",
     "Execution underway...",
+    "The blocking holds. The play takes shape...",
+    "Everything in motion. Let's see the result...",
   ],
   outcome: [
     "The play is over.",
@@ -166,5 +193,7 @@ export const defaultMessages: Record<CommentaryPhase, string[]> = {
     "Reset the chains.",
     "That's the end of the play.",
     "The whistle blows.",
+    "Both teams reset for the next snap.",
+    "The officials mark the spot.",
   ],
 }

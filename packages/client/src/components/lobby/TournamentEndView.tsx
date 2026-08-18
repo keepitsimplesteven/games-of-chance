@@ -98,9 +98,6 @@ export default function TournamentEndView() {
       {/* Remaining players */}
       {rest.length > 0 && (
         <div className="w-full max-w-md px-4">
-          <h3 className={`mb-2 text-xs font-semibold uppercase tracking-wide ${theme.mutedText}`}>
-            Other Finishers
-          </h3>
           <div className="space-y-1">
             {rest.map((entry) => {
               const isCurrentPlayer = entry.playerId === playerId

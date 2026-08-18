@@ -96,7 +96,7 @@ export function CoinFlipResult({ matchupState, getPlayerName, onRevealed }: Coin
           className={`
             w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold
             border-2 border-[#f5c542]/60 shadow-lg
-            ${flipOutcome === "HEADS" ? "bg-[#f5c542] text-[#111111]" : "bg-[#7dcea0] text-[#111111]"}
+            bg-[#f5c542] text-[#111111]
             ${phase === "flipping" ? "animate-coin-flip" : ""}
             ${phase === "landed" ? "animate-coin-land" : ""}
           `}

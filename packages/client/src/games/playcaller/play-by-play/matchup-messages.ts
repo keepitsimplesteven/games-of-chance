@@ -23,6 +23,8 @@ export const matchupMessages: Record<MatchupQuality, Record<PlayAxis, string[]>>
       "Every gap was filled. Nowhere to go.",
       "The linebackers read their keys perfectly.",
       "The defense sold out to stop the run. It worked.",
+      "That's what happens when you call run into a loaded box.",
+      "The defensive coordinator had that one circled.",
     ],
     pass: [
       "The secondary was sitting on that route.",
@@ -31,6 +33,8 @@ export const matchupMessages: Record<MatchupQuality, Record<PlayAxis, string[]>>
       "The DBs were in position before the throw.",
       "Pass rush and coverage in sync.",
       "The defense read pass and made them pay.",
+      "The coverage was waiting on him the whole way.",
+      "That's a play the defense had practiced all week.",
     ],
   },
 
@@ -42,6 +46,8 @@ export const matchupMessages: Record<MatchupQuality, Record<PlayAxis, string[]>>
       "The defense was in coverage. {yards}-yard gash!",
       "Not a defender near the line. {yards} yards!",
       "They bit on pass. {yards} yards on the run!",
+      "The wrong defense on the field. {yards} free yards!",
+      "That play call left the defense looking silly. {yards}!",
     ],
     pass: [
       "Stacked in the box. Receivers wide open for {yards}!",
@@ -50,6 +56,8 @@ export const matchupMessages: Record<MatchupQuality, Record<PlayAxis, string[]>>
       "The defense sold out for run. {yards} passing!",
       "Wide open downfield. {yards}-yard gain!",
       "Run defense left the passing lanes open. {yards}!",
+      "The offense took what the defense gave them. {yards}!",
+      "Nobody within ten yards of the receiver. {yards} easy!",
     ],
   },
 }

@@ -3,6 +3,8 @@ import { useTheme } from "../../theme"
 interface RoundHeaderProps {
   roundIndex: number
   totalRounds: number
+  /** Optional label override — when provided, displays this instead of deriving from roundIndex */
+  label?: string
 }
 
 /**
@@ -11,10 +13,11 @@ interface RoundHeaderProps {
  *
  * Validates: Requirements 8.3, 9.1
  */
-export function RoundHeader({ roundIndex, totalRounds }: RoundHeaderProps) {
+export function RoundHeader({ roundIndex, totalRounds, label }: RoundHeaderProps) {
   const theme = useTheme()
 
   const getRoundName = () => {
+    if (label) return label
     if (roundIndex === totalRounds - 1) return "Final"
     if (roundIndex === totalRounds - 2) return "Semi-Finals"
     if (roundIndex === totalRounds - 3) return "Quarter-Finals"
