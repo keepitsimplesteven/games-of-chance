@@ -1692,7 +1692,14 @@ export class GameRoom extends Server {
       let rankedPlayerIds: string[]
 
       if (this.state.config.progressionMode === "lottery") {
-        rankedPlayerIds = playerIds
+        // Use host-assigned seeds if set, otherwise fall back to join order
+        const seeds = this.state.playerSeeds
+        if (Object.keys(seeds).length > 0) {
+          // Sort by seed ascending: seed 1 first (best lottery odds), seed 2 second, etc.
+          rankedPlayerIds = [...playerIds].sort((a, b) => (seeds[a] ?? Infinity) - (seeds[b] ?? Infinity))
+        } else {
+          rankedPlayerIds = playerIds
+        }
       } else {
         // Build session leaderboard sorted by session score descending
         const leaderboard = playerIds

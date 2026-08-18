@@ -47,7 +47,7 @@ export function HistoryDrawer({ entries, isOpen, onClose }: HistoryDrawerProps) 
             aria-hidden="true"
           />
 
-          {/* Drawer panel — black bg with green border */}
+          {/* Drawer panel — black bg with green border, opens upward */}
           <motion.div
             key="history-drawer"
             variants={historyDrawerVariants}
@@ -55,10 +55,11 @@ export function HistoryDrawer({ entries, isOpen, onClose }: HistoryDrawerProps) 
             animate="expanded"
             exit="collapsed"
             transition={{ duration: 0.25, ease: "easeInOut" }}
-            className="absolute top-full left-0 right-0 z-20 mt-1 rounded border-2 border-[#2a7a3a] bg-[#111] p-2 overflow-y-auto shadow-lg"
+            className="absolute bottom-full left-0 right-0 z-20 mb-1 rounded border-2 border-[#2a7a3a] bg-[#111] p-2 overflow-y-auto shadow-lg"
             style={{ maxHeight: 'min(250px, 60svh)' }}
             role="region"
             aria-label="Drive history"
+            onClick={onClose}
           >
             {/* Header */}
             <div className={`${theme.accentText} text-[9px] font-bold uppercase mb-1.5`}>

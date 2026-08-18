@@ -7,6 +7,7 @@ import "./actions/kickPlayer"
 import "./actions/reassignHost"
 import "./actions/adjustScore"
 import "./actions/renamePlayer"
+import "./actions/setSeeds"
 
 export default function HostControlPanel() {
   const role = useGameStore((s) => s.role)
