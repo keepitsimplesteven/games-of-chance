@@ -59,6 +59,7 @@ export default function GameTileGrid() {
 
   const isHost = role === "host"
   const isTournament = progressionMode === "tournament"
+  const isLottery = progressionMode === "lottery"
   /** Determine tile status in tournament mode */
   const getTileStatus = (gameId: string): TournamentTileStatus | null => {
     if (!isTournament || !tournamentProgress) return null
@@ -87,11 +88,15 @@ export default function GameTileGrid() {
           const voteCount = votes.length
           const playerVotedForThis = votes.includes(playerId ?? "")
 
+          // In lottery mode, only Playcaller is clickable
           // In tournament mode, determine clickability from tile status
           // In endless mode (or no tournament progress), use the original `active` flag
-          const isClickable = isTournament && tileStatus
-            ? tileStatus === "available"
-            : game.active
+          const isLotteryLocked = isLottery && game.id !== "playcaller"
+          const isClickable = isLotteryLocked
+            ? false
+            : isTournament && tileStatus
+              ? tileStatus === "available"
+              : game.active
 
           return (
             <button
@@ -101,23 +106,26 @@ export default function GameTileGrid() {
               onClick={() => isClickable && handleTileClick(game.id)}
               aria-pressed={isSelected}
               className={`relative flex flex-col items-center justify-center rounded-xl p-4 shadow-md transition ${
-                // Tournament: locked tile
-                tileStatus === "locked"
-                  ? `cursor-default opacity-75 ${theme.listItem}`
-                  // Tournament: unavailable tile
-                  : tileStatus === "unavailable"
-                    ? `cursor-default opacity-50 ${theme.listItem}`
-                    // Tournament: finale available — distinct golden glow
-                    : isTournament && game.isFinale && tileStatus === "available"
-                      ? `cursor-pointer ${game.tileColor} ring-2 ring-[#f5c542] hover:shadow-lg`
-                      // Normal: selected
-                      : isSelected
-                        ? `${game.tileColor} ring-2 ring-[#f5c542]`
-                        // Normal: active/clickable
-                        : game.active
-                          ? `cursor-pointer ${game.tileColor} hover:shadow-lg hover:ring-2 hover:ring-[#f5c542]/50`
-                          // Normal: inactive (coming soon)
-                          : `cursor-default ${theme.listItem}`
+                // Lottery: non-Playcaller tiles are locked
+                isLotteryLocked
+                  ? `cursor-default opacity-60 ${game.tileColor}`
+                  // Tournament: locked tile
+                  : tileStatus === "locked"
+                    ? `cursor-default opacity-75 ${theme.listItem}`
+                    // Tournament: unavailable tile
+                    : tileStatus === "unavailable"
+                      ? `cursor-default opacity-50 ${theme.listItem}`
+                      // Tournament: finale available — distinct golden glow
+                      : isTournament && game.isFinale && tileStatus === "available"
+                        ? `cursor-pointer ${game.tileColor} ring-2 ring-[#f5c542] hover:shadow-lg`
+                        // Normal: selected
+                        : isSelected
+                          ? `${game.tileColor} ring-2 ring-[#f5c542]`
+                          // Normal: active/clickable
+                          : game.active
+                            ? `cursor-pointer ${game.tileColor} hover:shadow-lg hover:ring-2 hover:ring-[#f5c542]/50`
+                            // Normal: inactive (coming soon)
+                            : `cursor-default ${theme.listItem}`
                 }`}
             >
               {/* Tournament: Locked overlay */}
@@ -150,6 +158,15 @@ export default function GameTileGrid() {
                       Not Yet
                     </span>
                   )}
+                </div>
+              )}
+
+              {/* Lottery: Lock overlay on non-Playcaller games */}
+              {isLotteryLocked && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center rounded-xl bg-gray-900/50">
+                  <span className="text-lg" aria-hidden="true">
+                    🔒
+                  </span>
                 </div>
               )}
 
@@ -186,14 +203,14 @@ export default function GameTileGrid() {
                 {game.emoji}
               </span>
               <span
-                className={`mt-2 text-center text-sm font-bold ${tileStatus === "locked" || tileStatus === "unavailable"
+                className={`mt-2 text-center text-sm font-bold ${tileStatus === "locked" || tileStatus === "unavailable" || isLotteryLocked
                     ? theme.mutedText
                     : "text-white"
                   }`}
               >
                 {game.name}
               </span>
-              {game.active && tileStatus !== "locked" && tileStatus !== "unavailable" && (
+              {game.active && tileStatus !== "locked" && tileStatus !== "unavailable" && !isLotteryLocked && (
                 <span className="mt-1 text-center text-xs text-white/70">
                   {game.description}
                 </span>

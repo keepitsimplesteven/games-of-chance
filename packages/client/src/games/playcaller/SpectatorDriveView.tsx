@@ -198,11 +198,11 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
         <button
           type="button"
           onClick={onBack}
-          className={`${theme.accentText} text-[11px] font-bold uppercase flex items-center gap-1`}
+          className={`${theme.accentText} text-[16px] font-bold uppercase flex items-center gap-1`}
           aria-label="Back to matchup grid"
         >
           <span aria-hidden="true">←</span>
-          <span>Back</span>
+          <span>Spectate other games</span>
         </button>
         <span className={`${theme.mutedText} text-[10px]`}>
           Spectating

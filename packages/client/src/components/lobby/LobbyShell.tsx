@@ -7,6 +7,7 @@ import GameTileGrid from "./GameTileGrid"
 import HostControls from "./HostControls"
 import SettingsPanel from "./SettingsPanel"
 import ConnectionStatus from "../shared/ConnectionStatus"
+import GearIconTrigger from "../shared/GearIconTrigger"
 import GameView from "../game/GameView"
 import HostControlPanel from "../../host-panel/HostControlPanel"
 import ScoreAdjustmentNotification from "../../host-panel/ScoreAdjustmentNotification"
@@ -73,6 +74,7 @@ export default function LobbyShell({ children }: LobbyShellProps) {
                 />
                 <ShareLink />
                 <ConnectionStatus />
+                <GearIconTrigger />
               </div>
             </header>
           )}
@@ -106,6 +108,7 @@ export default function LobbyShell({ children }: LobbyShellProps) {
           )}
           <ShareLink />
           <ConnectionStatus />
+          <GearIconTrigger />
         </div>
       </header>
 
@@ -164,6 +167,7 @@ function PlaycallerHeader() {
       <div className="flex items-center gap-1.5">
         <ShareLink />
         <ConnectionStatus />
+        <GearIconTrigger />
 
         {/* Session standings dropdown with compact BaseLeaderboard */}
         <PlaycallerLeaderboard

@@ -44,6 +44,7 @@ function buildMockRoomState(overrides?: Partial<RoomState>): RoomState {
     },
     settingsLocked: false,
     preGameRanks: {},
+    playerSeeds: {},
     ...overrides,
   }
 }

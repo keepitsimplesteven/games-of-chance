@@ -42,6 +42,9 @@ export interface GameStore {
   // Animation state — shared so GameView can gate the leaderboard
   roundAnimationDone: boolean
 
+  // Host panel visibility — shared between GearIconTrigger and HostControlPanel
+  hostPanelOpen: boolean
+
   // Battle HP state — latest snapshot from BATTLE_TICK messages per battle
   battleHPState: Record<string, BattleHPSnapshot["robots"]> | null
 
@@ -61,6 +64,7 @@ export interface GameStore {
   updateSettings: (changes: Partial<GameSettings>) => void
   setGameType: (gameType: GameType) => void
   voteGame: (gameType: GameType) => void
+  setHostPanelOpen: (open: boolean) => void
 
   // Internal actions
   _onStateSync: (state: RoomState) => void
@@ -90,6 +94,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   currentPick: null,
   currentRoundNumber: null,
   roundAnimationDone: false,
+  hostPanelOpen: false,
   battleHPState: null,
   _socketSend: null,
 
@@ -231,6 +236,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       _socketSend({ type: "VOTE_GAME", payload: { gameType } })
     }
   },
+
+  setHostPanelOpen: (open: boolean) => set({ hostPanelOpen: open }),
 
   // ── Internal Actions ───────────────────────────────────────────────────
 

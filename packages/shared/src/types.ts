@@ -221,6 +221,9 @@ export interface RoomState {
   draftPickState?: DraftPickState | null
   /** Pre-game session rank snapshot for risers/fallers display. Key = playerId, value = rank before game started. */
   preGameRanks: Record<string, number>
+  /** Host-assigned seed overrides for players. Maps playerId → seed number.
+   *  Future intent: override default join-order seeding in Playcaller Lottery mode. */
+  playerSeeds: Record<string, number>
 }
 
 // ── Battle Bots ────────────────────────────────────────────────────────────
@@ -292,6 +295,8 @@ export type ClientMessage =
   | { type: "COIN_TOSS_CHOICE"; payload: { matchupId: string; selection: SideSelection } }
   | { type: "DRAFT_PICK_SELECTION"; payload: { position: number } }
   | { type: "ADVANCE_LOTTERY_PHASE"; payload?: never }
+  | { type: "RENAME_PLAYER"; payload: { playerId: string; newName: string } }
+  | { type: "SET_PLAYER_SEEDS"; payload: { seeds: Record<string, number> } }
 
 /** Server → Client messages */
 export type ServerMessage =
