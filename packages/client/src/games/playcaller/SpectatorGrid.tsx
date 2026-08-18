@@ -40,7 +40,7 @@ export function SpectatorGrid({ matchups, onSelectMatchup }: SpectatorGridProps)
 
   return (
     <div className="flex flex-col gap-3 w-full max-w-md mx-auto px-3 py-2">
-      <div className={`text-center text-xs uppercase tracking-wide ${theme.mutedText}`}>
+      <div className={`text-center text-m uppercase tracking-wide ${theme.mutedText}`}>
         Tap on a matchup to spectate
       </div>
       <div className="flex flex-col gap-2">

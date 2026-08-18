@@ -159,7 +159,7 @@ function ConsolationRow({ bracket, getPlayerDisplay, isEliminated }: Consolation
                 consolationRounds.map((cRound) => (
                   <div key={cRound.roundIndex} className="flex flex-col items-center gap-1">
                     <div className="text-[#f5c542]/70 text-[10px] font-semibold uppercase tracking-wide">
-                      {getConsolationLabel(cRound)}
+                      {/* {getConsolationLabel(cRound)} */}
                     </div>
                     {cRound.matchups.map((matchup) => (
                       <MatchupCard
