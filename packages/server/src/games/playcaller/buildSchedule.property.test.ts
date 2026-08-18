@@ -108,7 +108,7 @@ describe("Property 2: Schedule ordering is main-rounds then consolation then fin
           // The last entry is always finals
           const lastEntry = schedule[schedule.length - 1]
           expect(lastEntry.mainBracketRoundIndex).toBe(bracket.totalRounds - 1)
-          expect(lastEntry.description).toBe("Finals")
+          expect(lastEntry.description).toBe("Final")
 
           // If consolation exists, second-to-last is the consolation entry
           if (bracket.consolationRounds.length > 0) {

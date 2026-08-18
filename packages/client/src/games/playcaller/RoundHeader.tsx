@@ -19,8 +19,8 @@ export function RoundHeader({ roundIndex, totalRounds, label }: RoundHeaderProps
   const getRoundName = () => {
     if (label) return label
     if (roundIndex === totalRounds - 1) return "Final"
-    if (roundIndex === totalRounds - 2) return "Semi-Finals"
-    if (roundIndex === totalRounds - 3) return "Quarter-Finals"
+    if (roundIndex === totalRounds - 2) return "Semifinal"
+    if (roundIndex === totalRounds - 3) return "Quarterfinal"
     return `Round ${roundIndex + 1}`
   }
 
