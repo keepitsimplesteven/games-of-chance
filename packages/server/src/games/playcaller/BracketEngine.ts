@@ -130,11 +130,9 @@ export function computeByeCount(playerCount: number): number {
  */
 export function getScheduleRoundLabel(roundIndex: number, totalRounds: number): string {
   const roundsFromEnd = totalRounds - roundIndex
-  if (roundsFromEnd === 1) return "Finals"
-  if (roundsFromEnd === 2) return "Semifinals"
-  if (roundsFromEnd === 3) return "Quarterfinals"
-  // Round 0 with byes is always the Play-in
-  if (roundIndex === 0 && totalRounds > 3) return "Play-in"
+  if (roundsFromEnd === 1) return "Final"
+  if (roundsFromEnd === 2) return "Semifinal"
+  if (roundsFromEnd === 3) return "Quarterfinal"
   return `Round ${roundIndex + 1}`
 }
 
@@ -730,9 +728,9 @@ export function generateConsolationRounds(bracket: Bracket): ConsolationRound[] 
 
 /**
  * Builds the game-round schedule for a bracket, consolidating ALL consolation
- * matchups into a single dedicated round between semifinals and finals.
+ * matchups into a single dedicated round between Semifinal and Final.
  *
- * Schedule order: main-bracket rounds (Play-in through Semifinals) → Consolation → Finals
+ * Schedule order: main-bracket rounds (Round 1 through Semifinal) → Consolation → Final
  *
  * @param bracket - Current bracket state
  * @returns Array of GameRoundSchedule entries defining the order of play
@@ -764,7 +762,7 @@ export function buildSchedule(bracket: Bracket): GameRoundSchedule[] {
   schedule.push({
     mainBracketRoundIndex: finalsRoundIndex,
     consolationRoundIndices: [],
-    description: "Finals",
+    description: "Final",
   })
 
   return schedule
@@ -775,10 +773,9 @@ export function buildSchedule(bracket: Bracket): GameRoundSchedule[] {
  */
 function getRoundDescription(roundIndex: number, totalRounds: number): string {
   const roundsFromEnd = totalRounds - 1 - roundIndex
-  if (roundsFromEnd === 0) return "Finals"
-  if (roundsFromEnd === 1) return "Semifinals"
-  if (roundsFromEnd === 2) return "Quarterfinals"
-  if (roundIndex === 0) return "Play-in"
+  if (roundsFromEnd === 0) return "Final"
+  if (roundsFromEnd === 1) return "Semifinal"
+  if (roundsFromEnd === 2) return "Quarterfinal"
   return `Round ${roundIndex + 1}`
 }
 

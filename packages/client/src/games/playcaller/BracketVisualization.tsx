@@ -29,8 +29,8 @@ interface BracketVisualizationProps {
 function getRoundLabel(roundIndex: number, totalRounds: number): string {
   const roundsFromEnd = totalRounds - roundIndex
   if (roundsFromEnd === 1) return "Final"
-  if (roundsFromEnd === 2) return "Semi-Finals"
-  if (roundsFromEnd === 3) return "Quarter-Finals"
+  if (roundsFromEnd === 2) return "Semifinal"
+  if (roundsFromEnd === 3) return "Quarterfinal"
   return `Round ${roundIndex + 1}`
 }
 

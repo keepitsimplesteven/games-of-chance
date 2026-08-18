@@ -7,6 +7,7 @@ import GameTileGrid from "./GameTileGrid"
 import HostControls from "./HostControls"
 import SettingsPanel from "./SettingsPanel"
 import ConnectionStatus from "../shared/ConnectionStatus"
+import SfxMuteToggle from "../shared/SfxMuteToggle"
 import GearIconTrigger from "../shared/GearIconTrigger"
 import GameView from "../game/GameView"
 import HostControlPanel from "../../host-panel/HostControlPanel"
@@ -16,6 +17,7 @@ import { SessionStandingsPopover } from "../game/SessionStandingsPopover"
 import { PlaycallerLeaderboard } from "../../games/playcaller/PlaycallerLeaderboard"
 import { ViewportContainer } from "../layout/ViewportContainer"
 import { GAME_GRID_CONFIGS } from "../layout/viewport-constants"
+import { useLobbyJoinSound } from "../../sfx/useLobbyJoinSound"
 
 interface LobbyShellProps {
   children?: ReactNode
@@ -24,7 +26,12 @@ interface LobbyShellProps {
 export default function LobbyShell({ children }: LobbyShellProps) {
   const phase = useGameStore((s) => s.roomState?.round.phase)
   const gameType = useGameStore((s) => s.roomState?.room.gameType)
+  const progressionMode = useGameStore((s) => s.roomState?.room.progressionMode)
   const theme = useTheme()
+  const isLottery = progressionMode === "lottery"
+
+  // Play lobby join sound for lottery mode
+  useLobbyJoinSound()
 
   // Show lobby content (game tiles + host controls) when in LOBBY phase
   const isLobby = !phase || phase === "LOBBY"
@@ -74,6 +81,7 @@ export default function LobbyShell({ children }: LobbyShellProps) {
                 />
                 <ShareLink />
                 <ConnectionStatus />
+                {isLottery && <SfxMuteToggle />}
                 <GearIconTrigger />
               </div>
             </header>
@@ -108,6 +116,7 @@ export default function LobbyShell({ children }: LobbyShellProps) {
           )}
           <ShareLink />
           <ConnectionStatus />
+          {isLottery && <SfxMuteToggle />}
           <GearIconTrigger />
         </div>
       </header>
@@ -160,6 +169,7 @@ export default function LobbyShell({ children }: LobbyShellProps) {
  */
 function PlaycallerHeader() {
   const theme = useTheme()
+  const isLottery = useGameStore((s) => s.roomState?.room.progressionMode) === "lottery"
 
   return (
     <header className="flex items-center justify-between px-2 py-1 shrink-0">
@@ -167,6 +177,7 @@ function PlaycallerHeader() {
       <div className="flex items-center gap-1.5">
         <ShareLink />
         <ConnectionStatus />
+        {isLottery && <SfxMuteToggle />}
         <GearIconTrigger />
 
         {/* Session standings dropdown with compact BaseLeaderboard */}

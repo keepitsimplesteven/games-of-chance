@@ -79,9 +79,9 @@ export function PlaycallerSplash() {
           {getScoringMessage()}
         </div>
 
-        <p className={`text-center text-xs ${theme.mutedText}`}>
+        {/* <p className={`text-center text-xs ${theme.mutedText}`}>
           {playerCount} player{playerCount !== 1 ? "s" : ""} · 20s play clock · single elimination
-        </p>
+        </p> */}
       </div>
     </SplashLayout>
   )

@@ -403,7 +403,7 @@ describe("getActiveMatchupsForSchedule", () => {
     const players = ["p1", "p2", "p3", "p4"]
     const bracket = generateBracket(players)
 
-    const scheduleEntry = { mainBracketRoundIndex: 0, consolationRoundIndices: [], description: "Semifinals" }
+    const scheduleEntry = { mainBracketRoundIndex: 0, consolationRoundIndices: [], description: "Semifinal" }
     const matchups = getActiveMatchupsForSchedule(bracket, scheduleEntry)
 
     // Should return the 2 matchups from round 0
@@ -457,7 +457,7 @@ describe("getActiveMatchupsForSchedule", () => {
     const scheduleEntry = {
       mainBracketRoundIndex: 1,
       consolationRoundIndices: [0],
-      description: "Quarterfinals + 9th/10th",
+      description: "Quarterfinal + 9th/10th",
     }
     const matchups = getActiveMatchupsForSchedule(bracket, scheduleEntry)
 
@@ -573,7 +573,7 @@ describe("getActiveMatchupsForSchedule", () => {
     const players = ["p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8"]
     const bracket = generateBracket(players)
 
-    const scheduleEntry = { mainBracketRoundIndex: 0, consolationRoundIndices: [], description: "Quarterfinals" }
+    const scheduleEntry = { mainBracketRoundIndex: 0, consolationRoundIndices: [], description: "Quarterfinal" }
     const matchups = getActiveMatchupsForSchedule(bracket, scheduleEntry)
 
     // Should exactly match the round's matchups (all have valid players in an 8-player bracket)
