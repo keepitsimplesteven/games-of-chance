@@ -35,6 +35,7 @@ export function resetPlaycallerState(): void {
   bracketState = null
   resetDriveStates()
   resetLotteryWinners()
+  resetLotteryPlacements()
 }
 
 // ── Module-level drive state ───────────────────────────────────────────────
@@ -117,18 +118,46 @@ export function resetLotteryWinners(): void {
   lotteryWinners = null
 }
 
+// ── Module-level lottery placements state ─────────────────────────────────
+
+/** Lottery placements: playerId → placement number (1-based, lower = better) */
+let lotteryPlacements: Record<string, number> | null = null
+
+export function getLotteryPlacements(): Record<string, number> | null {
+  return lotteryPlacements
+}
+
+export function setLotteryPlacements(placements: Record<string, number>): void {
+  lotteryPlacements = placements
+}
+
+export function resetLotteryPlacements(): void {
+  lotteryPlacements = null
+}
+
 // ── Lottery Matchup Resolver ────────────────────────────────────────────────
 
 /**
- * Creates a MatchResolver that looks up the predetermined winner from the lottery winners map.
- * It finds the matchup by matching the two player IDs to the bracket's current round matchups.
+ * Creates a MatchResolver that determines the winner using lottery placements.
+ * Primary mechanism: the player with the lower placement number always wins.
+ * Fallback: looks up by matchup ID in the winners map (for pre-computed main bracket).
  */
 function createLotteryMatchupResolver(
   winners: Record<string, string>,
   bracket: Bracket
 ): MatchResolver {
   return (playerA: string, playerB: string): string => {
-    // Find the matchup that contains both players in main bracket rounds
+    // Primary: use placement-based resolution — lower placement number always wins.
+    // This works regardless of matchup ID, handling consolation rounds generated at runtime.
+    if (lotteryPlacements) {
+      const placA = lotteryPlacements[playerA]
+      const placB = lotteryPlacements[playerB]
+      if (placA !== undefined && placB !== undefined) {
+        return placA < placB ? playerA : playerB
+      }
+    }
+
+    // Fallback: find the matchup by player pair in main bracket rounds
     for (const round of bracket.rounds) {
       for (const matchup of round.matchups) {
         if (
@@ -152,7 +181,7 @@ function createLotteryMatchupResolver(
         }
       }
     }
-    // Fallback: shouldn't happen in lottery mode
+    // Last resort fallback: shouldn't happen in lottery mode
     return playerA
   }
 }
@@ -269,7 +298,17 @@ export function resolveMatchupDown(matchupId: string): DriveState {
   let newState: DriveState
 
   // Check if there's a predetermined winner for this matchup (lottery mode)
-  const predeterminedWinner = lotteryWinners?.[matchupId]
+  let predeterminedWinner = lotteryWinners?.[matchupId]
+
+  // If no matchup ID match, try placement-based resolution
+  if (!predeterminedWinner && lotteryPlacements) {
+    const placA = lotteryPlacements[drive.offensePlayerId]
+    const placB = lotteryPlacements[drive.defensePlayerId]
+    if (placA !== undefined && placB !== undefined) {
+      predeterminedWinner = placA < placB ? drive.offensePlayerId : drive.defensePlayerId
+    }
+  }
+
   if (predeterminedWinner) {
     const resolved = resolveLotteryDown(
       drive,

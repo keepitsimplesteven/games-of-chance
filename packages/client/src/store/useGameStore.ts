@@ -25,6 +25,8 @@ export interface GameStore {
   scoringMode: ScoringMode | undefined
   progressionMode: ProgressionMode | undefined
   roomSize: number | undefined
+  draftPickEnabled: boolean | undefined
+  skipGameplay: boolean | undefined
 
   // Connection
   connectionStatus: ConnectionStatus
@@ -47,7 +49,7 @@ export interface GameStore {
   _socketSend: ((msg: ClientMessage) => void) | null
 
   // Actions
-  connect: (roomId: string, name: string, role: "host" | "player", scoringMode?: ScoringMode, roomSize?: number, progressionMode?: ProgressionMode) => void
+  connect: (roomId: string, name: string, role: "host" | "player", scoringMode?: ScoringMode, roomSize?: number, progressionMode?: ProgressionMode, draftPickEnabled?: boolean, skipGameplay?: boolean) => void
   submitPick: (pick: unknown) => void
   startRound: () => void
   endGame: () => void
@@ -80,6 +82,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   scoringMode: undefined,
   progressionMode: undefined,
   roomSize: undefined,
+  draftPickEnabled: undefined,
+  skipGameplay: undefined,
   connectionStatus: "disconnected",
   roomState: null,
   pickSubmitted: false,
@@ -91,7 +95,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   // ── Actions ────────────────────────────────────────────────────────────
 
-  connect: (roomId, name, role, scoringMode, roomSize, progressionMode) => {
+  connect: (roomId, name, role, scoringMode, roomSize, progressionMode, draftPickEnabled, skipGameplay) => {
     const current = get().joinState
     // Non-regression guard: once IN_ROOM, never transition backwards
     if (current === "IN_ROOM") return
@@ -129,6 +133,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       scoringMode,
       progressionMode,
       roomSize,
+      draftPickEnabled,
+      skipGameplay,
       joinState: "CONNECTING",
       connectionStatus: "connecting",
     })

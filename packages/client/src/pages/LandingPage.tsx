@@ -11,10 +11,11 @@ export default function LandingPage() {
   const [progressionMode, setProgressionMode] = useState<ProgressionMode>("tournament")
   const [roomSize, setRoomSize] = useState(4)
   const [draftPickEnabled, setDraftPickEnabled] = useState(false)
+  const [skipGameplay, setSkipGameplay] = useState(true)
 
   function handleCreateRoom() {
     const roomId = crypto.randomUUID()
-    navigate(`/${roomId}`, { state: { scoringMode, progressionMode, roomSize, draftPickEnabled: progressionMode === "lottery" ? draftPickEnabled : undefined } })
+    navigate(`/${roomId}`, { state: { scoringMode, progressionMode, roomSize, draftPickEnabled: progressionMode === "lottery" ? draftPickEnabled : undefined, skipGameplay: progressionMode === "lottery" ? skipGameplay : undefined } })
   }
 
   function handleJoinRoom(e: React.FormEvent) {
@@ -112,21 +113,39 @@ export default function LandingPage() {
               : "Play any game as many times as you want"}
           </p>
           {progressionMode === "lottery" && (
-            <div className="mt-3 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setDraftPickEnabled(!draftPickEnabled)}
-                className={`px-3 py-1.5 text-xs font-bold uppercase transition ${
-                  draftPickEnabled ? toggleActive : toggleInactive
-                }`}
-              >
-                Draft Pick {draftPickEnabled ? "ON" : "OFF"}
-              </button>
-              <span className={`text-xs ${theme.mutedText}`}>
-                {draftPickEnabled
-                  ? "Players draft their bracket position after lottery"
-                  : "Lottery placement used directly"}
-              </span>
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDraftPickEnabled(!draftPickEnabled)}
+                  className={`px-3 py-1.5 text-xs font-bold uppercase transition ${
+                    draftPickEnabled ? toggleActive : toggleInactive
+                  }`}
+                >
+                  Draft Pick {draftPickEnabled ? "ON" : "OFF"}
+                </button>
+                <span className={`text-xs ${theme.mutedText}`}>
+                  {draftPickEnabled
+                    ? "Players draft their bracket position after lottery"
+                    : "Lottery placement used directly"}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSkipGameplay(!skipGameplay)}
+                  className={`px-3 py-1.5 text-xs font-bold uppercase transition ${
+                    skipGameplay ? toggleActive : toggleInactive
+                  }`}
+                >
+                  Auto-Play {skipGameplay ? "ON" : "OFF"}
+                </button>
+                <span className={`text-xs ${theme.mutedText}`}>
+                  {skipGameplay
+                    ? "Games resolve instantly (results only)"
+                    : "Full interactive drive gameplay"}
+                </span>
+              </div>
             </div>
           )}
         </div>

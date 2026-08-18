@@ -34,7 +34,7 @@ import {
   resetBigWheelState,
 } from "./games/big-wheel/BigWheelPlugin"
 import { generateBracket, isComplete, isFullyComplete, generateConsolationRounds, standardBracketOrder } from "./games/playcaller/BracketEngine"
-import { setPlaycallerState, resetPlaycallerState, getPlaycallerState, getSpectators, getActiveCompetitors, getDriveStates, resetDriveStates, setLotteryWinners } from "./games/playcaller/PlaycallerPlugin"
+import { setPlaycallerState, resetPlaycallerState, getPlaycallerState, getSpectators, getActiveCompetitors, getDriveStates, resetDriveStates, setLotteryWinners, setLotteryPlacements } from "./games/playcaller/PlaycallerPlugin"
 import { drawPlacements, deriveMatchupWinners, DEFAULT_LOTTERY_ODDS } from "./games/playcaller/lottery"
 import { PLAYCALLER } from "./games/playcaller/constants"
 import {
@@ -377,7 +377,7 @@ export class GameRoom extends Server {
 
   private handleJoin(
     connection: Connection,
-    payload: { name: string; role: "host" | "player"; clientId: string; reconnectPlayerId?: string; scoringMode?: "grand-prix" | "chips"; roomSize?: number; progressionMode?: ProgressionMode; draftPickEnabled?: boolean }
+    payload: { name: string; role: "host" | "player"; clientId: string; reconnectPlayerId?: string; scoringMode?: "grand-prix" | "chips"; roomSize?: number; progressionMode?: ProgressionMode; draftPickEnabled?: boolean; skipGameplay?: boolean }
   ) {
     const playerCount = Object.keys(this.state.players).length
 
@@ -473,6 +473,16 @@ export class GameRoom extends Server {
     // If this is the host creating the room and they provided draftPickEnabled, apply it
     if (role === "host" && payload.draftPickEnabled !== undefined) {
       this.state.config.draftPickEnabled = payload.draftPickEnabled
+    }
+
+    // If this is the host creating a lottery room, apply SKIP_GAMEPLAY setting
+    if (role === "host" && this.state.config.progressionMode === "lottery") {
+      if (payload.skipGameplay !== undefined) {
+        this.state.gameSettings.tuning = { ...this.state.gameSettings.tuning, SKIP_GAMEPLAY: payload.skipGameplay }
+      } else {
+        // Default to true (auto-play) for lottery mode if not specified
+        this.state.gameSettings.tuning = { ...this.state.gameSettings.tuning, SKIP_GAMEPLAY: true }
+      }
     }
 
     // Force game type to playcaller when in lottery mode
@@ -1626,27 +1636,36 @@ export class GameRoom extends Server {
         return
       }
 
-      // Build session leaderboard sorted by session score descending
-      const leaderboard = playerIds
-        .map((id) => ({ id, score: this.state.sessionScores[id] ?? 0 }))
-        .sort((a, b) => b.score - a.score)
+      // In lottery mode, seeding matches player list order (join order).
+      // No session score ranking — all players typically start at 0.
+      // Position 0 = Seed 1 = best lottery odds (row 0 of odds table)
+      let rankedPlayerIds: string[]
 
-      // Group by score and shuffle tied groups (random tiebreaker, never alphabetical)
-      const rankedPlayerIds: string[] = []
-      let i = 0
-      while (i < leaderboard.length) {
-        let j = i
-        while (j < leaderboard.length && leaderboard[j].score === leaderboard[i].score) {
-          j++
+      if (this.state.config.progressionMode === "lottery") {
+        rankedPlayerIds = playerIds
+      } else {
+        // Build session leaderboard sorted by session score descending
+        const leaderboard = playerIds
+          .map((id) => ({ id, score: this.state.sessionScores[id] ?? 0 }))
+          .sort((a, b) => b.score - a.score)
+
+        // Group by score and shuffle tied groups (random tiebreaker, never alphabetical)
+        rankedPlayerIds = []
+        let i = 0
+        while (i < leaderboard.length) {
+          let j = i
+          while (j < leaderboard.length && leaderboard[j].score === leaderboard[i].score) {
+            j++
+          }
+          // Shuffle the tied group
+          const tiedGroup = leaderboard.slice(i, j).map((e) => e.id)
+          for (let k = tiedGroup.length - 1; k > 0; k--) {
+            const r = Math.floor(Math.random() * (k + 1));
+            [tiedGroup[k], tiedGroup[r]] = [tiedGroup[r], tiedGroup[k]]
+          }
+          rankedPlayerIds.push(...tiedGroup)
+          i = j
         }
-        // Shuffle the tied group
-        const tiedGroup = leaderboard.slice(i, j).map((e) => e.id)
-        for (let k = tiedGroup.length - 1; k > 0; k--) {
-          const r = Math.floor(Math.random() * (k + 1));
-          [tiedGroup[k], tiedGroup[r]] = [tiedGroup[r], tiedGroup[k]]
-        }
-        rankedPlayerIds.push(...tiedGroup)
-        i = j
       }
 
       // Generate bracket and store state
@@ -1748,6 +1767,9 @@ export class GameRoom extends Server {
         for (const [id, placement] of placementsMap) {
           placementsRecord[id] = placement
         }
+
+        // Store placements for placement-based resolution (consolation rounds)
+        setLotteryPlacements(placementsRecord)
 
         this.state.lotteryState = {
           oddsTable: DEFAULT_LOTTERY_ODDS,
