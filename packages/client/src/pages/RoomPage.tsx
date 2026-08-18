@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from "react"
-import { useParams, useLocation } from "react-router-dom"
+import { useParams, useLocation, useNavigate } from "react-router-dom"
 import type { ScoringMode, ProgressionMode } from "@games-of-chance/shared"
 import { useGameStore, setJoinState } from "../store/useGameStore"
 import { usePartySocket } from "../hooks/usePartySocket"
@@ -9,10 +9,12 @@ import { useTheme } from "../theme"
 export default function RoomPage() {
   const { roomId } = useParams<{ roomId: string }>()
   const location = useLocation()
+  const navigate = useNavigate()
   const joinState = useGameStore((s) => s.joinState)
   const connectionStatus = useGameStore((s) => s.connectionStatus)
   const playerName = useGameStore((s) => s.playerName)
   const role = useGameStore((s) => s.role)
+  const serverError = useGameStore((s) => s.serverError)
   const theme = useTheme()
 
   // Read scoring mode, progression mode, and room size from navigation state (set by LandingPage "Create Room")
@@ -70,6 +72,14 @@ export default function RoomPage() {
       setError("Connection failed. Please try again.")
     }
   }, [joinState, connectionStatus])
+
+  // Handle ROOM_NAME_TAKEN: navigate back to landing with error feedback
+  useEffect(() => {
+    if (serverError?.code === "ROOM_NAME_TAKEN") {
+      useGameStore.setState({ serverError: null })
+      navigate("/", { state: { roomNameError: `"${roomId}" is already in use. Pick a different name.` } })
+    }
+  }, [serverError, navigate, roomId])
 
   const handleNameSubmit = (e: FormEvent) => {
     e.preventDefault()
