@@ -7,6 +7,8 @@ import { BattleBotsView } from "../../games/battle-bots/BattleBotsView"
 import { BattleBotsSplash } from "../../games/battle-bots/BattleBotsSplash"
 import { BigWheelContainer } from "../../games/big-wheel/BigWheelContainer"
 import { PlaycallerContainer } from "../../games/playcaller/PlaycallerContainer"
+import { LotteryRevealScreen } from "../../games/playcaller/LotteryRevealScreen"
+import { DraftPickScreen } from "../../games/playcaller/DraftPickScreen"
 import GameLeaderboard from "./GameLeaderboard"
 import PhaseIndicator from "./PhaseIndicator"
 import GameCompleteScreen from "./GameCompleteScreen"
@@ -56,6 +58,16 @@ export default function GameView() {
       default:
         return <GameSplashScreen />
     }
+  }
+
+  // LOTTERY_REVEAL phase — show the lottery reveal screen
+  if (phase === "LOTTERY_REVEAL") {
+    return <LotteryRevealScreen />
+  }
+
+  // DRAFT_PICK phase — show the draft pick selection screen
+  if (phase === "DRAFT_PICK") {
+    return <DraftPickScreen />
   }
 
   // END_TOURNAMENT phase — finale game completed in tournament mode → podium

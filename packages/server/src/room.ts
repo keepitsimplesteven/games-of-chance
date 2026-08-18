@@ -17,6 +17,8 @@ import type {
   PlaycallerGameState,
   TournamentProgress,
   ProgressionMode,
+  LotteryState,
+  DraftPickState,
 } from "@games-of-chance/shared"
 import { registry } from "./games/GameRegistry"
 import { getStrategy } from "./scoring"
@@ -31,8 +33,9 @@ import {
   setBigWheelState,
   resetBigWheelState,
 } from "./games/big-wheel/BigWheelPlugin"
-import { generateBracket, isComplete, isFullyComplete, generateConsolationRounds } from "./games/playcaller/BracketEngine"
-import { setPlaycallerState, resetPlaycallerState, getPlaycallerState, getSpectators, getActiveCompetitors, getDriveStates, resetDriveStates } from "./games/playcaller/PlaycallerPlugin"
+import { generateBracket, isComplete, isFullyComplete, generateConsolationRounds, standardBracketOrder } from "./games/playcaller/BracketEngine"
+import { setPlaycallerState, resetPlaycallerState, getPlaycallerState, getSpectators, getActiveCompetitors, getDriveStates, resetDriveStates, setLotteryWinners } from "./games/playcaller/PlaycallerPlugin"
+import { drawPlacements, deriveMatchupWinners, DEFAULT_LOTTERY_ODDS } from "./games/playcaller/lottery"
 import { PLAYCALLER } from "./games/playcaller/constants"
 import {
   handlePlaySelection as handlePlaySelectionFn,
@@ -102,6 +105,10 @@ interface LiveRoomState {
   vacatedSlots: Record<string, VacatedSlot>
   /** Pre-game session rank snapshot for risers/fallers computation */
   preGameRanks: Record<string, number>
+  /** Lottery state — stored after lottery draw, broadcast during LOTTERY_REVEAL and DRAFT_PICK phases */
+  lotteryState: LotteryState | null
+  /** Draft pick state — active during DRAFT_PICK phase */
+  draftPickState: DraftPickState | null
 }
 
 // ── Default configuration ──────────────────────────────────────────────────
@@ -181,6 +188,7 @@ export class GameRoom extends Server {
   private pendingResolveResult: unknown = null
   private botManager: BotManager = new BotManager()
   private botPickTimerIds: ReturnType<typeof setTimeout>[] = []
+  private draftPickTimerId: ReturnType<typeof setTimeout> | null = null
 
   async onStart() {
     // Initialize state on cold start
@@ -201,6 +209,8 @@ export class GameRoom extends Server {
       tournamentProgress: null,
       vacatedSlots: {},
       preGameRanks: {},
+      lotteryState: null,
+      draftPickState: null,
     }
   }
 
@@ -276,6 +286,12 @@ export class GameRoom extends Server {
         break
       case "COIN_TOSS_CHOICE":
         this.handleCoinTossChoice(sender, msg.payload)
+        break
+      case "ADVANCE_LOTTERY_PHASE":
+        this.handleAdvanceLotteryPhase(sender)
+        break
+      case "DRAFT_PICK_SELECTION":
+        this.handleDraftPickSelection(sender, msg.payload)
         break
       default:
         this.sendError(
@@ -361,7 +377,7 @@ export class GameRoom extends Server {
 
   private handleJoin(
     connection: Connection,
-    payload: { name: string; role: "host" | "player"; clientId: string; reconnectPlayerId?: string; scoringMode?: "grand-prix" | "chips"; roomSize?: number; progressionMode?: ProgressionMode }
+    payload: { name: string; role: "host" | "player"; clientId: string; reconnectPlayerId?: string; scoringMode?: "grand-prix" | "chips"; roomSize?: number; progressionMode?: ProgressionMode; draftPickEnabled?: boolean }
   ) {
     const playerCount = Object.keys(this.state.players).length
 
@@ -452,6 +468,16 @@ export class GameRoom extends Server {
     // If this is the host creating the room and they provided a progression mode, apply it
     if (role === "host" && payload.progressionMode) {
       this.state.config.progressionMode = payload.progressionMode
+    }
+
+    // If this is the host creating the room and they provided draftPickEnabled, apply it
+    if (role === "host" && payload.draftPickEnabled !== undefined) {
+      this.state.config.draftPickEnabled = payload.draftPickEnabled
+    }
+
+    // Force game type to playcaller when in lottery mode
+    if (role === "host" && this.state.config.progressionMode === "lottery") {
+      this.state.config.gameType = "playcaller"
     }
 
     // Initialize tournament progress for the host when in tournament mode
@@ -732,6 +758,11 @@ export class GameRoom extends Server {
     // Cancel any lingering timers
     this.cancelDeadlineTimer()
     this.cancelTickReplay()
+    if (this.draftPickTimerId) { clearTimeout(this.draftPickTimerId); this.draftPickTimerId = null }
+
+    // Reset lottery state
+    this.state.lotteryState = null
+    this.state.draftPickState = null
 
     // Apply session scoring based on scoringMode
     if (this.state.config.scoringMode === "chips") {
@@ -1237,6 +1268,114 @@ export class GameRoom extends Server {
     handleCoinTossChoiceFn(this.getPlaycallerContext(), sender, payload)
   }
 
+  private handleAdvanceLotteryPhase(sender: Connection) {
+    const hostId = this.getHostId()
+    const senderId = this.getPlayerIdByConnectionId(sender.id)
+    if (senderId !== hostId) {
+      this.sendError(sender, "NOT_HOST", "Only the host can advance the lottery phase")
+      return
+    }
+    if (this.state.round.phase !== "LOTTERY_REVEAL") {
+      this.sendError(sender, "WRONG_PHASE", "Can only advance from LOTTERY_REVEAL phase")
+      return
+    }
+    if (this.state.config.draftPickEnabled) {
+      // Initialize draft pick state
+      const lotteryState = this.state.lotteryState
+      if (!lotteryState) return
+      const pickOrder = Object.entries(lotteryState.placements)
+        .sort(([, a], [, b]) => a - b)
+        .map(([id]) => id)
+      this.state.draftPickState = {
+        pickOrder,
+        currentPickIndex: 0,
+        selections: {},
+        availablePositions: Array.from({ length: pickOrder.length }, (_, i) => i + 1),
+      }
+      this.state.round.phase = "DRAFT_PICK"
+      this.broadcastState()
+      this.scheduleDraftPickTimeout()
+    } else {
+      this.state.round.phase = "END_TOURNAMENT"
+      this.broadcastState()
+    }
+  }
+
+  private handleDraftPickSelection(sender: Connection, payload: { position: number }) {
+    if (this.state.round.phase !== "DRAFT_PICK") {
+      this.sendError(sender, "WRONG_PHASE", "Not in draft pick phase")
+      return
+    }
+    const playerId = this.getPlayerIdByConnectionId(sender.id)
+    if (!playerId) {
+      this.sendError(sender, "NOT_IN_ROOM", "Player not found")
+      return
+    }
+    const draftState = this.state.draftPickState
+    if (!draftState) return
+    const currentPicker = draftState.pickOrder[draftState.currentPickIndex]
+    if (playerId !== currentPicker) {
+      this.sendError(sender, "NOT_YOUR_TURN", "It's not your turn to pick")
+      return
+    }
+    if (!draftState.availablePositions.includes(payload.position)) {
+      this.sendError(sender, "INVALID_POSITION", "That position is not available")
+      return
+    }
+    draftState.selections[playerId] = payload.position
+    draftState.availablePositions = draftState.availablePositions.filter((p) => p !== payload.position)
+    draftState.currentPickIndex++
+    if (this.draftPickTimerId) { clearTimeout(this.draftPickTimerId); this.draftPickTimerId = null }
+    if (draftState.currentPickIndex >= draftState.pickOrder.length) {
+      this.state.round.phase = "END_TOURNAMENT"
+      this.broadcastState()
+    } else {
+      this.broadcastState()
+      this.scheduleDraftPickTimeout()
+    }
+  }
+
+  private scheduleDraftPickTimeout() {
+    if (this.draftPickTimerId) { clearTimeout(this.draftPickTimerId); this.draftPickTimerId = null }
+    const draftState = this.state.draftPickState
+    if (!draftState) return
+    const currentPicker = draftState.pickOrder[draftState.currentPickIndex]
+    const isBot = this.botManager.isBot(currentPicker) || currentPicker in this.state.vacatedSlots
+    const delay = isBot ? (2000 + Math.random() * 2000) : 30000
+    this.draftPickTimerId = setTimeout(() => {
+      this.autoDraftPick()
+    }, delay)
+  }
+
+  private autoDraftPick() {
+    const draftState = this.state.draftPickState
+    if (!draftState || this.state.round.phase !== "DRAFT_PICK") return
+    const currentPicker = draftState.pickOrder[draftState.currentPickIndex]
+    const isBot = this.botManager.isBot(currentPicker) || currentPicker in this.state.vacatedSlots
+    let position: number
+    if (isBot && this.state.lotteryState) {
+      const lotteryPlacement = this.state.lotteryState.placements[currentPicker]
+      if (draftState.availablePositions.includes(lotteryPlacement)) {
+        position = lotteryPlacement
+      } else {
+        position = Math.min(...draftState.availablePositions)
+      }
+    } else {
+      // Timeout for human: auto-pick lowest available
+      position = Math.min(...draftState.availablePositions)
+    }
+    draftState.selections[currentPicker] = position
+    draftState.availablePositions = draftState.availablePositions.filter((p) => p !== position)
+    draftState.currentPickIndex++
+    if (draftState.currentPickIndex >= draftState.pickOrder.length) {
+      this.state.round.phase = "END_TOURNAMENT"
+    }
+    this.broadcastState()
+    if (this.state.round.phase === "DRAFT_PICK") {
+      this.scheduleDraftPickTimeout()
+    }
+  }
+
   private advancePlaycallerBracket() {
     advancePlaycallerBracketFn(this.getPlaycallerContext())
   }
@@ -1273,6 +1412,12 @@ export class GameRoom extends Server {
     sender: Connection,
     payload: { gameType: string }
   ) {
+    // Lottery mode locks game type to playcaller
+    if (this.state.config.progressionMode === "lottery") {
+      this.sendError(sender, "GAME_LOCKED", "Game type is locked to Playcaller in lottery mode")
+      return
+    }
+
     // Authorization: only host can change game type
     const hostId = this.getHostId()
     const senderId = this.getPlayerIdByConnectionId(sender.id)
@@ -1506,6 +1651,111 @@ export class GameRoom extends Server {
 
       // Generate bracket and store state
       const bracket = generateBracket(rankedPlayerIds)
+
+      // ── Lottery mode: perform lottery draw and derive predetermined winners ──
+      if (this.state.config.progressionMode === "lottery") {
+        const playerCount = rankedPlayerIds.length
+
+        // 1. Draw placements from lottery odds table
+        const placements = drawPlacements(playerCount, Math.random)
+
+        // 2. Map seed indices to player IDs
+        //    rankedPlayerIds is in session-rank order: position 0 = seed 1 = best lottery odds
+        const placementsMap = new Map<string, number>()
+        for (let idx = 0; idx < playerCount; idx++) {
+          placementsMap.set(rankedPlayerIds[idx], placements[idx])
+        }
+
+        // 3. Pre-simulate bracket advancement to populate `eliminated` for consolation generation.
+        //    This mirrors the same logic deriveMatchupWinners uses internally.
+        const simBracket = {
+          ...bracket,
+          rounds: bracket.rounds.map((round) => ({
+            ...round,
+            matchups: round.matchups.map((m) => ({ ...m })),
+            byes: [...round.byes],
+          })),
+          eliminated: {} as Record<string, number>,
+          consolationRounds: [] as typeof bracket.consolationRounds,
+        }
+
+        for (let roundIdx = 0; roundIdx < simBracket.rounds.length; roundIdx++) {
+          const currentRound = simBracket.rounds[roundIdx]
+
+          for (const matchup of currentRound.matchups) {
+            if (!matchup.playerA || !matchup.playerB) continue
+
+            const placementA = placementsMap.get(matchup.playerA)!
+            const placementB = placementsMap.get(matchup.playerB)!
+            const winner = placementA < placementB ? matchup.playerA : matchup.playerB
+            const loser = winner === matchup.playerA ? matchup.playerB : matchup.playerA
+            matchup.winner = winner
+            simBracket.eliminated[loser] = roundIdx
+          }
+
+          // Advance winners to next round
+          const isLastRound = roundIdx >= simBracket.rounds.length - 1
+          if (!isLastRound) {
+            const nextRound = simBracket.rounds[roundIdx + 1]
+
+            if (currentRound.byes.length > 0) {
+              // Play-in round: use standard bracket seeding order
+              const advancers: { playerId: string; effectiveSeed: number }[] = []
+              for (const byePlayer of currentRound.byes) {
+                advancers.push({ playerId: byePlayer, effectiveSeed: bracket.seeds[byePlayer] })
+              }
+              for (const matchup of currentRound.matchups) {
+                const effectiveSeed = bracket.seeds[matchup.playerA]
+                advancers.push({ playerId: matchup.winner!, effectiveSeed })
+              }
+              advancers.sort((a, b) => a.effectiveSeed - b.effectiveSeed)
+              const mainBracketSize = advancers.length
+              const order = standardBracketOrder(mainBracketSize)
+              for (let i = 0; i < order.length; i += 2) {
+                const matchupIndex = Math.floor(i / 2)
+                const seedPositionA = order[i] - 1
+                const seedPositionB = order[i + 1] - 1
+                nextRound.matchups[matchupIndex].playerA = advancers[seedPositionA].playerId
+                nextRound.matchups[matchupIndex].playerB = advancers[seedPositionB].playerId
+              }
+            } else {
+              // Normal round: winners placed sequentially
+              const roundWinners: string[] = currentRound.matchups.map((m) => m.winner!)
+              for (let i = 0; i < roundWinners.length; i++) {
+                const matchupIndex = Math.floor(i / 2)
+                if (i % 2 === 0) {
+                  nextRound.matchups[matchupIndex].playerA = roundWinners[i]
+                } else {
+                  nextRound.matchups[matchupIndex].playerB = roundWinners[i]
+                }
+              }
+            }
+          }
+        }
+
+        // 4. Generate consolation rounds from the simulated bracket (which has elimination data)
+        const allConsolationRounds = generateConsolationRounds(simBracket as typeof bracket)
+        const bracketWithConsolation = { ...bracket, consolationRounds: allConsolationRounds }
+
+        // 5. Derive predetermined winners for all matchups (main + consolation)
+        const matchupWinners = deriveMatchupWinners(bracketWithConsolation, placementsMap)
+
+        // 6. Store lottery state
+        setLotteryWinners(matchupWinners)
+
+        // Convert placementsMap to plain object for the lotteryState
+        const placementsRecord: Record<string, number> = {}
+        for (const [id, placement] of placementsMap) {
+          placementsRecord[id] = placement
+        }
+
+        this.state.lotteryState = {
+          oddsTable: DEFAULT_LOTTERY_ODDS,
+          placements: placementsRecord,
+          matchupWinners,
+        }
+      }
+
       setPlaycallerState(bracket)
       this.state.pluginState["playcaller"] = bracket
 
@@ -2114,6 +2364,48 @@ export class GameRoom extends Server {
 
     this.cancelDeadlineTimer()
     this.cancelTickReplay()
+    if (this.draftPickTimerId) { clearTimeout(this.draftPickTimerId); this.draftPickTimerId = null }
+
+    // ── Lottery mode: transition to LOTTERY_REVEAL instead of END_GAME ──
+    if (this.state.config.progressionMode === "lottery") {
+      // Apply session scoring (same as normal END_GAME)
+      if (this.state.config.scoringMode === "chips") {
+        for (const playerId of Object.keys(this.state.players)) {
+          this.state.sessionScores[playerId] = this.state.gameScores[playerId] ?? 0
+        }
+      } else {
+        const strategy = getStrategy(
+          this.state.config.scoringMode,
+          this.state.config.placementPoints
+        )
+        const sessionUpdate = strategy.applyGameResult(
+          Object.values(this.state.players),
+          this.state.gameLeaderboard,
+          this.state.gameScores
+        )
+
+        for (const [playerId, points] of Object.entries(sessionUpdate.sessionScores)) {
+          this.state.sessionScores[playerId] =
+            (this.state.sessionScores[playerId] ?? 0) + points
+        }
+      }
+
+      for (const playerId of Object.keys(this.state.players)) {
+        this.state.sessionGamesPlayed[playerId] =
+          (this.state.sessionGamesPlayed[playerId] ?? 0) + 1
+      }
+
+      this.state.sessionLeaderboard = this.computeSessionLeaderboard()
+
+      // Transition to LOTTERY_REVEAL (lotteryState is preserved for the reveal screen)
+      this.state.round.phase = "LOTTERY_REVEAL"
+      this.broadcastState()
+      return
+    }
+
+    // Reset lottery state (non-lottery modes)
+    this.state.lotteryState = null
+    this.state.draftPickState = null
 
     // Apply session scoring before transitioning to END_GAME
     if (this.state.config.scoringMode === "chips") {
@@ -2506,6 +2798,8 @@ export class GameRoom extends Server {
       playcallerGameState,
       gameVotes: this.state.gameVotes,
       tournamentProgress: this.state.tournamentProgress,
+      lotteryState: this.state.lotteryState ?? null,
+      draftPickState: this.state.draftPickState ?? null,
       preGameRanks: this.state.preGameRanks,
     }
   }

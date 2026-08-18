@@ -10,10 +10,11 @@ export default function LandingPage() {
   const [scoringMode, setScoringMode] = useState<ScoringMode>("chips")
   const [progressionMode, setProgressionMode] = useState<ProgressionMode>("tournament")
   const [roomSize, setRoomSize] = useState(4)
+  const [draftPickEnabled, setDraftPickEnabled] = useState(false)
 
   function handleCreateRoom() {
     const roomId = crypto.randomUUID()
-    navigate(`/${roomId}`, { state: { scoringMode, progressionMode, roomSize } })
+    navigate(`/${roomId}`, { state: { scoringMode, progressionMode, roomSize, draftPickEnabled: progressionMode === "lottery" ? draftPickEnabled : undefined } })
   }
 
   function handleJoinRoom(e: React.FormEvent) {
@@ -93,12 +94,41 @@ export default function LandingPage() {
             >
               🏆 Tournament
             </button>
+            <button
+              type="button"
+              onClick={() => setProgressionMode("lottery")}
+              className={`flex-1 px-3 py-2 text-sm font-bold uppercase transition ${
+                progressionMode === "lottery" ? toggleActive : toggleInactive
+              }`}
+            >
+              🎰 Lottery
+            </button>
           </div>
           <p className={`text-xs ${theme.mutedText}`}>
             {progressionMode === "tournament"
               ? "Each game played once, building to a finale"
+              : progressionMode === "lottery"
+              ? "Lottery determines final placement, play to earn draft picks"
               : "Play any game as many times as you want"}
           </p>
+          {progressionMode === "lottery" && (
+            <div className="mt-3 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setDraftPickEnabled(!draftPickEnabled)}
+                className={`px-3 py-1.5 text-xs font-bold uppercase transition ${
+                  draftPickEnabled ? toggleActive : toggleInactive
+                }`}
+              >
+                Draft Pick {draftPickEnabled ? "ON" : "OFF"}
+              </button>
+              <span className={`text-xs ${theme.mutedText}`}>
+                {draftPickEnabled
+                  ? "Players draft their bracket position after lottery"
+                  : "Lottery placement used directly"}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Room size selector */}

@@ -14,7 +14,7 @@ export type GameType = string
 export type ScoringMode = "grand-prix" | "chips"
 
 /** Progression mode — selected by host at room creation, orthogonal to ScoringMode */
-export type ProgressionMode = "endless" | "tournament"
+export type ProgressionMode = "endless" | "tournament" | "lottery"
 
 /** Status of a game tile in tournament mode */
 export type TournamentTileStatus = "available" | "locked" | "unavailable"
@@ -82,6 +82,8 @@ export interface RoomConfig {
   roomSize: number
   /** Progression mode — "endless" (default) or "tournament" */
   progressionMode: ProgressionMode
+  /** Whether draft pick selection is enabled (lottery mode sub-toggle) */
+  draftPickEnabled?: boolean
 }
 
 export interface Player {
@@ -100,7 +102,7 @@ export interface Player {
  * Valid room phases. NO BETWEEN_ROUNDS phase exists.
  * RESULT transitions directly to PICKING (next round) or LOBBY (game ended).
  */
-export type RoundPhase = "LOBBY" | "SPLASH" | "COIN_TOSS" | "PICKING" | "RESOLVING" | "RESULT" | "END_GAME" | "END_TOURNAMENT"
+export type RoundPhase = "LOBBY" | "SPLASH" | "COIN_TOSS" | "PICKING" | "RESOLVING" | "RESULT" | "END_GAME" | "END_TOURNAMENT" | "LOTTERY_REVEAL" | "DRAFT_PICK"
 
 export interface RoundState {
   phase: RoundPhase
@@ -213,6 +215,10 @@ export interface RoomState {
   gameVotes?: Record<string, string[]>
   /** Tournament progress — present when progressionMode is "tournament" */
   tournamentProgress?: TournamentProgress | null
+  /** Lottery state — present during LOTTERY_REVEAL and DRAFT_PICK phases */
+  lotteryState?: LotteryState | null
+  /** Draft pick state — present during DRAFT_PICK phase */
+  draftPickState?: DraftPickState | null
   /** Pre-game session rank snapshot for risers/fallers display. Key = playerId, value = rank before game started. */
   preGameRanks: Record<string, number>
 }
@@ -284,6 +290,8 @@ export type ClientMessage =
   | { type: "PLAY_SELECTION"; payload: { matchupId: string; play: string } }
   | { type: "COIN_TOSS_CALL"; payload: { matchupId: string; side: CoinSide } }
   | { type: "COIN_TOSS_CHOICE"; payload: { matchupId: string; selection: SideSelection } }
+  | { type: "DRAFT_PICK_SELECTION"; payload: { position: number } }
+  | { type: "ADVANCE_LOTTERY_PHASE"; payload?: never }
 
 /** Server → Client messages */
 export type ServerMessage =
@@ -295,6 +303,21 @@ export type ServerMessage =
 
 
 // ── Playcaller Tournament ──────────────────────────────────────────────────
+
+/** Lottery state — present during LOTTERY_REVEAL and DRAFT_PICK phases */
+export interface LotteryState {
+  oddsTable: number[][]
+  placements: Record<string, number>
+  matchupWinners: Record<string, string>
+}
+
+/** Draft pick state — present during DRAFT_PICK phase */
+export interface DraftPickState {
+  pickOrder: string[]
+  currentPickIndex: number
+  selections: Record<string, number>
+  availablePositions: number[]
+}
 
 /** Playcaller pick — Phase 1: any value accepted (unused) */
 export interface PlaycallerPick {

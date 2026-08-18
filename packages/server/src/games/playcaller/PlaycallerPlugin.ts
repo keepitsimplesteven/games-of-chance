@@ -7,9 +7,11 @@ import type {
   RoundScoreResult,
   GameSettings,
   Matchup,
+  MatchResolver,
 } from "@games-of-chance/shared"
 import type { DriveState, OffensivePlayId, DefensivePlayId } from "./drive"
 import { createDriveState, resolveDown, selectRandomPlay, DEFAULT_PLAY_CONFIG, DEFAULT_PLAY_MATRIX } from "./drive"
+import { resolveLotteryDown } from "./lottery/lotteryDriveResolver"
 import type { GamePlugin } from "../GamePlugin"
 import { registry } from "../GameRegistry"
 import { PLAYCALLER, PLAYCALLER_SETTINGS_SCHEMA } from "./constants"
@@ -32,6 +34,7 @@ export function setPlaycallerState(state: Bracket): void {
 export function resetPlaycallerState(): void {
   bracketState = null
   resetDriveStates()
+  resetLotteryWinners()
 }
 
 // ── Module-level drive state ───────────────────────────────────────────────
@@ -95,6 +98,63 @@ export function getActiveDriveMatchups(): string[] {
   return Object.entries(driveStates)
     .filter(([_, d]) => !d.isComplete)
     .map(([id]) => id)
+}
+
+// ── Module-level lottery winners state ────────────────────────────────────
+
+/** Predetermined winners from lottery draw — matchupId → winnerId */
+let lotteryWinners: Record<string, string> | null = null
+
+export function getLotteryWinners(): Record<string, string> | null {
+  return lotteryWinners
+}
+
+export function setLotteryWinners(winners: Record<string, string>): void {
+  lotteryWinners = winners
+}
+
+export function resetLotteryWinners(): void {
+  lotteryWinners = null
+}
+
+// ── Lottery Matchup Resolver ────────────────────────────────────────────────
+
+/**
+ * Creates a MatchResolver that looks up the predetermined winner from the lottery winners map.
+ * It finds the matchup by matching the two player IDs to the bracket's current round matchups.
+ */
+function createLotteryMatchupResolver(
+  winners: Record<string, string>,
+  bracket: Bracket
+): MatchResolver {
+  return (playerA: string, playerB: string): string => {
+    // Find the matchup that contains both players in main bracket rounds
+    for (const round of bracket.rounds) {
+      for (const matchup of round.matchups) {
+        if (
+          (matchup.playerA === playerA && matchup.playerB === playerB) ||
+          (matchup.playerA === playerB && matchup.playerB === playerA)
+        ) {
+          const winner = winners[matchup.matchupId]
+          if (winner) return winner
+        }
+      }
+    }
+    // Check consolation rounds
+    for (const cRound of bracket.consolationRounds) {
+      for (const matchup of cRound.matchups) {
+        if (
+          (matchup.playerA === playerA && matchup.playerB === playerB) ||
+          (matchup.playerA === playerB && matchup.playerB === playerA)
+        ) {
+          const winner = winners[matchup.matchupId]
+          if (winner) return winner
+        }
+      }
+    }
+    // Fallback: shouldn't happen in lottery mode
+    return playerA
+  }
 }
 
 // ── Per-Down Pick Handling ──────────────────────────────────────────────────
@@ -206,14 +266,32 @@ export function resolveMatchupDown(matchupId: string): DriveState {
   const drive = driveStates![matchupId]
   const picks = downPicks[matchupId]
 
-  const { state: newState } = resolveDown(
-    drive,
-    picks.offense!,
-    picks.defense!,
-    Math.random,
-    DEFAULT_PLAY_CONFIG,
-    DEFAULT_PLAY_MATRIX
-  )
+  let newState: DriveState
+
+  // Check if there's a predetermined winner for this matchup (lottery mode)
+  const predeterminedWinner = lotteryWinners?.[matchupId]
+  if (predeterminedWinner) {
+    const resolved = resolveLotteryDown(
+      drive,
+      picks.offense!,
+      picks.defense!,
+      Math.random,
+      DEFAULT_PLAY_CONFIG,
+      DEFAULT_PLAY_MATRIX,
+      predeterminedWinner
+    )
+    newState = resolved.state
+  } else {
+    const resolved = resolveDown(
+      drive,
+      picks.offense!,
+      picks.defense!,
+      Math.random,
+      DEFAULT_PLAY_CONFIG,
+      DEFAULT_PLAY_MATRIX
+    )
+    newState = resolved.state
+  }
 
   driveStates![matchupId] = newState
   return newState
@@ -302,9 +380,14 @@ export const playcallerPlugin: GamePlugin<PlaycallerPick, PlaycallerRoundResult>
     let consolationMatchupsResolved: Matchup[] = []
     let consolationContext: { placementStart: number; description: string }[] = []
 
+    // Determine the match resolver — lottery mode uses predetermined winners
+    const resolver: MatchResolver = lotteryWinners
+      ? createLotteryMatchupResolver(lotteryWinners, bracketState)
+      : randomResolver
+
     // Resolve main-bracket matchups (if schedule entry has a mainBracketRoundIndex)
     if (scheduleEntry.mainBracketRoundIndex !== null) {
-      bracketState = resolveCurrentRound(bracketState, randomResolver)
+      bracketState = resolveCurrentRound(bracketState, resolver)
       resultBracketRound = scheduleEntry.mainBracketRoundIndex
       resultMatchups = bracketState.rounds[scheduleEntry.mainBracketRoundIndex].matchups
     }
@@ -318,10 +401,10 @@ export const playcallerPlugin: GamePlugin<PlaycallerPick, PlaycallerRoundResult>
       const hasReadyMatchup = consolationRound.matchups.some((m) => m.playerA !== "" && m.playerB !== "")
       if (!hasReadyMatchup) continue
 
-      // Resolve each matchup with random resolver
+      // Resolve each matchup with the appropriate resolver (lottery or random)
       for (const matchup of consolationRound.matchups) {
         if (matchup.playerA && matchup.playerB) {
-          matchup.winner = randomResolver(matchup.playerA, matchup.playerB)
+          matchup.winner = resolver(matchup.playerA, matchup.playerB)
         }
       }
       consolationRound.resolved = true
