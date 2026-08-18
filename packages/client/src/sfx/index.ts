@@ -46,7 +46,7 @@ export function isSfxMuted(): boolean {
  * Returns controls to play, stop, and clean up the audio.
  * Unlike `playSound`, this gives the caller lifecycle control.
  */
-export function createManagedSound(src: string, volume = 0.3) {
+export function createManagedSound(src: string, volume = 0.1) {
   const audio = new Audio(src)
   audio.volume = volume
 
