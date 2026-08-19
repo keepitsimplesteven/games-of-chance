@@ -343,7 +343,6 @@ export function resolveMatchupDown(matchupId: string): DriveState {
   }
 
   driveStates![matchupId] = newState
-  delete downPicks[matchupId] // prevent stale pick reuse on subsequent timeout
   return newState
 }
 

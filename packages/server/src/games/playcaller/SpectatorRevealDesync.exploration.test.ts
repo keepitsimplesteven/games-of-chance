@@ -5,7 +5,6 @@ import {
   resolveMatchupDown,
   fillMissingPicks,
   getDownPicks,
-  clearDownPicks,
   setDriveStates,
   resetDriveStates,
 } from "./PlaycallerPlugin"
@@ -113,18 +112,18 @@ describe("Bug Condition Exploration: Spectator Reveal Desync (Server + Client)",
     })
   })
 
-  describe("Test Case B (Server - Stale Picks): downPicks not cleared after resolveMatchupDown", () => {
-    it("downPicks[matchupId] should be cleared after resolveMatchupDown is called", () => {
+  describe("Test Case B (Server - Stale picks don't cause double-resolution): fillMissingPicks skips fully-picked matchups", () => {
+    it("fillMissingPicks() skips matchups where both picks persist after resolveMatchupDown", () => {
       /**
-       * Property 1: Bug Condition — Stale picks survive across resolution
+       * Property 1: Bug Condition — Stale picks no longer cause double-resolution
        *
-       * After resolving Matchup A's down via resolveMatchupDown, verify that
-       * downPicks[matchupA] is cleared — assert picks are deleted after resolution.
+       * After resolving Matchup A's down via resolveMatchupDown, the picks
+       * intentionally PERSIST in downPicks (needed for allActiveMatchupsResolved).
+       * However, fillMissingPicks() must NOT include matchupA in its return array
+       * because no picks were actually "filled" (both were already present).
        *
-       * Bug: currently resolveMatchupDown does NOT delete downPicks[matchupId] after
-       * consuming the picks, leaving them in place for a subsequent timeout to reuse.
-       *
-       * EXPECTED: This test FAILS on unfixed code because stale picks persist.
+       * This validates that Task 3.1's `filled` flag prevents the original bug
+       * without needing to delete picks (which broke allActiveMatchupsResolved).
        */
       fc.assert(
         fc.property(
@@ -133,28 +132,30 @@ describe("Bug Condition Exploration: Spectator Reveal Desync (Server + Client)",
           (offensePlay, defensePlay) => {
             resetDriveStates()
 
-            // Set up a single matchup
-            const drive = createDriveState("offense-player", "defense-player", 2, 1)
-            setDriveStates({ matchupX: drive })
+            // Set up two matchups
+            const driveX = createDriveState("offense-player", "defense-player", 2, 1)
+            const driveY = createDriveState("other-off", "other-def", 2, 1)
+            setDriveStates({ matchupX: driveX, matchupY: driveY })
 
-            // Record both picks
+            // Record both picks for matchupX
             recordPlaySelection("offense-player", "matchupX", offensePlay)
             recordPlaySelection("defense-player", "matchupX", defensePlay)
 
-            // Verify picks are present before resolution
-            const picksBefore = getDownPicks()
-            expect(picksBefore["matchupX"]?.offense).toBeDefined()
-            expect(picksBefore["matchupX"]?.defense).toBeDefined()
-
-            // Resolve the matchup's down
+            // Resolve matchupX's down (picks persist — not deleted)
             resolveMatchupDown("matchupX")
 
-            // EXPECTED BEHAVIOR (FIXED code): picks should be cleared after resolution
-            // so stale picks cannot be reused by a subsequent timeout
-            //
-            // BUG (UNFIXED code): downPicks["matchupX"] still exists with offense & defense
+            // Verify picks still exist (intentional — needed for allActiveMatchupsResolved)
             const picksAfter = getDownPicks()
-            expect(picksAfter["matchupX"]).toBeUndefined()
+            expect(picksAfter["matchupX"]?.offense).toBeDefined()
+            expect(picksAfter["matchupX"]?.defense).toBeDefined()
+
+            // Key assertion: fillMissingPicks does NOT include matchupX
+            // because both picks were already present (filled flag stays false)
+            const filledMatchups = fillMissingPicks()
+            expect(filledMatchups).not.toContain("matchupX")
+
+            // matchupY IS included because it genuinely had missing picks
+            expect(filledMatchups).toContain("matchupY")
           }
         ),
         { numRuns: 20 }
