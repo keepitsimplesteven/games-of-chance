@@ -11,6 +11,8 @@ const REVEAL_DELAY =
 
 export interface GatedMiniScoreboardProps {
   driveState: DriveState
+  /** Optional tap handler — passed through to MiniScoreboard */
+  onTap?: () => void
 }
 
 /**
@@ -18,7 +20,7 @@ export interface GatedMiniScoreboardProps {
  * other games shown in the sidebar don't spoil outcomes before the announcer
  * would reveal them.
  */
-export function GatedMiniScoreboard({ driveState }: GatedMiniScoreboardProps) {
+export function GatedMiniScoreboard({ driveState, onTap }: GatedMiniScoreboardProps) {
   const getPlayerName = usePlayerName()
   const seeds = useGameStore((s) => s.roomState?.playcallerGameState?.bracket?.seeds ?? {})
 
@@ -89,6 +91,7 @@ export function GatedMiniScoreboard({ driveState }: GatedMiniScoreboardProps) {
       winnerId={displayCompletion?.winner}
       offensePlayerId={driveState.offensePlayerId}
       defensePlayerId={driveState.defensePlayerId}
+      onTap={onTap}
     />
   )
 }

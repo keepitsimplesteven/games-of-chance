@@ -1084,7 +1084,7 @@ const passAggressive: PlayDefinition[] = [
   {
     displayName: "Hail Mary",
     formation: "Shotgun Empty",
-    circumstances: ["desperation"],
+    circumstances: ["desperation", "long_yardage"],
     weight: 2,
     playArt: {
       markers: [
@@ -1290,7 +1290,7 @@ const passAggressive: PlayDefinition[] = [
     },
   },
   {
-    displayName: "Screen Pass",
+    displayName: "Slip Screen",
     formation: "Shotgun",
     circumstances: ["standard", "medium_yardage", "long_yardage", "short_yardage", "goal_line"],
     weight: 1,
@@ -1449,6 +1449,203 @@ const passAggressive: PlayDefinition[] = [
         defense_read: [
           "Corner stayed patient. Double move fooled nobody.",
           "Textbook discipline. The fake didn't sell.",
+        ],
+      },
+    },
+  },
+  {
+    displayName: "Bootleg",
+    formation: "Under Center",
+    circumstances: ["short_yardage", "desperation", "must_convert"],
+    weight: 1,
+    playArt: {
+      markers: [
+        // Offensive line
+        { position: { x: 35, y: 50 }, shape: "square" },
+        { position: { x: 42, y: 50 }, shape: "square" },
+        { position: { x: 50, y: 50 }, shape: "square" },
+        { position: { x: 58, y: 50 }, shape: "square" },
+        { position: { x: 65, y: 50 }, shape: "square" },
+        // TE on strong side
+        { position: { x: 72, y: 50 }, shape: "square" },
+        // QB highlighted — rolling out
+        { position: { x: 50, y: 53 }, shape: "circle", highlighted: true },
+        // RB faking the run left
+        { position: { x: 45, y: 58 }, shape: "circle" },
+        // WR running a drag route across the field
+        { position: { x: 15, y: 50 }, shape: "circle" },
+      ],
+      routes: [
+        // RB fakes left to sell play-action
+        { from: { x: 45, y: 58 }, to: { x: 30, y: 50 }, style: "dashed" },
+        // QB rolls right on the bootleg
+        { from: { x: 50, y: 53 }, to: { x: 78, y: 53 }, style: "arrow" },
+        // QB throws back across field to the drag
+        { from: { x: 78, y: 53 }, to: { x: 40, y: 40 }, style: "dashed" },
+        // WR runs a shallow drag from left to middle
+        { from: { x: 15, y: 50 }, to: { x: 40, y: 40 }, style: "arrow" },
+      ],
+      lineOfScrimmage: 50,
+    },
+    messages: {
+      preSnap: ["Play-action look. The QB's got his eyes to the right..."],
+      activePlay: ["Bootleg! He rolls out and fires!"],
+      outcome: {
+        turnover: [
+          "The end didn't bite! He's right there — INTERCEPTED off the bootleg!",
+          "Threw it right into the flat defender! INTERCEPTION on the rollout!",
+          "The corner read boot all the way. Jumps the throw — PICKED OFF!",
+        ],
+        touchdown: [
+          "Bootleg fools everyone! Wide open throw — TOUCHDOWN!",
+          "The whole defense went left! Easy pitch and catch — TOUCHDOWN!",
+          "Naked bootleg to the drag route — nobody within ten yards! TOUCHDOWN!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
+      matchupOutcome: {
+        offense_fooled: [
+          "The defense crashed the fake. Bootleg side is empty! {yards}!",
+          "Everyone flowed to the run. Easy throw on the rollout for {yards}!",
+        ],
+        defense_read: [
+          "The DE held contain. Nowhere to throw on the bootleg.",
+          "Boot side was covered. He never had a chance.",
+        ],
+      },
+    },
+  },
+  {
+    displayName: "TE Leap",
+    formation: "Goal Line Heavy",
+    circumstances: ["goal_line", "short_yardage"],
+    weight: 2,
+    playArt: {
+      markers: [
+        // Heavy offensive line (6 linemen)
+        { position: { x: 30, y: 50 }, shape: "square" },
+        { position: { x: 38, y: 50 }, shape: "square" },
+        { position: { x: 46, y: 50 }, shape: "square" },
+        { position: { x: 54, y: 50 }, shape: "square" },
+        { position: { x: 62, y: 50 }, shape: "square" },
+        { position: { x: 70, y: 50 }, shape: "square" },
+        // QB under center
+        { position: { x: 50, y: 53 }, shape: "circle" },
+        // TE highlighted — lined up inline, will release and leap
+        { position: { x: 75, y: 50 }, shape: "circle", highlighted: true },
+        // FB in the backfield
+        { position: { x: 50, y: 58 }, shape: "circle" },
+      ],
+      routes: [
+        // TE releases off the line and runs a quick seam to the end zone
+        { from: { x: 75, y: 50 }, to: { x: 75, y: 43 }, style: "arrow" },
+        // QB lobs to TE over the pile
+        { from: { x: 50, y: 53 }, to: { x: 75, y: 43 }, style: "dashed" },
+        // FB fakes the dive to hold linebackers
+        { from: { x: 50, y: 58 }, to: { x: 50, y: 50 }, style: "dashed" },
+      ],
+      lineOfScrimmage: 50,
+    },
+    messages: {
+      preSnap: ["Heavy package. The tight end is flexed just off the tackle..."],
+      activePlay: ["Play-fake — lobs it to the tight end! He leaps!"],
+      outcome: {
+        turnover: [
+          "The linebacker read his eyes! Steps in front — INTERCEPTION at the goal line!",
+          "Tipped at the line! It floats — PICKED OFF by the safety!",
+          "The TE couldn't bring it down! Bobbles it and the DB steals it! INTERCEPTION!",
+        ],
+        touchdown: [
+          "TE LEAP! High-points it over the pile! TOUCHDOWN!",
+          "The big man goes UP and comes down with six! TOUCHDOWN!",
+          "What a grab! The tight end skies over everyone! TOUCHDOWN!",
+          "Lob to the goal line — and the TE wins the jump ball! TOUCHDOWN!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
+      matchupOutcome: {
+        offense_fooled: [
+          "Everyone stacked the box for the run. TE is all alone! {yards}!",
+          "Linebackers crashed forward. Tight end sneaks out — {yards}!",
+        ],
+        defense_read: [
+          "The safety had eyes on the TE the whole time. Nowhere to go.",
+          "They didn't bite on the fake. TE was bracketed.",
+        ],
+      },
+    },
+  },
+  {
+    displayName: "Flat-7",
+    formation: "Shotgun Spread",
+    circumstances: ["short_yardage", "desperation", "standard"],
+    weight: 1,
+    playArt: {
+      markers: [
+        { position: { x: 35, y: 50 }, shape: "square" },
+        { position: { x: 42, y: 50 }, shape: "square" },
+        { position: { x: 50, y: 50 }, shape: "square" },
+        { position: { x: 58, y: 50 }, shape: "square" },
+        { position: { x: 65, y: 50 }, shape: "square" },
+        { position: { x: 50, y: 58 }, shape: "circle" }, // QB
+        // RB highlighted — releasing to the flat
+        { position: { x: 42, y: 58 }, shape: "circle", highlighted: true },
+        // Outside WR running a 7 (corner) route to clear out
+        { position: { x: 85, y: 50 }, shape: "circle" },
+        // Slot WR running underneath
+        { position: { x: 75, y: 50 }, shape: "circle" },
+        // Backside WR
+        { position: { x: 15, y: 50 }, shape: "circle" },
+      ],
+      routes: [
+        // Outside WR runs a 7/corner route to pull the corner deep
+        { from: { x: 85, y: 50 }, to: { x: 95, y: 30 }, style: "arrow" },
+        // RB releases to the flat underneath the vacated area
+        { from: { x: 42, y: 58 }, to: { x: 85, y: 48 }, style: "arrow" },
+        // Slot WR runs a short in to occupy the linebacker
+        { from: { x: 75, y: 50 }, to: { x: 60, y: 42 }, style: "dashed" },
+      ],
+      lineOfScrimmage: 50,
+    },
+    messages: {
+      preSnap: ["Spread look. The back shifts to the strong side..."],
+      activePlay: ["Corner route clears it out — dumps it to the flat!"],
+      outcome: {
+        turnover: [
+          "The flat defender didn't go with the 7! Jumps the throw — INTERCEPTED!",
+          "Linebacker read the RB release! Steps in front — INTERCEPTION!",
+          "Threw it behind the back! The corner scoops it — PICKED OFF!",
+        ],
+        touchdown: [
+          "Flat is WIDE open! The 7 route cleared everyone out! TOUCHDOWN!",
+          "Walk-in touchdown! Nobody in the flat! The corner route did its job!",
+          "RB catches it with acres of space — jukes one man — TOUCHDOWN!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
+      matchupOutcome: {
+        offense_fooled: [
+          "Run defense left the flat bare. Easy catch for {yards}!",
+          "The 7 route pulled both DBs. Flat is empty — {yards}!",
+        ],
+        defense_read: [
+          "Flat defender sat on it. The corner route didn't fool him.",
+          "Zone coverage had the flat covered. No window.",
         ],
       },
     },

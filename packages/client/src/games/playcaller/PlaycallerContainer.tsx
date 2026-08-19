@@ -7,7 +7,6 @@ import { SideMatchPanels } from "./SideMatchPanels"
 import { SpectatorView } from "./SpectatorView"
 import { RoundHeader } from "./RoundHeader"
 import { DriveView } from "./DriveView"
-import { DriveCompletionOverlay } from "./DriveCompletionOverlay"
 import { SpectatorGrid } from "./SpectatorGrid"
 import { SpectatorDriveView } from "./SpectatorDriveView"
 import { CoinTossCeremony } from "./CoinTossCeremony"
@@ -40,14 +39,11 @@ export function PlaycallerContainer() {
 
 
   // Spectator navigation state: which matchup is the spectator viewing?
-  // null = show grid, string = show that matchup's drive view
+  // null = show grid/own game, string = show that matchup's drive view
   const [selectedMatchupId, setSelectedMatchupId] = useState<string | null>(null)
 
   // VS intro animation state: true when entering a new bracket round with drives
   const [showIntro, setShowIntro] = useState(true)
-
-  // Spectate-after-completion: when player's drive finishes but others are ongoing
-  const [showSpectator, setShowSpectator] = useState(false)
 
   // Track the round index so we can reset showIntro on round change
   const prevRoundIndexRef = useRef<number | null>(null)
@@ -104,7 +100,6 @@ export function PlaycallerContainer() {
   useEffect(() => {
     if (prevRoundIndexRef.current !== null && prevRoundIndexRef.current !== bracket.currentRoundIndex) {
       setShowIntro(true)
-      setShowSpectator(false)
     }
     prevRoundIndexRef.current = bracket.currentRoundIndex
   }, [bracket.currentRoundIndex])
@@ -245,38 +240,15 @@ export function PlaycallerContainer() {
         }
 
         // Spectate after completion: player's drive is done, but others are still active
-        if (matchupDriveState.isComplete) {
-          const otherActiveDrives = Object.entries(driveStates)
-            .filter(([id, d]) => id !== playerMatchup.matchupId && !d.isComplete)
-            .map(([id, d]) => ({ matchupId: id, driveState: d }))
-
-          if (otherActiveDrives.length > 0 && showSpectator) {
-            // Show compact completion overlay + spectator grid
-            if (selectedMatchupId && driveStates[selectedMatchupId]) {
-              return (
-                <SpectatorDriveView
-                  driveState={driveStates[selectedMatchupId]}
-                  onBack={() => setSelectedMatchupId(null)}
-                  roundName={roundName}
-                />
-              )
-            }
-            return (
-              <div className="flex flex-col h-full overflow-hidden">
-                <div className="px-2 py-1 text-center text-xs text-amber-300 font-medium">
-                  Your drive is complete — watching other games
-                </div>
-                <div className="flex-1 overflow-auto">
-                  <SpectatorGrid
-                    matchups={otherActiveDrives}
-                    onSelectMatchup={(matchupId) => setSelectedMatchupId(matchupId)}
-                  />
-                </div>
-              </div>
-            )
-          }
-
-          // All drives complete or player hasn't opted into spectating — fall through to DriveView
+        // If player tapped a mini-scoreboard card, show SpectatorDriveView for that game
+        if (matchupDriveState.isComplete && selectedMatchupId && driveStates[selectedMatchupId]) {
+          return (
+            <SpectatorDriveView
+              driveState={driveStates[selectedMatchupId]}
+              onBack={() => setSelectedMatchupId(null)}
+              roundName={roundName}
+            />
+          )
         }
 
         // Build list of other drives for the side panel
@@ -292,6 +264,7 @@ export function PlaycallerContainer() {
             opponentName={opponentName}
             role={role}
             otherDrives={otherDrivesForPanel}
+            onSpectate={(mId) => setSelectedMatchupId(mId)}
           />
         )
       }

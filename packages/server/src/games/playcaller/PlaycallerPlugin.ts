@@ -310,6 +310,15 @@ export function resolveMatchupDown(matchupId: string): DriveState {
   }
 
   if (predeterminedWinner) {
+    // Determine if this is the Final game — if so, enforce minimum play count for drama
+    let minPlays: number | undefined
+    if (bracketState) {
+      const scheduleEntry = bracketState.schedule[bracketState.currentScheduleIndex]
+      if (scheduleEntry?.description === "Final") {
+        minPlays = PLAYCALLER.FINAL_MIN_PLAYS
+      }
+    }
+
     const resolved = resolveLotteryDown(
       drive,
       picks.offense!,
@@ -317,7 +326,8 @@ export function resolveMatchupDown(matchupId: string): DriveState {
       Math.random,
       DEFAULT_PLAY_CONFIG,
       DEFAULT_PLAY_MATRIX,
-      predeterminedWinner
+      predeterminedWinner,
+      minPlays
     )
     newState = resolved.state
   } else {

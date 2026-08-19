@@ -23,6 +23,7 @@ import { createDriveState, resolveDown, isDriveComplete, selectRandomPlay } from
 import { DEFAULT_PLAY_CONFIG, DEFAULT_PLAY_MATRIX } from "../drive/config"
 import { generatePlayByPlay } from "../drive/playByPlay"
 import { suppressLoserVictory } from "./suppressLoserVictory"
+import { suppressEarlyEnding } from "./suppressEarlyEnding"
 
 const OFFENSIVE_PLAYS: OffensivePlayId[] = [
   "run-safe",
@@ -53,6 +54,7 @@ const DEFENSIVE_PLAYS: DefensivePlayId[] = [
  * @param config - Play configuration
  * @param matrix - Play matrix
  * @param predeterminedWinner - Player ID that must win this drive
+ * @param minPlays - Optional minimum play count before the drive can end (dramatic final override)
  * @returns Updated state and play result (with suppression applied if needed)
  */
 export function resolveLotteryDown(
@@ -62,18 +64,36 @@ export function resolveLotteryDown(
   rng: RngFunction,
   config: PlayConfig,
   matrix: PlayMatrix,
-  predeterminedWinner: string
+  predeterminedWinner: string,
+  minPlays?: number
 ): { state: DriveState; result: PlayResult } {
   // First, resolve normally
   const normalResult = resolveDown(state, offensivePlay, defensivePlay, rng, config, matrix)
-  const normalOutcome = normalResult.result.outcome
-  const normalYards = normalResult.result.yardsGained
+  let currentOutcome = normalResult.result.outcome
+  let currentYards = normalResult.result.yardsGained
 
-  // Apply suppression — this returns the same outcome if no suppression is needed
+  // Apply minimum-plays suppression first (keeps the drive alive for drama)
+  if (minPlays !== undefined) {
+    const earlyCheck = suppressEarlyEnding(
+      state,
+      currentOutcome,
+      currentYards,
+      minPlays,
+      rng,
+      config,
+      matrix,
+      offensivePlay,
+      defensivePlay
+    )
+    currentOutcome = earlyCheck.outcome
+    currentYards = earlyCheck.yardsGained
+  }
+
+  // Then apply loser-victory suppression (ensures predetermined winner wins)
   const corrected = suppressLoserVictory(
     state,
-    normalOutcome,
-    normalYards,
+    currentOutcome,
+    currentYards,
     predeterminedWinner,
     rng,
     config,
@@ -82,8 +102,8 @@ export function resolveLotteryDown(
     defensivePlay
   )
 
-  // If nothing changed, return the normal result as-is
-  if (corrected.outcome === normalOutcome && corrected.yardsGained === normalYards) {
+  // If nothing changed from the original resolution, return normalResult as-is
+  if (corrected.outcome === normalResult.result.outcome && corrected.yardsGained === normalResult.result.yardsGained) {
     return normalResult
   }
 

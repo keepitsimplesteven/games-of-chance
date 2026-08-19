@@ -224,7 +224,7 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
           aria-label="Back to matchup grid"
         >
           <span aria-hidden="true">←</span>
-          <span>Spectate other games</span>
+          <span>Back</span>
         </button>
         <span className={`${theme.mutedText} text-[10px]`}>
           Spectating
