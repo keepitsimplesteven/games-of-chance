@@ -224,6 +224,7 @@ export function DriveView({
   // Bracket seeds for display
   const seeds = useGameStore((s) => s.roomState?.playcallerGameState?.bracket?.seeds ?? {})
   const playerId = useGameStore((s) => s.playerId)
+  const pickSubmitted = useGameStore((s) => s.pickSubmitted)
 
   // Determine player names for scoreboard
   const offensePlayerName = getPlayerName(driveState.offensePlayerId)
@@ -310,7 +311,7 @@ export function DriveView({
             onToggleHistory={() => setHistoryOpen((prev) => !prev)}
             historyOpen={historyOpen}
           />
-          {!driveState.isComplete && !isWaitingForReveal && <PlayClock />}
+          {!driveState.isComplete && !isWaitingForReveal && !pickSubmitted && <PlayClock />}
         </div>
         <HistoryDrawer
           entries={isWaitingForReveal ? historyEntries.slice(0, -1) : historyEntries}
