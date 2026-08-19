@@ -42,9 +42,9 @@ export function MiniScoreboard({
   return (
     <div className={`${theme.listItem} rounded px-2 py-1.5`}>
       {/* Player names row */}
-      <div className="flex flex-col justify-between items-center">
+      <div className="flex flex-col justify-between items-center overflow-hidden">
         <span
-          className={`text-[12px] font-bold ${
+          className={`text-[12px] font-bold truncate max-w-full ${
             isComplete && !offenseIsWinner
               ? "line-through text-gray-500"
               : isComplete && offenseIsWinner
@@ -56,7 +56,7 @@ export function MiniScoreboard({
         </span>
         <span className={`text-[8px] ${theme.mutedText} opacity-60`}>vs</span>
         <span
-          className={`text-[12px] font-bold ${
+          className={`text-[12px] font-bold truncate max-w-full ${
             isComplete && !defenseIsWinner
               ? "line-through text-gray-500"
               : isComplete && defenseIsWinner

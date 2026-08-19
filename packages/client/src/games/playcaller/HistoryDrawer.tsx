@@ -94,8 +94,8 @@ function HistoryRow({ entry }: { entry: PlayHistoryEntry }) {
   const defenseRng = createDeterministicRng(entry.down, entry.yardsToGo, entry.yardLine, 2)
   const offenseName = selectPlay(offensePlayPool[offenseSlot], circumstance, offenseRng).displayName
   const defenseName = selectPlay(defensePlayPool[defenseSlot], circumstance, defenseRng).displayName
-  const outcomeText = formatOutcome(entry.result.outcome, entry.result.yardsGained, entry.yardLine)
-  const outcomeColor = getOutcomeColor(entry.result.outcome, entry.result.yardsGained, entry.yardsToGo)
+  const outcomeText = formatOutcome(entry.result.outcome, entry.result.yardsGained, entry.yardLine, entry.resultingYardLine)
+  const outcomeColor = getOutcomeColor(entry.result.outcome, entry.result.yardsGained, entry.yardsToGo, entry.resultingYardLine)
 
   return (
     <div
@@ -124,7 +124,7 @@ function HistoryRow({ entry }: { entry: PlayHistoryEntry }) {
 }
 
 /** Formats the outcome into a short display string, clamping yards to yardLine */
-function formatOutcome(outcome: string, yardsGained: number, yardLine: number): string {
+function formatOutcome(outcome: string, yardsGained: number, yardLine: number, resultingYardLine?: number): string {
   switch (outcome) {
     case "interception":
       return "INT!"
@@ -134,23 +134,22 @@ function formatOutcome(outcome: string, yardsGained: number, yardLine: number): 
       return "Incomplete"
     case "tackle_for_loss":
       return `${yardsGained} yds`
-    case "critical_success": {
-      const clamped = Math.min(yardsGained, yardLine)
-      return clamped >= yardLine ? "TD!" : `${clamped} yds`
-    }
     default: {
-      const displayYards = yardsGained > 0 ? Math.min(yardsGained, yardLine) : yardsGained
-      return `${displayYards} yd${displayYards !== 1 ? "s" : ""}`
+      // Touchdown: resulting yard line reached the goal (0)
+      if (resultingYardLine !== undefined && resultingYardLine <= 0) return "TD!"
+      // Clamp yards gained to distance-to-goal (can't gain more than the remaining yardage)
+      const clamped = yardsGained > 0 ? Math.min(yardsGained, yardLine) : yardsGained
+      return `${clamped} yd${clamped !== 1 ? "s" : ""}`
     }
   }
 }
 
 /** Returns a Tailwind color class based on the outcome */
-function getOutcomeColor(outcome: string, yardsGained: number, yardsToGo: number): string {
+function getOutcomeColor(outcome: string, yardsGained: number, yardsToGo: number, resultingYardLine?: number): string {
   // Turnovers → red
   if (outcome === "interception" || outcome === "fumble") return "text-[#cc3333]"
   // Touchdown (ball reached end zone) → green
-  if (outcome === "critical_success" && yardsGained >= 35) return "text-[#3a9a4a]"
+  if (resultingYardLine !== undefined && resultingYardLine <= 0) return "text-[#66d97a]"
   // Negative plays → red
   if (outcome === "tackle_for_loss") return "text-[#cc3333]"
   // First down gained → yellow

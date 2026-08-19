@@ -11,11 +11,11 @@ import type { LotteryState } from "@games-of-chance/shared"
  * first as "Seed 1") and columns = placements (1st–Nth). Each player's actual
  * result cell is highlighted.
  *
- * Two reveal modes based on `draftPickEnabled`:
- * - Draft Pick DISABLED: animated reveal from 10th to 1st with staggered timing.
- *   Host sees "Finish" button after animation completes.
- * - Draft Pick ENABLED: instant reveal, all results shown at once. Host sees
- *   "Continue to Draft" button immediately.
+ * Reveal is host-controlled:
+ * - Default mode: Host clicks "Next reveal" to fade in each cell one at a time.
+ * - Dramatic reveal mode: Host toggles on; cells auto-reveal on a timer via server.
+ * - Draft Pick ENABLED: instant reveal, all results shown at once.
+ * - Static mode (modal view): instant reveal, no controls.
  *
  * Validates: Requirements 6.2, 6.3, 6.4, 6.5, 6.6, 3.8
  */
@@ -61,9 +61,13 @@ export function LotteryRevealScreen({ staticMode = false }: { staticMode?: boole
     oddsTable.length > 0 ? oddsTable[0].length : 10
   )
 
-  // Animated reveal state
-  // revealedCount tracks how many placements have been revealed (from last to first)
-  const [revealedCount, setRevealedCount] = useState(0)
+  // Server-driven reveal count (host advances via socket messages)
+  const serverRevealedCount = lotteryState?.revealedCount ?? 0
+  const dramaticMode = lotteryState?.dramaticMode ?? false
+
+  // For static/draftPick modes, show everything immediately regardless of server state
+  const effectiveRevealedCount =
+    staticMode || draftPickEnabled ? playerCount : serverRevealedCount
 
   // Ref map for result cells — keyed by placement column (1-based)
   const resultCellRefs = useRef<Record<number, HTMLTableCellElement | null>>({})
@@ -76,49 +80,60 @@ export function LotteryRevealScreen({ staticMode = false }: { staticMode?: boole
     []
   )
 
+  // Scroll the newly revealed result cell into view
+  const prevRevealedRef = useRef(effectiveRevealedCount)
   useEffect(() => {
-    if (staticMode || draftPickEnabled) {
-      // Instant reveal — show all at once
-      setRevealedCount(playerCount)
+    if (staticMode || draftPickEnabled || effectiveRevealedCount === 0) return
+    if (effectiveRevealedCount <= prevRevealedRef.current) {
+      prevRevealedRef.current = effectiveRevealedCount
       return
     }
-
-    // Staggered reveal from last place to first (10th → 1st)
-    const timer = setInterval(() => {
-      setRevealedCount((prev) => {
-        if (prev >= playerCount) {
-          clearInterval(timer)
-          return prev
-        }
-        return prev + 1
-      })
-    }, 1500)
-    return () => clearInterval(timer)
-  }, [staticMode, draftPickEnabled, playerCount])
-
-  // Scroll the newly revealed result cell into view
-  useEffect(() => {
-    if (draftPickEnabled || revealedCount === 0) return
+    prevRevealedRef.current = effectiveRevealedCount
 
     // The most recently revealed placement: reveal from last place down
-    // revealedCount=1 → placement=playerCount, revealedCount=N → placement=playerCount-N+1
-    const revealedPlacement = playerCount - revealedCount + 1
+    const revealedPlacement = playerCount - effectiveRevealedCount + 1
     const cell = resultCellRefs.current[revealedPlacement]
     if (cell) {
       cell.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" })
     }
-  }, [revealedCount, playerCount, draftPickEnabled])
+  }, [effectiveRevealedCount, playerCount, staticMode, draftPickEnabled])
 
-  const animationComplete = revealedCount >= playerCount
+  // Dramatic mode: auto-send LOTTERY_REVEAL_NEXT on a timer
+  useEffect(() => {
+    if (!dramaticMode || staticMode || draftPickEnabled) return
+    if (serverRevealedCount >= playerCount) return
+
+    const timer = setTimeout(() => {
+      const send = useGameStore.getState()._socketSend
+      if (send) {
+        send({ type: "LOTTERY_REVEAL_NEXT" })
+      }
+    }, 2500)
+    return () => clearTimeout(timer)
+  }, [dramaticMode, serverRevealedCount, playerCount, staticMode, draftPickEnabled])
+
+  const animationComplete = effectiveRevealedCount >= playerCount
 
   // Determine which placements have been revealed.
   // Reveal order: last place (highest placement number) first.
-  // "revealedCount of 1" means the player with placement = playerCount is revealed.
   const isPlacementRevealed = (placement: number): boolean => {
-    if (draftPickEnabled) return true
-    // Reveal from highest placement down: placement N is revealed first (revealedCount >= 1)
-    const revealOrder = playerCount - placement + 1 // placement N → order 1, placement 1 → order N
-    return revealedCount >= revealOrder
+    if (staticMode || draftPickEnabled) return true
+    const revealOrder = playerCount - placement + 1
+    return effectiveRevealedCount >= revealOrder
+  }
+
+  const handleRevealNext = () => {
+    const send = useGameStore.getState()._socketSend
+    if (send) {
+      send({ type: "LOTTERY_REVEAL_NEXT" })
+    }
+  }
+
+  const handleToggleDramatic = () => {
+    const send = useGameStore.getState()._socketSend
+    if (send) {
+      send({ type: "LOTTERY_TOGGLE_DRAMATIC" })
+    }
   }
 
   const handleAdvance = () => {
@@ -204,13 +219,17 @@ export function LotteryRevealScreen({ staticMode = false }: { staticMode?: boole
                       <td
                         key={colIdx}
                         ref={isResult ? setResultCellRef(placementCol) : undefined}
-                        className={`border border-white/10 px-2 py-1.5 text-center tabular-nums ${
-                          isResult && revealed
-                            ? "bg-amber-500/30 ring-2 ring-inset ring-amber-400 font-bold text-amber-200"
-                            : theme.bodyText
-                        }`}
+                        className={`relative border border-white/10 px-2 py-1.5 text-center tabular-nums ${theme.bodyText}`}
                       >
                         {formatPercent(probability)}
+                        {/* Highlight overlay — fades in when revealed */}
+                        {isResult && (
+                          <div
+                            className={`absolute inset-0 rounded-sm bg-amber-500/30 ring-2 ring-inset ring-amber-400 transition-opacity duration-500 ${
+                              revealed ? "opacity-100" : "opacity-0"
+                            }`}
+                          />
+                        )}
                       </td>
                     )
                   })}
@@ -221,7 +240,42 @@ export function LotteryRevealScreen({ staticMode = false }: { staticMode?: boole
         </table>
       </div>
 
-      {/* Host advance button */}
+      {/* Host reveal controls — shown during active reveal (not in static/draftPick mode) */}
+      {!staticMode && !draftPickEnabled && role === "host" && !animationComplete && (
+        <div className="flex flex-col items-center gap-3">
+          {/* Next reveal button (default mode) */}
+          <button
+            onClick={handleRevealNext}
+            disabled={dramaticMode}
+            className={`rounded-lg px-6 py-3 text-sm font-semibold shadow-sm transition ${
+              dramaticMode
+                ? "opacity-40 cursor-not-allowed " + theme.btnGhost
+                : theme.btnPrimary
+            }`}
+          >
+            Next Reveal ({effectiveRevealedCount}/{playerCount})
+          </button>
+
+          {/* Dramatic mode toggle */}
+          <button
+            onClick={handleToggleDramatic}
+            className={`rounded-lg px-4 py-2 text-xs font-medium transition ${
+              dramaticMode ? theme.btnSecondary : theme.btnGhost
+            }`}
+          >
+            {dramaticMode ? "✦ Dramatic Mode ON" : "✦ Dramatic Reveal Mode"}
+          </button>
+        </div>
+      )}
+
+      {/* Non-host waiting indicator */}
+      {!staticMode && !draftPickEnabled && role !== "host" && !animationComplete && (
+        <div className={`text-sm ${theme.mutedText}`}>
+          Waiting for host to reveal the next pick
+        </div>
+      )}
+
+      {/* Host advance button — shown after all reveals complete */}
       {!staticMode && role === "host" && animationComplete && (
         <button
           onClick={handleAdvance}

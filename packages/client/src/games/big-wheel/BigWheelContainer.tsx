@@ -30,7 +30,7 @@ export function BigWheelContainer() {
   const roundResult = roomState.round.result as BigWheelSpinResult | null
 
   // Gate the leaderboard behind deferred reveal to prevent spoiling spin results
-  const gameLeaderboard = useDeferredRevealValue(roomState.gameLeaderboard)
+  const gameLeaderboard = useDeferredRevealValue(roomState.gameLeaderboard, [])
 
   // Don't render during LOBBY or END_GAME
   if (phase === "LOBBY") return null
@@ -55,7 +55,7 @@ export function BigWheelContainer() {
   } = bigWheelGameState
 
   // Gate spin results behind deferred reveal so leaderboard doesn't spoil
-  const deferredSpinResults = useDeferredRevealValue(spinResults)
+  const deferredSpinResults = useDeferredRevealValue(spinResults, {} as typeof spinResults)
 
   // Determine if current user is the active spinner
   const isActiveSpinner = playerId === activeSpinnerId

@@ -26,7 +26,7 @@ export function MatchPanel({ matchup, seeds, phase }: MatchPanelProps) {
       <div
         className={`flex w-full items-center justify-between rounded-lg px-4 py-3 ${
           hasWinner && matchup.winner === matchup.playerA
-            ? "border border-green-500 bg-green-900/30"
+            ? "border border-[#f5c542] bg-[#f5c542]/10"
             : hasWinner && matchup.winner !== matchup.playerA
               ? "border border-gray-600 bg-gray-900/40 opacity-50"
               : "border border-gray-600 bg-gray-900/40"
@@ -45,7 +45,7 @@ export function MatchPanel({ matchup, seeds, phase }: MatchPanelProps) {
             Resolving...
           </span>
         ) : hasWinner ? (
-          <span className="text-sm font-medium text-green-400">
+          <span className="text-sm font-medium text-[#f5c542]">
             🏆 {getPlayerName(matchup.winner)} wins!
           </span>
         ) : (
@@ -57,7 +57,7 @@ export function MatchPanel({ matchup, seeds, phase }: MatchPanelProps) {
       <div
         className={`flex w-full items-center justify-between rounded-lg px-4 py-3 ${
           hasWinner && matchup.winner === matchup.playerB
-            ? "border border-green-500 bg-green-900/30"
+            ? "border border-[#f5c542] bg-[#f5c542]/10"
             : hasWinner && matchup.winner !== matchup.playerB
               ? "border border-gray-600 bg-gray-900/40 opacity-50"
               : "border border-gray-600 bg-gray-900/40"

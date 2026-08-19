@@ -45,7 +45,7 @@ export function SessionStandingsPopover({ trigger }: SessionStandingsPopoverProp
 
   // Gate scores behind deferred reveal — show stale values until animation done
   // or phase is PICKING/LOBBY/END_GAME
-  const deferredLeaderboard = useDeferredRevealValue(sessionLeaderboard)
+  const deferredLeaderboard = useDeferredRevealValue(sessionLeaderboard, [])
 
   // Default to closed on each phase transition away from LOBBY
   const prevPhaseRef = useRef(phase)

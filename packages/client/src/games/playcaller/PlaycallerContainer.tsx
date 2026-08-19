@@ -15,6 +15,7 @@ import { MatchupIntro } from "../../components/game/MatchupIntro"
 import RoundControls from "../../components/game/RoundControls"
 import { getRoundName } from "./field-utils"
 import { usePlayerName } from "./hooks/usePlayerName"
+import { useTheme } from "../../theme"
 
 /**
  * PlaycallerContainer — top-level game view for the Playcaller tournament.
@@ -35,6 +36,8 @@ export function PlaycallerContainer() {
   const roomState = useGameStore((s) => s.roomState)
   const playerId = useGameStore((s) => s.playerId)
   const getPlayerName = usePlayerName()
+  const theme = useTheme()
+
 
   // Spectator navigation state: which matchup is the spectator viewing?
   // null = show grid, string = show that matchup's drive view
@@ -53,7 +56,7 @@ export function PlaycallerContainer() {
 
   const phase = roomState.round.phase
   const playcallerGameState = roomState.playcallerGameState as PlaycallerGameState | null | undefined
-  
+
   if (phase === "LOBBY" || phase === "END_GAME") return null
 
   // If no playcaller game state is available yet, show loading
@@ -237,7 +240,6 @@ export function PlaycallerContainer() {
               roundName={roundName}
               matchups={introMatchups}
               onComplete={() => setShowIntro(false)}
-              durationMs={3000}
             />
           )
         }
@@ -313,7 +315,6 @@ export function PlaycallerContainer() {
               roundName={roundName}
               matchups={introMatchups}
               onComplete={() => setShowIntro(false)}
-              durationMs={3000}
             />
           )
         }
@@ -343,7 +344,7 @@ export function PlaycallerContainer() {
         return (
           <SpectatorDriveView
             driveState={spectatorMatchups[0].driveState}
-            onBack={() => {}} // No grid to go back to
+            onBack={() => { }} // No grid to go back to
             roundName={roundName}
           />
         )
@@ -383,6 +384,7 @@ export function PlaycallerContainer() {
           <div className="text-sm text-[#f5c542] font-medium uppercase tracking-wider">
             Round Complete
           </div>
+          <p className={`text-xs ${theme.mutedText}`}>(Tap on a completed game to see the drive summary)</p>
         </div>
         <div className="flex-1 min-h-0 overflow-auto py-2">
           <BracketVisualization bracket={bracket} />

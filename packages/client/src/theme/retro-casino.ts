@@ -16,7 +16,7 @@ export const retroCasino: ThemeDefinition = {
   titleText: "text-[#f5c542] [text-shadow:2px_2px_0_#8b6914,0_0_8px_rgba(245,197,66,0.3)]",
   headingText: "text-[#f5c542]",
   bodyText: "text-[#f0f0f0]",
-  mutedText: "text-[#7dcea0]",
+  mutedText: "text-[#c8e6d0]",
   accentText: "text-[#f5c542]",
 
   // Containers
@@ -30,7 +30,7 @@ export const retroCasino: ThemeDefinition = {
   btnGhost: "bg-transparent text-[#f0f0f0] border-2 border-[#2a7a3a] hover:border-[#3a9a4a] hover:bg-[#0f3d18] transition-all",
 
   // Status
-  statusSuccess: "text-[#7dcea0]",
+  statusSuccess: "text-[#a8f0b8]",
   statusDanger: "text-[#ff6b6b]",
   statusNeutral: "text-[#f0f0f0]/60",
 

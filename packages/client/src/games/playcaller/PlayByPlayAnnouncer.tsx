@@ -131,8 +131,8 @@ export function PlayByPlayAnnouncer({
     { text: commentary.outcome, visible: phase === "outcome" || phase === "done" },
   ]
 
-  // Determine outcome text color based on matchup highlight and viewer role
-  const outcomeColorClass = getOutcomeColorClass(commentary.matchupHighlight, role)
+  // Determine outcome text color based on matchup highlight, viewer role, and outcome category
+  const outcomeColorClass = getOutcomeColorClass(commentary.matchupHighlight, role, commentary.outcomeCategory)
 
   return (
     <div
@@ -165,20 +165,49 @@ export function PlayByPlayAnnouncer({
 }
 
 /**
- * Returns a Tailwind text color class for the outcome line based on
- * matchup highlight and the viewer's role.
+ * Game-ending outcome categories that always receive priority coloring
+ * regardless of matchup quality.
+ */
+const GAME_ENDING_GOOD_FOR_OFFENSE: string[] = ["touchdown"]
+const GAME_ENDING_BAD_FOR_OFFENSE: string[] = ["turnover", "turnover_on_downs"]
+
+/**
+ * Returns a Tailwind text color class for the outcome line.
  *
- * - Gold (text-yellow-400): matchup was in the viewer's favor
- *   (offense_fooled when viewing as offense, defense_read when viewing as defense)
- * - Red (text-red-400): matchup went against the viewer
- *   (defense_read when viewing as offense, offense_fooled when viewing as defense)
- * - null: no matchup highlight, use default color
+ * Priority order (first match wins):
+ * 1. Game-ending outcomes — ALWAYS colored for the viewer:
+ *    - Touchdown: gold for offense viewer, red for defense viewer
+ *    - Turnover/turnover_on_downs: red for offense viewer, gold for defense viewer
+ * 2. Matchup highlight (defense_read / offense_fooled):
+ *    - Gold (text-yellow-400): matchup was in the viewer's favor
+ *    - Red (text-red-400): matchup went against the viewer
+ * 3. null: no coloring, use default
  */
 function getOutcomeColorClass(
   matchupHighlight: MatchupQuality | null | undefined,
-  role: "offense" | "defense" | undefined
+  role: "offense" | "defense" | undefined,
+  outcomeCategory?: string | null
 ): string | null {
-  if (!matchupHighlight || !role) return null
+  if (!role) return null
+
+  // Priority 1: Game-ending outcomes always get colored
+  if (outcomeCategory) {
+    if (GAME_ENDING_GOOD_FOR_OFFENSE.includes(outcomeCategory)) {
+      // Touchdown — good for offense, bad for defense
+      return role === "offense"
+        ? "text-yellow-400 font-bold"
+        : "text-red-400 font-bold"
+    }
+    if (GAME_ENDING_BAD_FOR_OFFENSE.includes(outcomeCategory)) {
+      // Turnover — bad for offense, good for defense
+      return role === "offense"
+        ? "text-red-400 font-bold"
+        : "text-yellow-400 font-bold"
+    }
+  }
+
+  // Priority 2: Matchup-quality coloring
+  if (!matchupHighlight) return null
 
   const favorable =
     (role === "offense" && matchupHighlight === "offense_fooled") ||

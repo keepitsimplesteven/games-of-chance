@@ -19,6 +19,7 @@ import type { CommentaryLines } from "./play-by-play/selectCommentary"
 import type { DriveState } from "./field-utils.types"
 import type { BallAnimationConfig, BallAnimationType } from "./animations/types"
 import { DriveCompletionOverlay } from "./DriveCompletionOverlay"
+import { MatchupLabel } from "./MatchupLabel"
 
 const MAX_YARDS = 35
 
@@ -246,15 +247,17 @@ export function DriveView({
       style={{ gap: "4px" }}
     >
       {/* ═══ Header ═══ */}
-      <header className="flex items-center justify-between shrink-0">
+      <header className="flex items-center justify-between gap-2 shrink-0 overflow-hidden">
         <span
-          className={`text-xl font-bold uppercase tracking-widest ${theme.accentText}`}
+          className={`text-xl font-bold uppercase tracking-widest shrink-0 ${theme.accentText}`}
         >
           {roundName}
         </span>
-        <span className={`text-[12px] ${theme.mutedText}`}>
-          You ({roleLabel}) vs {opponentNameWithSeed}
-        </span>
+        <MatchupLabel
+          leftName={`You (${roleLabel})`}
+          rightName={opponentNameWithSeed}
+          mutedClass={theme.mutedText}
+        />
       </header>
 
       {/* ═══ Show/Hide toggle row (right-aligned, only when other games exist) ═══ */}
