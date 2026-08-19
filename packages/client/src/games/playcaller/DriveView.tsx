@@ -122,8 +122,8 @@ export function DriveView({
   }
 
   const handleOutcomeReveal = useCallback(() => {
-    setDisplayedPlayCount((prev) => prev + 1)
-  }, [])
+    setDisplayedPlayCount((prev) => Math.min(prev + 1, playCount))
+  }, [playCount])
 
 
   // Format latest play result (gated — only show after reveal)

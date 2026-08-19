@@ -86,8 +86,8 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
   const isWaitingForReveal = displayedPlayCount < playCount
 
   const handleOutcomeReveal = useCallback(() => {
-    setDisplayedPlayCount((prev) => prev + 1)
-  }, [])
+    setDisplayedPlayCount((prev) => Math.min(prev + 1, playCount))
+  }, [playCount])
 
   // Compute display values based on which plays have been revealed
   let displayYardLine: number

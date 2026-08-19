@@ -108,7 +108,7 @@ function SpectatorMatchupCard({ matchupId, driveState, onSelect }: SpectatorMatc
     if (!isWaitingForReveal) return
 
     timerRef.current = setTimeout(() => {
-      setDisplayedPlayCount((prev) => prev + 1)
+      setDisplayedPlayCount((prev) => Math.min(prev + 1, playCount))
     }, REVEAL_DELAY)
 
     return () => {
