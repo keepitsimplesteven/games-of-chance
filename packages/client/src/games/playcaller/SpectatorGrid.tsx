@@ -81,8 +81,25 @@ function SpectatorMatchupCard({ matchupId, driveState, onSelect }: SpectatorMatc
   const seeds = useGameStore((s) => s.roomState?.playcallerGameState?.bracket?.seeds ?? {})
 
   const playCount = driveState.playHistory.length
-  const [displayedPlayCount, setDisplayedPlayCount] = useState(playCount)
+
+  // On mount, treat all pre-existing play history as already revealed.
+  // Only gate plays that arrive *after* mount (live updates).
+  // This prevents refresh/reconnect from getting permanently stuck one play behind.
+  const initialDisplayCount = useRef(playCount).current
+  const [displayedPlayCount, setDisplayedPlayCount] = useState(initialDisplayCount)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Re-sync safeguard: if multiple plays landed at once (spectator toggled
+  // between games, or was away), snap to playCount - 1 so only the latest
+  // play is gated. Prevents getting stuck multiple plays behind.
+  const prevPlayCountRef = useRef(playCount)
+  useEffect(() => {
+    const delta = playCount - prevPlayCountRef.current
+    prevPlayCountRef.current = playCount
+    if (delta > 1) {
+      setDisplayedPlayCount(playCount - 1)
+    }
+  }, [playCount])
 
   const isWaitingForReveal = displayedPlayCount < playCount
 
@@ -132,6 +149,14 @@ function SpectatorMatchupCard({ matchupId, driveState, onSelect }: SpectatorMatc
   const winnerId = displayCompletion?.winner
   const endingType = displayCompletion?.endingType
 
+  // Build display names with seed prefix
+  const offenseDisplay = seeds[driveState.offensePlayerId]
+    ? `(${seeds[driveState.offensePlayerId]}) ${getPlayerName(driveState.offensePlayerId)}`
+    : getPlayerName(driveState.offensePlayerId)
+  const defenseDisplay = seeds[driveState.defensePlayerId]
+    ? `(${seeds[driveState.defensePlayerId]}) ${getPlayerName(driveState.defensePlayerId)}`
+    : getPlayerName(driveState.defensePlayerId)
+
   return (
     <button
       data-testid="spectator-matchup-card"
@@ -140,29 +165,29 @@ function SpectatorMatchupCard({ matchupId, driveState, onSelect }: SpectatorMatc
       className={`${theme.listItem} rounded-lg border border-current/10 px-3 py-2 text-left w-full transition-transform active:scale-[0.97] min-h-32`}
     >
       {/* Player names */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center gap-1 overflow-hidden">
         <span
-          className={`text-[18px] font-bold ${displayIsComplete && winnerId !== driveState.offensePlayerId
+          className={`font-bold truncate min-w-0 flex-1 text-left ${getSpectatorNameSize(offenseDisplay)} ${displayIsComplete && winnerId !== driveState.offensePlayerId
               ? "line-through text-gray-500"
               : displayIsComplete && winnerId === driveState.offensePlayerId
                 ? theme.statusSuccess
                 : theme.bodyText
             }`}
         >
-          {seeds[driveState.offensePlayerId] ? `(${seeds[driveState.offensePlayerId]}) ` : ""}{getPlayerName(driveState.offensePlayerId)}
+          {offenseDisplay}
         </span>
-        <span className={`text-[14px] ${theme.mutedText} opacity-60 mx-1`}>
+        <span className={`text-[12px] ${theme.mutedText} opacity-60 shrink-0`}>
           vs
         </span>
         <span
-          className={`text-[18px] font-bold  ${displayIsComplete && winnerId !== driveState.defensePlayerId
+          className={`font-bold truncate min-w-0 flex-1 text-right ${getSpectatorNameSize(defenseDisplay)} ${displayIsComplete && winnerId !== driveState.defensePlayerId
               ? "line-through text-gray-500"
               : displayIsComplete && winnerId === driveState.defensePlayerId
                 ? theme.statusSuccess
                 : theme.bodyText
             }`}
         >
-          {seeds[driveState.defensePlayerId] ? `(${seeds[driveState.defensePlayerId]}) ` : ""}{getPlayerName(driveState.defensePlayerId)}
+          {defenseDisplay}
         </span>
       </div>
 
@@ -186,6 +211,15 @@ function SpectatorMatchupCard({ matchupId, driveState, onSelect }: SpectatorMatc
       </div>
     </button>
   )
+}
+
+/** Returns text size class that shrinks for longer player names in spectator cards. */
+function getSpectatorNameSize(name: string): string {
+  const len = name.length
+  if (len >= 25) return "text-[12px]"
+  if (len >= 20) return "text-[14px]"
+  if (len >= 15) return "text-[16px]"
+  return "text-[18px]"
 }
 
 function formatEndingType(endingType: string): string {

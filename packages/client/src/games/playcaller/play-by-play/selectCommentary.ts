@@ -17,6 +17,8 @@ export interface CommentaryLines {
   outcome: string
   /** Indicates if a matchup-quality message was triggered, for text coloring */
   matchupHighlight: MatchupQuality | null
+  /** The resolved outcome category — used by UI for game-ending color overrides */
+  outcomeCategory: OutcomeCategory
 }
 
 /**
@@ -135,6 +137,7 @@ export function selectCommentary(
     activePlay,
     outcome: formattedOutcome,
     matchupHighlight: matchupQuality,
+    outcomeCategory,
   }
 }
 

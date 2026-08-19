@@ -40,6 +40,24 @@ const runSafe: PlayDefinition[] = [
     messages: {
       preSnap: ["Fullback lines up in front of the tailback..."],
       activePlay: ["Handoff. He hits the hole!"],
+      outcome: {
+        turnover: [
+          "FUMBLE! The linebacker meets him in the hole and rips it out!",
+          "He coughs it up in traffic! FUMBLE! Defense recovers!",
+          "Helmet to the football! It's loose! FUMBLE!",
+        ],
+        touchdown: [
+          "Through the hole and GONE! Nobody can catch him! TOUCHDOWN!",
+          "The dive breaks into the secondary! He won't be caught! TOUCHDOWN!",
+          "Hits the hole at full speed and he's IN! TOUCHDOWN!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
       matchupOutcome: {
         offense_fooled: [
           "Nobody home in the box. {yards} yards!",
@@ -72,6 +90,23 @@ const runSafe: PlayDefinition[] = [
     messages: {
       preSnap: ["QB under center. The line tightens..."],
       activePlay: ["He lunges forward!"],
+      outcome: {
+        turnover: [
+          "FUMBLE! He gets stood up and they strip it! Defense ball!",
+          "The center-QB exchange! It's on the ground! FUMBLE!",
+        ],
+        touchdown: [
+          "QB SNEAK! He's across the plane! TOUCHDOWN!",
+          "Pushes the pile forward! HE'S IN! TOUCHDOWN!",
+          "The sneak gets him just enough! TOUCHDOWN!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
     },
   },
   {
@@ -312,6 +347,24 @@ const runAggressive: PlayDefinition[] = [
     },
     messages: {
       activePlay: ["He bounces it outside!"],
+      outcome: {
+        turnover: [
+          "FUMBLE! The edge rusher punches it out on the stretch!",
+          "The ball's on the ground! FUMBLE! Defense recovers!",
+          "Stripped from behind as he turned the corner! FUMBLE!",
+        ],
+        touchdown: [
+          "He turns the corner and he's GONE! TOUCHDOWN!",
+          "Nobody can catch him on the edge! TOUCHDOWN!",
+          "Stretch play breaks free! All the way! TOUCHDOWN!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
       matchupOutcome: {
         offense_fooled: [
           "Nobody on the perimeter! {yards} yards!",
@@ -350,6 +403,24 @@ const runAggressive: PlayDefinition[] = [
     messages: {
       preSnap: ["The guards are pulling..."],
       activePlay: ["Pulling guard leads the way!"],
+      outcome: {
+        turnover: [
+          "FUMBLE! Big hit at the point of attack! The ball's loose!",
+          "The linebacker meets him head-on and jars it free! FUMBLE!",
+          "Stripped by the cornerback on the edge! FUMBLE recovered by the defense!",
+        ],
+        touchdown: [
+          "Power sweep around the edge! He's in! TOUCHDOWN!",
+          "Following his blockers all the way home! TOUCHDOWN!",
+          "The wall holds! He walks into the end zone! TOUCHDOWN!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
       matchupOutcome: {
         offense_fooled: [
           "Guards pulled into open space. {yards} yards!",
@@ -389,6 +460,24 @@ const runAggressive: PlayDefinition[] = [
     messages: {
       preSnap: ["Something tricky brewing..."],
       activePlay: ["It's a reverse! Defense caught flat-footed!"],
+      outcome: {
+        turnover: [
+          "FUMBLE! The exchange on the reverse is botched! Defense has it!",
+          "He drops it on the handoff! FUMBLE! Turnover!",
+          "The end crashed down and forced it out! FUMBLE on the reverse!",
+        ],
+        touchdown: [
+          "Reverse goes ALL the way! Nobody touched him! TOUCHDOWN!",
+          "Misdirection perfection! He's in the end zone! TOUCHDOWN!",
+          "The defense went the wrong way! TOUCHDOWN on the reverse!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
       matchupOutcome: {
         offense_fooled: [
           "Defense pulled the wrong way! {yards} yards!",
@@ -427,6 +516,24 @@ const runAggressive: PlayDefinition[] = [
       lineOfScrimmage: 50,
     },
     messages: {
+      outcome: {
+        turnover: [
+          "FUMBLE! The jet motion handoff goes awry! Ball's on the ground!",
+          "He couldn't secure the toss! FUMBLE! Defense recovers!",
+          "Big hit by the edge defender! The ball squirts out! FUMBLE!",
+        ],
+        touchdown: [
+          "Jet sweep to the house! Too fast! TOUCHDOWN!",
+          "He outruns everyone to the edge! TOUCHDOWN on the sweep!",
+          "Pure speed to the end zone! TOUCHDOWN!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
       matchupOutcome: {
         offense_fooled: [
           "Jet motion had them lost. {yards} easy!",
@@ -463,6 +570,24 @@ const runAggressive: PlayDefinition[] = [
       lineOfScrimmage: 50,
     },
     messages: {
+      outcome: {
+        turnover: [
+          "FUMBLE! The backside linebacker tracked it and punched it out!",
+          "He lost the handle on the counter step! FUMBLE! Defense jumps on it!",
+          "Violent hit at the point of attack! The ball's out! FUMBLE!",
+        ],
+        touchdown: [
+          "Counter breaks through! He cuts back and he's GONE! TOUCHDOWN!",
+          "Faked them all out of their shoes! TOUCHDOWN on the counter!",
+          "The pulling guard sealed the edge! Runner scores! TOUCHDOWN!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
       matchupOutcome: {
         offense_fooled: [
           "Counter froze the defense. {yards} yards!",
@@ -558,6 +683,25 @@ const runAggressive: PlayDefinition[] = [
     },
     messages: {
       activePlay: ["He launches over the pile!"],
+      outcome: {
+        turnover: [
+          "FUMBLE at the goal line! The ball pops loose and the defense pounces!",
+          "Hit at the one! The ball flies out! FUMBLE! Turnover!",
+          "He reached for the end zone and lost it! FUMBLE recovered by the defense!",
+        ],
+        touchdown: [
+          "HE'S IN! Over the top! TOUCHDOWN!",
+          "Leaps over the pile! TOUCHDOWN! What an effort!",
+          "GOAL LINE STAND? NO! He punches it in! TOUCHDOWN!",
+          "Sheer will! He drags the whole defense into the end zone! TOUCHDOWN!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
       matchupOutcome: {
         offense_fooled: [
           "Defense spread for pass. No resistance! {yards}!",
@@ -598,6 +742,24 @@ const passSafe: PlayDefinition[] = [
     },
     messages: {
       activePlay: ["Quick throw to the slant!"],
+      outcome: {
+        turnover: [
+          "The linebacker jumped the slant! INTERCEPTED! He saw it all the way!",
+          "PICKED OFF! The safety read the QB's eyes and broke on the slant!",
+          "Too predictable! The corner cuts in front — INTERCEPTION!",
+        ],
+        touchdown: [
+          "Slant and GO! He breaks the tackle and takes it to the house! TOUCHDOWN!",
+          "Quick slant, no one around! He turns upfield — TOUCHDOWN!",
+          "Catch at the five, one juke, he's IN! TOUCHDOWN!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
       matchupOutcome: {
         offense_fooled: [
           "LBs crashed the line. Slant wide open for {yards}!",
@@ -663,6 +825,24 @@ const passSafe: PlayDefinition[] = [
     messages: {
       preSnap: ["The O-line looks ready to let them in..."],
       activePlay: ["Screen pass! Blockers out front!"],
+      outcome: {
+        turnover: [
+          "The blitzing LB gets a hand up! Tipped and INTERCEPTED!",
+          "Screen pass read! The defender steps in front — PICKED OFF!",
+          "The screen was sniffed out! INTERCEPTION at the line!",
+        ],
+        touchdown: [
+          "Screen breaks free! Blockers all the way! TOUCHDOWN!",
+          "The convoy takes him to the promised land! TOUCHDOWN!",
+          "Nobody's catching him once he gets to the edge! TOUCHDOWN!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
       matchupOutcome: {
         offense_fooled: [
           "Blitzers flew past. Screen has a convoy! {yards}!",
@@ -731,6 +911,24 @@ const passSafe: PlayDefinition[] = [
     },
     messages: {
       activePlay: ["Nothing deep. Dumps it to the back..."],
+      outcome: {
+        turnover: [
+          "The linebacker was waiting in the flat! INTERCEPTED on the checkdown!",
+          "Too casual! The DB undercuts it — INTERCEPTION!",
+          "Forced throw to the flat. Defender had it all the way. PICKED OFF!",
+        ],
+        touchdown: [
+          "Checkdown... and he's got SPACE! Takes it all the way! TOUCHDOWN!",
+          "The back catches it in the flat and nobody's there! TOUCHDOWN!",
+          "Missed tackle! He spins away and SCORES! TOUCHDOWN on the checkdown!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
       matchupOutcome: {
         offense_fooled: [
           "Defense crashed for run. Back alone in the flat for {yards}!",
@@ -848,6 +1046,28 @@ const passAggressive: PlayDefinition[] = [
     messages: {
       preSnap: ["Single high safety. Could be a deep shot..."],
       activePlay: ["He launches it deep!"],
+      outcome: {
+        turnover: [
+          "INTERCEPTED! Safety read his eyes the whole way!",
+          "PICKED OFF! The corner sat on the fly and jumped it!",
+          "Into double coverage and it's INTERCEPTED!",
+          "He put too much air under it. The safety comes down with it!",
+          "Oh no! Underthrown, and the defender has it. INTERCEPTION!",
+        ],
+        touchdown: [
+          "TOUCHDOWN! Over the top for six!",
+          "He burned him deep! TOUCHDOWN!",
+          "Caught in stride! Into the end zone! TOUCHDOWN!",
+          "Nobody could catch him! TOUCHDOWN on the fly!",
+          "A BOMB! That's a TOUCHDOWN!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
       matchupOutcome: {
         offense_fooled: [
           "Defense sold out for run. Wide open deep! {yards}!",
@@ -864,7 +1084,7 @@ const passAggressive: PlayDefinition[] = [
   {
     displayName: "Hail Mary",
     formation: "Shotgun Empty",
-    circumstances: ["desperation"],
+    circumstances: ["desperation", "long_yardage"],
     weight: 2,
     playArt: {
       markers: [
@@ -892,6 +1112,26 @@ const passAggressive: PlayDefinition[] = [
     messages: {
       preSnap: ["Everyone going deep. All or nothing..."],
       activePlay: ["He heaves it!"],
+      outcome: {
+        turnover: [
+          "INTERCEPTED in a crowd! The Hail Mary is picked off!",
+          "INTERCEPTION! Defender outfights the receivers for it!",
+          "It's batted around and... INTERCEPTED! Defense has it!",
+          "The prayer is answered — by the DEFENSE! Interception!",
+        ],
+        touchdown: [
+          "CAUGHT! TOUCHDOWN! THE HAIL MARY COMES THROUGH!",
+          "HE HAS IT! TOUCHDOWN! Unbelievable!",
+          "In the pile of bodies... HE CAME DOWN WITH IT! TOUCHDOWN!",
+          "Miracle catch! TOUCHDOWN! The Hail Mary works!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
       matchupOutcome: {
         offense_fooled: [
           "Defense loaded the box. Receivers running free! {yards}!",
@@ -925,6 +1165,27 @@ const passAggressive: PlayDefinition[] = [
     },
     messages: {
       activePlay: ["Lobs it to the corner!"],
+      outcome: {
+        turnover: [
+          "QB's hit as he throws! The safety comes down with it. INTERCEPTION!",
+          "Underthrown fade! The corner cuts in front — INTERCEPTED!",
+          "The DB climbs the ladder and snags it! INTERCEPTION at the goal line!",
+          "Tipped at the catch point and PICKED OFF! Turnover!",
+          "Jumped the fade route! INTERCEPTION! The defense steals it!",
+        ],
+        touchdown: [
+          "TOUCHDOWN! Back shoulder fade, perfectly placed!",
+          "High-points it over the DB! TOUCHDOWN!",
+          "Only his guy could get it. And he DID! TOUCHDOWN!",
+          "Fade to the pylon... CAUGHT! TOUCHDOWN!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
       matchupOutcome: {
         offense_fooled: [
           "Corner cheated up for run. Fade is 1-on-none! {yards}!",
@@ -959,6 +1220,28 @@ const passAggressive: PlayDefinition[] = [
       ],
       lineOfScrimmage: 50,
     },
+    messages: {
+      preSnap: ["Trips right. He's eyeing the post..."],
+      activePlay: ["Breaks inside, fires it to the middle!"],
+      outcome: {
+        turnover: [
+          "The linebacker dropped into the lane! INTERCEPTED over the middle!",
+          "Read like a book! The safety breaks on it — INTERCEPTION!",
+          "Thread the needle? Not today. PICKED OFF!",
+        ],
+        touchdown: [
+          "TOUCHDOWN! Post route splits the safeties!",
+          "Right down the seam! Nobody could touch him! TOUCHDOWN!",
+          "The post breaks wide open! TOUCHDOWN!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
+    },
   },
   {
     displayName: "Corner Route",
@@ -984,9 +1267,30 @@ const passAggressive: PlayDefinition[] = [
       ],
       lineOfScrimmage: 50,
     },
+    messages: {
+      activePlay: ["He breaks to the corner!"],
+      outcome: {
+        turnover: [
+          "The safety was lurking! Cuts underneath and PICKS IT OFF!",
+          "Corner route into traffic! INTERCEPTED on the sideline!",
+          "The CB jumped the break! INTERCEPTION!",
+        ],
+        touchdown: [
+          "Corner route to the pylon! TOUCHDOWN!",
+          "Away from the safety! Catches it in the end zone! TOUCHDOWN!",
+          "Perfect placement! TOUCHDOWN on the corner route!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
+    },
   },
   {
-    displayName: "Screen Pass",
+    displayName: "Slip Screen",
     formation: "Shotgun",
     circumstances: ["standard", "medium_yardage", "long_yardage", "short_yardage", "goal_line"],
     weight: 1,
@@ -1016,6 +1320,24 @@ const passAggressive: PlayDefinition[] = [
     },
     messages: {
       activePlay: ["Screen to the wide side!"],
+      outcome: {
+        turnover: [
+          "Batted at the line! INTERCEPTED by the D-lineman!",
+          "The blitzer gets a hand on it! Tipped and PICKED OFF!",
+          "Screen sniffed out! The LB jumps the throw — INTERCEPTION!",
+        ],
+        touchdown: [
+          "Screen and GO! He's got blockers all the way! TOUCHDOWN!",
+          "Behind the wall of blockers! Nobody can catch him! TOUCHDOWN!",
+          "The screen breaks loose! All the way for a TOUCHDOWN!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
       matchupOutcome: {
         offense_fooled: [
           "Run D crashed inside. Perimeter open! {yards}!",
@@ -1050,6 +1372,27 @@ const passAggressive: PlayDefinition[] = [
       ],
       lineOfScrimmage: 50,
     },
+    messages: {
+      activePlay: ["Fires it up the seam!"],
+      outcome: {
+        turnover: [
+          "The safety was reading his eyes! Jumps the seam — INTERCEPTION!",
+          "Right into the linebacker's hands! PICKED OFF on the seam!",
+          "He tried to squeeze it between the safeties. INTERCEPTED!",
+        ],
+        touchdown: [
+          "TOUCHDOWN! Splits the safeties right up the seam!",
+          "Between the hashes and GONE! TOUCHDOWN!",
+          "Nobody picked him up in the middle! TOUCHDOWN on the seam!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
+    },
   },
   {
     displayName: "Double Move",
@@ -1080,6 +1423,24 @@ const passAggressive: PlayDefinition[] = [
     messages: {
       preSnap: ["Receiver in motion. Watch for a route combo..."],
       activePlay: ["Double move! Fakes out, breaks deep!"],
+      outcome: {
+        turnover: [
+          "Corner didn't bite! Stays in position and PICKS IT OFF!",
+          "The safety read through the fake! INTERCEPTION on the double move!",
+          "Held his ground and jumped the second break. INTERCEPTED!",
+        ],
+        touchdown: [
+          "The DB bit on the fake! WIDE OPEN! TOUCHDOWN!",
+          "Double move shakes the coverage! Into the end zone! TOUCHDOWN!",
+          "He's ALL alone! The fake worked! TOUCHDOWN!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
       matchupOutcome: {
         offense_fooled: [
           "Defense playing run. Double move creates a void! {yards}!",
@@ -1088,6 +1449,203 @@ const passAggressive: PlayDefinition[] = [
         defense_read: [
           "Corner stayed patient. Double move fooled nobody.",
           "Textbook discipline. The fake didn't sell.",
+        ],
+      },
+    },
+  },
+  {
+    displayName: "Bootleg",
+    formation: "Under Center",
+    circumstances: ["short_yardage", "desperation", "must_convert"],
+    weight: 1,
+    playArt: {
+      markers: [
+        // Offensive line
+        { position: { x: 35, y: 50 }, shape: "square" },
+        { position: { x: 42, y: 50 }, shape: "square" },
+        { position: { x: 50, y: 50 }, shape: "square" },
+        { position: { x: 58, y: 50 }, shape: "square" },
+        { position: { x: 65, y: 50 }, shape: "square" },
+        // TE on strong side
+        { position: { x: 72, y: 50 }, shape: "square" },
+        // QB highlighted — rolling out
+        { position: { x: 50, y: 53 }, shape: "circle", highlighted: true },
+        // RB faking the run left
+        { position: { x: 45, y: 58 }, shape: "circle" },
+        // WR running a drag route across the field
+        { position: { x: 15, y: 50 }, shape: "circle" },
+      ],
+      routes: [
+        // RB fakes left to sell play-action
+        { from: { x: 45, y: 58 }, to: { x: 30, y: 50 }, style: "dashed" },
+        // QB rolls right on the bootleg
+        { from: { x: 50, y: 53 }, to: { x: 78, y: 53 }, style: "arrow" },
+        // QB throws back across field to the drag
+        { from: { x: 78, y: 53 }, to: { x: 40, y: 40 }, style: "dashed" },
+        // WR runs a shallow drag from left to middle
+        { from: { x: 15, y: 50 }, to: { x: 40, y: 40 }, style: "arrow" },
+      ],
+      lineOfScrimmage: 50,
+    },
+    messages: {
+      preSnap: ["Play-action look. The QB's got his eyes to the right..."],
+      activePlay: ["Bootleg! He rolls out and fires!"],
+      outcome: {
+        turnover: [
+          "The end didn't bite! He's right there — INTERCEPTED off the bootleg!",
+          "Threw it right into the flat defender! INTERCEPTION on the rollout!",
+          "The corner read boot all the way. Jumps the throw — PICKED OFF!",
+        ],
+        touchdown: [
+          "Bootleg fools everyone! Wide open throw — TOUCHDOWN!",
+          "The whole defense went left! Easy pitch and catch — TOUCHDOWN!",
+          "Naked bootleg to the drag route — nobody within ten yards! TOUCHDOWN!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
+      matchupOutcome: {
+        offense_fooled: [
+          "The defense crashed the fake. Bootleg side is empty! {yards}!",
+          "Everyone flowed to the run. Easy throw on the rollout for {yards}!",
+        ],
+        defense_read: [
+          "The DE held contain. Nowhere to throw on the bootleg.",
+          "Boot side was covered. He never had a chance.",
+        ],
+      },
+    },
+  },
+  {
+    displayName: "TE Leap",
+    formation: "Goal Line Heavy",
+    circumstances: ["goal_line", "short_yardage"],
+    weight: 2,
+    playArt: {
+      markers: [
+        // Heavy offensive line (6 linemen)
+        { position: { x: 30, y: 50 }, shape: "square" },
+        { position: { x: 38, y: 50 }, shape: "square" },
+        { position: { x: 46, y: 50 }, shape: "square" },
+        { position: { x: 54, y: 50 }, shape: "square" },
+        { position: { x: 62, y: 50 }, shape: "square" },
+        { position: { x: 70, y: 50 }, shape: "square" },
+        // QB under center
+        { position: { x: 50, y: 53 }, shape: "circle" },
+        // TE highlighted — lined up inline, will release and leap
+        { position: { x: 75, y: 50 }, shape: "circle", highlighted: true },
+        // FB in the backfield
+        { position: { x: 50, y: 58 }, shape: "circle" },
+      ],
+      routes: [
+        // TE releases off the line and runs a quick seam to the end zone
+        { from: { x: 75, y: 50 }, to: { x: 75, y: 43 }, style: "arrow" },
+        // QB lobs to TE over the pile
+        { from: { x: 50, y: 53 }, to: { x: 75, y: 43 }, style: "dashed" },
+        // FB fakes the dive to hold linebackers
+        { from: { x: 50, y: 58 }, to: { x: 50, y: 50 }, style: "dashed" },
+      ],
+      lineOfScrimmage: 50,
+    },
+    messages: {
+      preSnap: ["Heavy package. The tight end is flexed just off the tackle..."],
+      activePlay: ["Play-fake — lobs it to the tight end! He leaps!"],
+      outcome: {
+        turnover: [
+          "The linebacker read his eyes! Steps in front — INTERCEPTION at the goal line!",
+          "Tipped at the line! It floats — PICKED OFF by the safety!",
+          "The TE couldn't bring it down! Bobbles it and the DB steals it! INTERCEPTION!",
+        ],
+        touchdown: [
+          "TE LEAP! High-points it over the pile! TOUCHDOWN!",
+          "The big man goes UP and comes down with six! TOUCHDOWN!",
+          "What a grab! The tight end skies over everyone! TOUCHDOWN!",
+          "Lob to the goal line — and the TE wins the jump ball! TOUCHDOWN!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
+      matchupOutcome: {
+        offense_fooled: [
+          "Everyone stacked the box for the run. TE is all alone! {yards}!",
+          "Linebackers crashed forward. Tight end sneaks out — {yards}!",
+        ],
+        defense_read: [
+          "The safety had eyes on the TE the whole time. Nowhere to go.",
+          "They didn't bite on the fake. TE was bracketed.",
+        ],
+      },
+    },
+  },
+  {
+    displayName: "Flat-7",
+    formation: "Shotgun Spread",
+    circumstances: ["short_yardage", "desperation", "standard"],
+    weight: 1,
+    playArt: {
+      markers: [
+        { position: { x: 35, y: 50 }, shape: "square" },
+        { position: { x: 42, y: 50 }, shape: "square" },
+        { position: { x: 50, y: 50 }, shape: "square" },
+        { position: { x: 58, y: 50 }, shape: "square" },
+        { position: { x: 65, y: 50 }, shape: "square" },
+        { position: { x: 50, y: 58 }, shape: "circle" }, // QB
+        // RB highlighted — releasing to the flat
+        { position: { x: 42, y: 58 }, shape: "circle", highlighted: true },
+        // Outside WR running a 7 (corner) route to clear out
+        { position: { x: 85, y: 50 }, shape: "circle" },
+        // Slot WR running underneath
+        { position: { x: 75, y: 50 }, shape: "circle" },
+        // Backside WR
+        { position: { x: 15, y: 50 }, shape: "circle" },
+      ],
+      routes: [
+        // Outside WR runs a 7/corner route to pull the corner deep
+        { from: { x: 85, y: 50 }, to: { x: 95, y: 30 }, style: "arrow" },
+        // RB releases to the flat underneath the vacated area
+        { from: { x: 42, y: 58 }, to: { x: 85, y: 48 }, style: "arrow" },
+        // Slot WR runs a short in to occupy the linebacker
+        { from: { x: 75, y: 50 }, to: { x: 60, y: 42 }, style: "dashed" },
+      ],
+      lineOfScrimmage: 50,
+    },
+    messages: {
+      preSnap: ["Spread look. The back shifts to the strong side..."],
+      activePlay: ["Corner route clears it out — dumps it to the flat!"],
+      outcome: {
+        turnover: [
+          "The flat defender didn't go with the 7! Jumps the throw — INTERCEPTED!",
+          "Linebacker read the RB release! Steps in front — INTERCEPTION!",
+          "Threw it behind the back! The corner scoops it — PICKED OFF!",
+        ],
+        touchdown: [
+          "Flat is WIDE open! The 7 route cleared everyone out! TOUCHDOWN!",
+          "Walk-in touchdown! Nobody in the flat! The corner route did its job!",
+          "RB catches it with acres of space — jukes one man — TOUCHDOWN!",
+        ],
+        big_gain: [],
+        small_gain: [],
+        incomplete: [],
+        negative: [],
+        turnover_on_downs: [],
+        first_down: [],
+      },
+      matchupOutcome: {
+        offense_fooled: [
+          "Run defense left the flat bare. Easy catch for {yards}!",
+          "The 7 route pulled both DBs. Flat is empty — {yards}!",
+        ],
+        defense_read: [
+          "Flat defender sat on it. The corner route didn't fool him.",
+          "Zone coverage had the flat covered. No window.",
         ],
       },
     },

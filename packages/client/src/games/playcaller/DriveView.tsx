@@ -19,6 +19,7 @@ import type { CommentaryLines } from "./play-by-play/selectCommentary"
 import type { DriveState } from "./field-utils.types"
 import type { BallAnimationConfig, BallAnimationType } from "./animations/types"
 import { DriveCompletionOverlay } from "./DriveCompletionOverlay"
+import { MatchupLabel } from "./MatchupLabel"
 
 const MAX_YARDS = 35
 
@@ -30,6 +31,8 @@ export interface DriveViewProps {
   role: "offense" | "defense"
   /** Other matchup drive states in this round (for the side panel) */
   otherDrives?: Array<{ matchupId: string; driveState: DriveState }>
+  /** Called when player taps a mini-scoreboard card to spectate that game */
+  onSpectate?: (matchupId: string) => void
 }
 
 /**
@@ -53,6 +56,7 @@ export function DriveView({
   opponentName,
   role,
   otherDrives = [],
+  onSpectate,
 }: DriveViewProps) {
   const theme = useTheme()
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -234,8 +238,9 @@ export function DriveView({
   const opponentNameWithSeed = opponentSeed ? `(${opponentSeed}) ${opponentName}` : opponentName
 
   const hasOtherGames = otherDrives.length > 0
-  const [otherGamesOpen, setOtherGamesOpen] = useState(true)
-  const showSidePanel = otherGamesOpen && hasOtherGames
+
+  // Determine if cards should be tappable (only after player's drive is complete and revealed)
+  const canSpectate = driveState.isComplete && !isWaitingForReveal && !!onSpectate
 
   historyEntries.filter(play => play !== driveState.playHistory[displayedPlayCount]);
 
@@ -246,29 +251,18 @@ export function DriveView({
       style={{ gap: "4px" }}
     >
       {/* ═══ Header ═══ */}
-      <header className="flex items-center justify-between shrink-0">
+      <header className="flex items-center justify-between gap-2 shrink-0 overflow-hidden">
         <span
-          className={`text-xl font-bold uppercase tracking-widest ${theme.accentText}`}
+          className={`text-xl font-bold uppercase tracking-widest shrink-0 ${theme.accentText}`}
         >
           {roundName}
         </span>
-        <span className={`text-[12px] ${theme.mutedText}`}>
-          You ({roleLabel}) vs {opponentNameWithSeed}
-        </span>
+        <MatchupLabel
+          leftName={`You (${roleLabel})`}
+          rightName={opponentNameWithSeed}
+          mutedClass={theme.mutedText}
+        />
       </header>
-
-      {/* ═══ Show/Hide toggle row (right-aligned, only when other games exist) ═══ */}
-      {hasOtherGames && (
-        <div className="text-right shrink-0">
-          <button
-            type="button"
-            onClick={() => setOtherGamesOpen((prev) => !prev)}
-            className={`text-[10px] ${theme.mutedText} hover:text-white transition-colors`}
-          >
-            {showSidePanel ? "▼ Hide other games" : `▶ Show other games (${otherDrives.length})`}
-          </button>
-        </div>
-      )}
 
       {/* ═══ Field + Side panel ═══ */}
       <div className="flex-1 min-h-0 flex gap-2">
@@ -284,12 +278,16 @@ export function DriveView({
         </div>
 
         {/* Other Games sidebar */}
-        {showSidePanel && (
-          <div className="overflow-auto flex flex-col mt-6 gap-1.5 w-[140px] shrink-0">
+        {hasOtherGames && (
+          <div className="overflow-auto flex flex-col gap-1.5 w-[140px] shrink-0">
+            <span className={`text-[9px] text-center font-medium ${canSpectate ? "text-amber-300" : theme.mutedText}`}>
+              {canSpectate ? "Tap a game to spectate" : "Other games"}
+            </span>
             {otherDrives.map(({ matchupId: mId, driveState: ds }) => (
               <GatedMiniScoreboard
                 key={mId}
                 driveState={ds}
+                onTap={canSpectate ? () => onSpectate!(mId) : undefined}
               />
             ))}
           </div>

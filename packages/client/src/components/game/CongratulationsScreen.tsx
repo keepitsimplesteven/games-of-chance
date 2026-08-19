@@ -136,7 +136,7 @@ export default function CongratulationsScreen() {
           onClick={() => setShowLotteryModal(false)}
         >
           <div
-            className="relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-xl shadow-xl bg-[#0a2a12]"
+            className="relative max-h-[85vh] w-full max-w-[44rem] overflow-y-auto rounded-xl shadow-xl bg-[#0a2a12]"
             onClick={(e) => e.stopPropagation()}
           >
             <button

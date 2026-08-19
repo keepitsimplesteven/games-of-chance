@@ -79,9 +79,12 @@ export function formatPlayResult(result: PlayResult, yardLine?: number): string 
   if (result.outcome === "incomplete_pass") return `${playName} — Incomplete`
   if (result.outcome === "tackle_for_loss")
     return `${playName} — Loss of ${Math.abs(result.yardsGained)}`
+  // Clamp positive yards to distance-to-goal; show TD if ball reached end zone
   const displayYards = yardLine !== undefined && result.yardsGained > 0
     ? Math.min(result.yardsGained, yardLine)
     : result.yardsGained
+  if (yardLine !== undefined && displayYards >= yardLine && yardLine > 0)
+    return `${playName} — TOUCHDOWN!`
   return `${playName} — ${displayYards} yard${displayYards !== 1 ? "s" : ""}`
 }
 
@@ -90,15 +93,16 @@ export function formatPlayResult(result: PlayResult, yardLine?: number): string 
 /**
  * Computes summary stats for a completed drive.
  * Returns null if drive has no completion data.
+ *
+ * Total yards is calculated as starting yard line (25) minus final ball position,
+ * which correctly accounts for yards lost and clamps to actual distance covered.
  */
 export function computeDriveSummary(state: DriveState) {
   if (!state.completion) return null
+  const STARTING_YARD_LINE = 25
   return {
     totalPlays: state.playHistory.length,
-    totalYards: state.playHistory.reduce(
-      (sum, entry) => sum + entry.result.yardsGained,
-      0
-    ),
+    totalYards: STARTING_YARD_LINE - state.yardLine,
     endingType: state.completion.endingType,
     winner: state.completion.winner,
   }

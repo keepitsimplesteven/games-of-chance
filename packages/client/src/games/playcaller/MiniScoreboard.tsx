@@ -13,6 +13,8 @@ export interface MiniScoreboardProps {
   winnerId?: string // player ID of the winner
   offensePlayerId?: string // to determine which name to strike
   defensePlayerId?: string
+  /** Optional tap handler — when provided, the card renders as tappable */
+  onTap?: () => void
 }
 
 /**
@@ -33,18 +35,30 @@ export function MiniScoreboard({
   winnerId,
   offensePlayerId,
   defensePlayerId,
+  onTap,
 }: MiniScoreboardProps) {
   const theme = useTheme()
 
   const offenseIsWinner = winnerId === offensePlayerId
   const defenseIsWinner = winnerId === defensePlayerId
 
+  const isTappable = !!onTap
+
   return (
-    <div className={`${theme.listItem} rounded px-2 py-1.5`}>
+    <div
+      className={`${theme.listItem} rounded px-2 py-1.5 ${
+        isTappable ? "cursor-pointer ring-1 ring-amber-400/40 hover:ring-amber-400/80 active:scale-[0.97] transition-all" : ""
+      }`}
+      onClick={onTap}
+      role={isTappable ? "button" : undefined}
+      tabIndex={isTappable ? 0 : undefined}
+      onKeyDown={isTappable ? (e) => { if (e.key === "Enter" || e.key === " ") onTap?.() } : undefined}
+      aria-label={isTappable ? `Spectate game: ${offensePlayerName} vs ${defensePlayerName}` : undefined}
+    >
       {/* Player names row */}
-      <div className="flex flex-col justify-between items-center">
+      <div className="flex flex-col justify-between items-center overflow-hidden">
         <span
-          className={`text-[12px] font-bold ${
+          className={`text-[12px] font-bold truncate max-w-full ${
             isComplete && !offenseIsWinner
               ? "line-through text-gray-500"
               : isComplete && offenseIsWinner
@@ -56,7 +70,7 @@ export function MiniScoreboard({
         </span>
         <span className={`text-[8px] ${theme.mutedText} opacity-60`}>vs</span>
         <span
-          className={`text-[12px] font-bold ${
+          className={`text-[12px] font-bold truncate max-w-full ${
             isComplete && !defenseIsWinner
               ? "line-through text-gray-500"
               : isComplete && defenseIsWinner

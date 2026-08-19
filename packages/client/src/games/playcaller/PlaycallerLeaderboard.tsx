@@ -35,7 +35,7 @@ export function PlaycallerLeaderboard({ trigger }: PlaycallerLeaderboardProps) {
   const sessionLeaderboard = roomState?.sessionLeaderboard ?? []
 
   // Gate scores behind deferred reveal
-  const deferredLeaderboard = useDeferredRevealValue(sessionLeaderboard)
+  const deferredLeaderboard = useDeferredRevealValue(sessionLeaderboard, [])
 
   // Default to closed on each phase transition away from LOBBY
   const prevPhaseRef = useRef(phase)

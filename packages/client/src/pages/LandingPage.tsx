@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import type { ScoringMode, ProgressionMode } from "@games-of-chance/shared"
+import { humanId } from "human-id"
 import { useTheme } from "../theme"
 
 export default function LandingPage() {
@@ -28,21 +29,24 @@ export default function LandingPage() {
   }
 
   function handleCreateRoom() {
-    const sanitized = sanitizeRoomName(roomName)
-    if (!sanitized) {
-      setRoomNameError("Enter a room name (letters, numbers, hyphens)")
-      return
-    }
-    if (sanitized.length < 2) {
-      setRoomNameError("Room name must be at least 2 characters")
-      return
-    }
-    if (sanitized.length > 40) {
-      setRoomNameError("Room name must be 40 characters or less")
-      return
+    let roomId: string
+    if (roomName.trim()) {
+      const sanitized = sanitizeRoomName(roomName)
+      if (!sanitized || sanitized.length < 2) {
+        setRoomNameError("Room name must be at least 2 characters")
+        return
+      }
+      if (sanitized.length > 40) {
+        setRoomNameError("Room name must be 40 characters or less")
+        return
+      }
+      roomId = sanitized
+    } else {
+      // No name provided — generate a friendly random ID
+      roomId = humanId({ separator: "-", capitalize: false })
     }
     setRoomNameError(null)
-    navigate(`/${sanitized}`, { state: { scoringMode, progressionMode, roomSize, draftPickEnabled: progressionMode === "lottery" ? draftPickEnabled : undefined, skipGameplay: progressionMode === "lottery" ? skipGameplay : undefined } })
+    navigate(`/${roomId}`, { state: { scoringMode, progressionMode, roomSize, draftPickEnabled: progressionMode === "lottery" ? draftPickEnabled : undefined, skipGameplay: progressionMode === "lottery" ? skipGameplay : undefined } })
   }
 
   function handleJoinRoom(e: React.FormEvent) {
@@ -225,14 +229,13 @@ export default function LandingPage() {
             <p className={`text-xs ${theme.statusDanger}`}>{roomNameError}</p>
           )}
           <p className={`text-xs ${theme.mutedText}`}>
-            Letters, numbers, and hyphens only. This becomes the room URL.
+            Optional. Letters, numbers, and hyphens. Leave blank for a random name.
           </p>
         </div>
 
         <button
           onClick={handleCreateRoom}
-          disabled={!roomName.trim()}
-          className={`w-full px-4 py-3 text-lg font-bold uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed ${theme.btnPrimary}`}
+          className={`w-full px-4 py-3 text-lg font-bold uppercase tracking-wider ${theme.btnPrimary}`}
         >
           Create Room
         </button>

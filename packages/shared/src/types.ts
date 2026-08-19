@@ -295,6 +295,8 @@ export type ClientMessage =
   | { type: "COIN_TOSS_CHOICE"; payload: { matchupId: string; selection: SideSelection } }
   | { type: "DRAFT_PICK_SELECTION"; payload: { position: number } }
   | { type: "ADVANCE_LOTTERY_PHASE"; payload?: never }
+  | { type: "LOTTERY_REVEAL_NEXT"; payload?: never }
+  | { type: "LOTTERY_TOGGLE_DRAMATIC"; payload?: never }
   | { type: "RENAME_PLAYER"; payload: { playerId: string; newName: string } }
   | { type: "SET_PLAYER_SEEDS"; payload: { seeds: Record<string, number> } }
 
@@ -314,6 +316,10 @@ export interface LotteryState {
   oddsTable: number[][]
   placements: Record<string, number>
   matchupWinners: Record<string, string>
+  /** How many placements have been revealed so far (0 = none, playerCount = all) */
+  revealedCount: number
+  /** Whether "Dramatic reveal mode" is active (timed auto-reveal with longer delays) */
+  dramaticMode: boolean
 }
 
 /** Draft pick state — present during DRAFT_PICK phase */
@@ -341,6 +347,8 @@ export interface Matchup {
   winner: string | null
   /** How the matchup ended (present only after resolution via drive gameplay) */
   endingType?: DriveEndingType | null
+  /** Play-by-play history for this matchup (populated when the round resolves) */
+  driveHistory?: PlayHistoryEntry[]
 }
 
 /** A single round in the bracket */

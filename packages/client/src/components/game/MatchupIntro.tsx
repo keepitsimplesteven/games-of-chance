@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useTheme } from "../../theme"
 
@@ -33,13 +33,17 @@ export function MatchupIntro({
   durationMs = 3000,
 }: MatchupIntroProps) {
   const theme = useTheme()
+  const [fadingOut, setFadingOut] = useState(false)
 
   useEffect(() => {
-    const timer = setTimeout(onComplete, durationMs)
-    return () => clearTimeout(timer)
+    // Start fade-out at durationMs, then call onComplete after the 800ms fade finishes
+    const fadeTimer = setTimeout(() => setFadingOut(true), durationMs)
+    const completeTimer = setTimeout(onComplete, durationMs + 800)
+    return () => {
+      clearTimeout(fadeTimer)
+      clearTimeout(completeTimer)
+    }
   }, [onComplete, durationMs])
-
-  const fadeOutDelay = (durationMs - 800) / 1000
 
   return (
     <AnimatePresence>
@@ -117,12 +121,12 @@ export function MatchupIntro({
           ))}
         </div>
 
-        {/* Fade out overlay */}
+        {/* Fade out overlay — triggered by timer, not by framer delay */}
         <motion.div
           className="absolute inset-0 bg-black pointer-events-none"
           initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: fadeOutDelay }}
+          animate={{ opacity: fadingOut ? 1 : 0 }}
+          transition={{ duration: 0.8 }}
         />
       </motion.div>
     </AnimatePresence>

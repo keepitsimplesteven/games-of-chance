@@ -61,7 +61,7 @@ export function PlayCard({ playId, displayName, formation, artData, state, onSel
     >
       {/* Play type badge — bottom-left corner */}
       <span
-        className={`absolute bottom-1 left-1 ${badgeBg} text-white text-[8px] font-bold uppercase px-1.5 py-0.5 rounded leading-none`}
+        className={`absolute bottom-1 left-1 ${badgeBg} text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded leading-none`}
       >
         {badgeLabel}
       </span>

@@ -61,7 +61,27 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
   // (playCount > displayedPlayCount), the field/result stays frozen until
   // the announcer fires onOutcomeReveal.
   const playCount = playHistory.length
-  const [displayedPlayCount, setDisplayedPlayCount] = useState(playCount)
+
+  // On mount, treat all pre-existing play history as already revealed.
+  // Only gate plays that arrive *after* mount (live updates).
+  // This prevents refresh/reconnect from getting permanently stuck one play behind.
+  const initialDisplayCount = useRef(playCount).current
+  const [displayedPlayCount, setDisplayedPlayCount] = useState(initialDisplayCount)
+
+  // Re-sync safeguard: if the spectator toggled away and came back (or multiple
+  // plays landed while the announcer was gating a single play), snap to
+  // playCount - 1 so only the very latest play is gated. Without this, a
+  // spectator who leaves and returns would be stuck multiple plays behind.
+  const prevPlayCountRef = useRef(playCount)
+  useEffect(() => {
+    const delta = playCount - prevPlayCountRef.current
+    prevPlayCountRef.current = playCount
+    // If more than 1 new play arrived since we last rendered, fast-forward
+    // to gate only the newest one.
+    if (delta > 1) {
+      setDisplayedPlayCount(playCount - 1)
+    }
+  }, [playCount])
 
   const isWaitingForReveal = displayedPlayCount < playCount
 
@@ -204,20 +224,17 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
           aria-label="Back to matchup grid"
         >
           <span aria-hidden="true">←</span>
-          <span>Spectate other games</span>
+          <span>Back</span>
         </button>
         <span className={`${theme.mutedText} text-[10px]`}>
           Spectating
         </span>
       </div>
 
-      {/* ═══ Header: Round name + Player matchup ═══ */}
-      <header className="flex items-center justify-between py-1">
-        <span className={`text-xl font-bold uppercase tracking-widest ${theme.accentText}`}>
+      {/* ═══ Header: Round name ═══ */}
+      <header className="flex items-center justify-between gap-2 py-1 overflow-hidden">
+        <span className={`text-xl font-bold uppercase tracking-widest shrink-0 ${theme.accentText}`}>
           {roundName}
-        </span>
-        <span className={`text-[12px] ${theme.mutedText}`}>
-          {offensePlayerName} vs {defensePlayerName}
         </span>
       </header>
 
@@ -255,6 +272,36 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
           onClose={() => setHistoryOpen(false)}
         />
       </div>
+
+      {/* ═══ Player Matchup Panel (fills bottom space where play cards would be) ═══ */}
+      {!(driveState.isComplete && !isWaitingForReveal) && (
+        <div className="shrink-0 flex items-center justify-center gap-4 px-3 py-4" style={{ minHeight: "18dvh" }}>
+          {/* Offense player */}
+          <div className="flex-1 min-w-0 text-center">
+            <div className={`text-[10px] uppercase tracking-widest ${theme.mutedText} mb-1`}>
+              Offense
+            </div>
+            <div className={`text-lg font-bold leading-tight truncate ${theme.bodyText}`}>
+              {offensePlayerName}
+            </div>
+          </div>
+
+          {/* VS divider */}
+          <div className={`text-[12px] font-bold ${theme.mutedText} opacity-50 shrink-0`}>
+            vs
+          </div>
+
+          {/* Defense player */}
+          <div className="flex-1 min-w-0 text-center">
+            <div className={`text-[10px] uppercase tracking-widest ${theme.mutedText} mb-1`}>
+              Defense
+            </div>
+            <div className={`text-lg font-bold leading-tight truncate ${theme.bodyText}`}>
+              {defensePlayerName}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ═══ Drive Completion Overlay — shown when drive is finished and revealed ═══ */}
       {driveState.isComplete && !isWaitingForReveal && (

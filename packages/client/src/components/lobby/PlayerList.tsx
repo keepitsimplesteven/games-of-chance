@@ -37,7 +37,7 @@ export default function PlayerList() {
   const { players, sessionLeaderboard } = roomState
 
   // Gate session leaderboard behind animation reveal to prevent spoiling outcomes
-  const deferredLeaderboard = useDeferredRevealValue(sessionLeaderboard)
+  const deferredLeaderboard = useDeferredRevealValue(sessionLeaderboard, [])
 
   // Build a lookup for session data (using deferred values during animation)
   const sessionDataMap = new Map(
@@ -101,17 +101,17 @@ export default function PlayerList() {
             return (
               <li
                 key={player.id}
-                className={`flex items-center justify-between rounded-md px-3 py-2 ${theme.listItem}`}
+                className={`flex items-center justify-between gap-2 rounded-md px-3 py-2 ${theme.listItem}`}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
                   {/* Rank badge */}
-                  <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${theme.bodyText} ${theme.listItem}`}>
+                  <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${theme.bodyText} ${theme.listItem}`}>
                     {rank}
                   </span>
 
                   {/* Connection status indicator */}
                   <span
-                    className={`inline-block h-2.5 w-2.5 rounded-full ${
+                    className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${
                       player.connected ? "bg-green-500" : "bg-gray-400"
                     }`}
                     aria-label={player.connected ? "Connected" : "Disconnected"}
@@ -119,13 +119,13 @@ export default function PlayerList() {
 
                   {/* Bot icon */}
                   {(isBotPlayer || isBotControlled(player.name)) && (
-                    <span className="text-sm" aria-label="Bot" title={isBotPlayer ? "Bot" : "Bot-controlled (player disconnected)"}>
+                    <span className="text-sm shrink-0" aria-label="Bot" title={isBotPlayer ? "Bot" : "Bot-controlled (player disconnected)"}>
                       🤖
                     </span>
                   )}
 
                   {/* Player name */}
-                  <span className={`text-sm font-medium ${theme.bodyText}`}>
+                  <span className={`text-sm font-medium truncate min-w-0 ${theme.bodyText}`}>
                     {player.name}
                     {isCurrentPlayer && (
                       <span className={`ml-1 text-xs ${theme.mutedText}`}>(you)</span>
@@ -134,14 +134,14 @@ export default function PlayerList() {
 
                   {/* Host badge */}
                   {player.role === "host" && (
-                    <span className="text-sm" aria-label="Host" title="Host">
+                    <span className="text-sm shrink-0" aria-label="Host" title="Host">
                       👑
                     </span>
                   )}
                 </div>
 
                 {/* Score or Seed */}
-                <span className={`text-sm font-semibold ${theme.accentText}`}>
+                <span className={`text-sm font-semibold shrink-0 ${theme.accentText}`}>
                   {isLotteryMode
                     ? `#${playerSeeds?.[player.id] ?? "—"} seed`
                     : `${sessionScore} pts`}

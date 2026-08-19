@@ -20,6 +20,15 @@ const FLIP_ANIMATION_DURATION_MS = 1500
 /** Additional delay after landing before showing result text */
 const REVEAL_DELAY_MS = 400
 
+/** Returns a text size class that shrinks for longer names. */
+function getCoinFlipNameSize(name: string): string {
+  const len = name.length
+  if (len >= 30) return "text-[11px]"
+  if (len >= 22) return "text-[12px]"
+  if (len >= 16) return "text-[13px]"
+  return "text-sm"
+}
+
 interface CoinFlipResultProps {
   matchupState: CoinTossCeremonyMatchupState
   getPlayerName: (id: string | null | undefined) => string
@@ -29,7 +38,7 @@ interface CoinFlipResultProps {
 
 export function CoinFlipResult({ matchupState, getPlayerName, onRevealed }: CoinFlipResultProps) {
   const theme = useTheme()
-  const { flipOutcome, calledSide, callerId, chooserId, flippedAt } = matchupState
+  const { flipOutcome, calledSide, callerId, flippedAt } = matchupState
 
   // Determine animation phase based on flippedAt timestamp
   const [phase, setPhase] = useState<"flipping" | "landed" | "revealed">(() => {
@@ -82,7 +91,6 @@ export function CoinFlipResult({ matchupState, getPlayerName, onRevealed }: Coin
   if (!flipOutcome || !calledSide) return null
 
   const callerWon = flipOutcome === calledSide
-  const chooserName = getPlayerName(chooserId)
   const callerName = getPlayerName(callerId)
 
   return (
@@ -116,23 +124,15 @@ export function CoinFlipResult({ matchupState, getPlayerName, onRevealed }: Coin
 
       {/* Result text — ONLY shown after animation fully resolves (deferred reveal) */}
       {phase === "revealed" && (
-        <div className="flex flex-col items-center gap-2 animate-result-reveal">
-          <div className={`text-lg font-bold tracking-wide ${theme.titleText}`}>
-            {flipOutcome}
-          </div>
-
-          <div className={`text-xs ${theme.mutedText}`}>
-            <span className={`font-bold ${theme.accentText}`}>{callerName}</span>
+        <div className="flex flex-col items-center gap-2 animate-result-reveal text-center">
+          <div className={`text-sm ${theme.bodyText} max-w-xs`}>
+            <span className={`font-bold ${theme.accentText} ${getCoinFlipNameSize(callerName)} truncate inline-block max-w-[50%] align-bottom`}>{callerName}</span>
             {" called "}
             <span className={`font-bold ${theme.bodyText}`}>{calledSide}</span>
             {" — "}
             <span className={callerWon ? theme.statusSuccess : theme.statusDanger}>
               {callerWon ? "correct!" : "wrong!"}
             </span>
-          </div>
-
-          <div className={`text-sm font-bold ${theme.accentText}`}>
-            🏆 {chooserName} won the toss!
           </div>
         </div>
       )}

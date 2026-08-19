@@ -15,6 +15,16 @@ import { CoinFlipResult } from "./CoinFlipResult"
  *
  * Validates: Requirements 2.2, 4.1, 6.1
  */
+
+/** Returns a text size class that shrinks for longer names, plus truncate at the extreme. */
+function getCeremonyNameSize(name: string): string {
+  const len = name.length
+  if (len >= 30) return "text-[11px]"
+  if (len >= 22) return "text-[12px]"
+  if (len >= 16) return "text-[13px]"
+  return "text-sm"
+}
+
 export function CoinTossCeremony() {
   const playerId = useGameStore((s) => s.playerId)
   const playcallerGameState = useGameStore(
@@ -131,9 +141,9 @@ function CoinCallUI({ matchupId, matchupState, getPlayerName }: CoinCallUIProps)
         Coin Toss
       </div>
       <CoinTossCountdown deadlineMs={matchupState.coinCallDeadlineMs} />
-      <div className={`text-sm ${theme.bodyText}`}>
+      <div className={`text-sm ${theme.bodyText} text-center max-w-xs`}>
         You are the <span className={`font-bold ${theme.accentText}`}>Caller</span> — vs{" "}
-        <span className="font-bold">{opponentName}</span>
+        <span className={`font-bold ${getCeremonyNameSize(opponentName)} truncate inline-block max-w-[60%] align-bottom`}>{opponentName}</span>
       </div>
       <div className={`text-sm ${theme.mutedText}`}>Call it — heads or tails?</div>
 
@@ -146,7 +156,7 @@ function CoinCallUI({ matchupId, matchupState, getPlayerName }: CoinCallUIProps)
             ${submitted && selectedSide === "HEADS"
               ? `${theme.btnPrimary} ring-2 ring-[#f5c542]`
               : submitted
-                ? "opacity-40 cursor-not-allowed bg-[#0f3d18] text-[#7dcea0] border border-[#2a7a3a]"
+                ? "opacity-40 cursor-not-allowed bg-[#0f3d18] text-[#c8e6d0] border border-[#2a7a3a]"
                 : `${theme.btnPrimary} active:scale-95 cursor-pointer`
             }`}
         >
@@ -160,7 +170,7 @@ function CoinCallUI({ matchupId, matchupState, getPlayerName }: CoinCallUIProps)
             ${submitted && selectedSide === "TAILS"
               ? `${theme.btnPrimary} ring-2 ring-[#f5c542]`
               : submitted
-                ? "opacity-40 cursor-not-allowed bg-[#0f3d18] text-[#7dcea0] border border-[#2a7a3a]"
+                ? "opacity-40 cursor-not-allowed bg-[#0f3d18] text-[#c8e6d0] border border-[#2a7a3a]"
                 : `${theme.btnPrimary} active:scale-95 cursor-pointer`
             }`}
         >
@@ -212,9 +222,9 @@ function SideSelectionUI({ matchupId, matchupState, getPlayerName }: CoinCallUIP
             Choose Your Side
           </div>
           <CoinTossCountdown deadlineMs={matchupState.sideChoiceDeadlineMs} />
-          <div className={`text-sm ${theme.bodyText}`}>
-            You won the toss! Playing against{" "}
-            <span className="font-bold">{opponentName}</span>
+          <div className={`text-sm ${theme.bodyText} text-center max-w-xs`}>
+            Your opponent:{" "}
+            <span className={`font-bold ${getCeremonyNameSize(opponentName)} truncate inline-block max-w-[70%] align-bottom`}>{opponentName}</span>
           </div>
           <div className={`text-sm ${theme.mutedText}`}>Pick offense or defense</div>
 
@@ -227,7 +237,7 @@ function SideSelectionUI({ matchupId, matchupState, getPlayerName }: CoinCallUIP
                 ${submitted && selectedSide === "OFFENSE"
                   ? `${theme.btnPrimary} ring-2 ring-[#f5c542]`
                   : submitted
-                    ? "opacity-40 cursor-not-allowed bg-[#0f3d18] text-[#7dcea0] border border-[#2a7a3a]"
+                    ? "opacity-40 cursor-not-allowed bg-[#0f3d18] text-[#c8e6d0] border border-[#2a7a3a]"
                     : `${theme.btnPrimary} active:scale-95 cursor-pointer`
                 }`}
             >
@@ -241,7 +251,7 @@ function SideSelectionUI({ matchupId, matchupState, getPlayerName }: CoinCallUIP
                 ${submitted && selectedSide === "DEFENSE"
                   ? `${theme.btnSecondary} ring-2 ring-[#f5c542]`
                   : submitted
-                    ? "opacity-40 cursor-not-allowed bg-[#0f3d18] text-[#7dcea0] border border-[#2a7a3a]"
+                    ? "opacity-40 cursor-not-allowed bg-[#0f3d18] text-[#c8e6d0] border border-[#2a7a3a]"
                     : `${theme.btnSecondary} active:scale-95 cursor-pointer`
                 }`}
             >
@@ -305,15 +315,15 @@ function WaitingView({ matchupState, getPlayerName, label }: CeremonyProps & { l
 
           <div className={`text-center text-sm ${theme.bodyText} max-w-xs`}>
             Waiting for{" "}
-            <span className={`font-bold ${theme.accentText}`}>{activePlayerName}</span>
+            <span className={`font-bold ${theme.accentText} ${getCeremonyNameSize(activePlayerName)} truncate inline-block max-w-[60%] align-bottom`}>{activePlayerName}</span>
             {" "}to finish {actionText}…
           </div>
 
           {/* Three-dot bouncing indicator */}
           <div className="flex items-center gap-1.5" aria-label="Loading">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#7dcea0] animate-bounce [animation-delay:0ms]" />
-            <span className="h-1.5 w-1.5 rounded-full bg-[#7dcea0] animate-bounce [animation-delay:150ms]" />
-            <span className="h-1.5 w-1.5 rounded-full bg-[#7dcea0] animate-bounce [animation-delay:300ms]" />
+            <span className="h-1.5 w-1.5 rounded-full bg-[#c8e6d0] animate-bounce [animation-delay:0ms]" />
+            <span className="h-1.5 w-1.5 rounded-full bg-[#c8e6d0] animate-bounce [animation-delay:150ms]" />
+            <span className="h-1.5 w-1.5 rounded-full bg-[#c8e6d0] animate-bounce [animation-delay:300ms]" />
           </div>
         </>
       )}
@@ -333,8 +343,8 @@ function CeremonyResult({ matchupState, getPlayerName }: CeremonyProps) {
     <div className={`flex flex-col items-center justify-center gap-5 py-8 animate-fade-in ${theme.font}`}>
       <CoinFlipResult matchupState={matchupState} getPlayerName={getPlayerName} />
 
-      <div className={`text-sm ${theme.bodyText}`}>
-        <span className={`font-bold ${theme.accentText}`}>{chooserName}</span>
+      <div className={`text-sm ${theme.bodyText} text-center max-w-xs`}>
+        <span className={`font-bold ${theme.accentText} ${getCeremonyNameSize(chooserName)} truncate inline-block max-w-[60%] align-bottom`}>{chooserName}</span>
         {" chose "}
         <span className="font-bold">
           {matchupState.sideSelection}
@@ -342,22 +352,22 @@ function CeremonyResult({ matchupState, getPlayerName }: CeremonyProps) {
       </div>
 
       {/* Role assignment cards */}
-      <div className="flex items-stretch gap-3 animate-result-reveal">
-        <div className={`flex flex-col items-center gap-1.5 rounded px-5 py-3 min-w-[110px] ${theme.card}`}>
+      <div className="flex items-stretch gap-3 animate-result-reveal w-full max-w-xs">
+        <div className={`flex flex-col items-center gap-1.5 rounded px-5 py-3 flex-1 basis-0 min-w-0 ${theme.card}`}>
           <span className={`text-xs uppercase tracking-wider font-bold ${theme.accentText}`}>
             Offense
           </span>
-          <span className={`text-base font-bold ${theme.bodyText}`}>
+          <span className={`${getCeremonyNameSize(offensePlayer)} font-bold ${theme.bodyText} text-center break-words truncate max-w-full`}>
             {offensePlayer}
           </span>
           <span className="text-lg" aria-hidden="true">🏈</span>
         </div>
         <div className={`flex items-center font-bold text-xs ${theme.mutedText}`}>vs</div>
-        <div className={`flex flex-col items-center gap-1.5 rounded px-5 py-3 min-w-[110px] ${theme.card}`}>
+        <div className={`flex flex-col items-center gap-1.5 rounded px-5 py-3 flex-1 basis-0 min-w-0 ${theme.card}`}>
           <span className={`text-xs uppercase tracking-wider font-bold ${theme.mutedText}`}>
             Defense
           </span>
-          <span className={`text-base font-bold ${theme.bodyText}`}>
+          <span className={`${getCeremonyNameSize(defensePlayer)} font-bold ${theme.bodyText} text-center break-words truncate max-w-full`}>
             {defensePlayer}
           </span>
           <span className="text-lg" aria-hidden="true">🛡️</span>
@@ -411,8 +421,8 @@ function SpectatorCeremonyView({ ceremonyStates, getPlayerName }: SpectatorViewP
               onClick={() => setSelectedMatchupId(matchupId)}
               className={`w-full rounded px-4 py-3 text-left transition-all cursor-pointer ${theme.listItem} hover:ring-1 hover:ring-[#f5c542]/40`}
             >
-              <div className="flex items-center justify-between mb-1">
-                <span className={`text-sm ${theme.bodyText}`}>
+              <div className="flex items-center justify-between mb-1 gap-2 overflow-hidden">
+                <span className={`text-sm ${theme.bodyText} truncate min-w-0`}>
                   <span className="font-bold">{getPlayerName(m.callerId)}</span>
                   {" vs "}
                   <span className="font-bold">{getPlayerName(m.waiterId)}</span>
@@ -427,7 +437,7 @@ function SpectatorCeremonyView({ ceremonyStates, getPlayerName }: SpectatorViewP
                   }
                 />
               </div>
-              <div className={`text-xs ${theme.mutedText}`}>
+              <div className={`text-xs ${theme.mutedText} truncate`}>
                 {m.step === "AWAITING_CALL" && (
                   <>Waiting for <span className={`font-bold ${theme.accentText}`}>{getPlayerName(m.callerId)}</span> to call</>
                 )}
@@ -480,10 +490,10 @@ function SpectatorDetailView({ matchupState, getPlayerName, onBack }: SpectatorD
       <div className={`text-lg font-bold uppercase tracking-wider ${theme.titleText}`}>
         Coin Toss
       </div>
-      <div className={`text-sm ${theme.bodyText}`}>
-        <span className="font-bold">{callerName}</span>
+      <div className={`text-sm ${theme.bodyText} text-center max-w-xs truncate`}>
+        <span className={`font-bold ${getCeremonyNameSize(callerName)}`}>{callerName}</span>
         {" vs "}
-        <span className="font-bold">{waiterName}</span>
+        <span className={`font-bold ${getCeremonyNameSize(waiterName)}`}>{waiterName}</span>
       </div>
       <div className={`text-[10px] uppercase tracking-widest ${theme.mutedText} px-2 py-0.5 rounded bg-[#0f3d18]`}>
         Spectating
@@ -498,8 +508,8 @@ function SpectatorDetailView({ matchupState, getPlayerName, onBack }: SpectatorD
               <span className="text-2xl" aria-hidden="true">🪙</span>
             </div>
           </div>
-          <div className={`text-center text-sm ${theme.bodyText}`}>
-            Waiting for <span className={`font-bold ${theme.accentText}`}>{callerName}</span> to call…
+          <div className={`text-center text-sm ${theme.bodyText} max-w-xs`}>
+            Waiting for <span className={`font-bold ${theme.accentText} ${getCeremonyNameSize(callerName)} truncate inline-block max-w-[60%] align-bottom`}>{callerName}</span> to call…
           </div>
         </>
       )}
@@ -510,8 +520,8 @@ function SpectatorDetailView({ matchupState, getPlayerName, onBack }: SpectatorD
           {flipRevealed && (
             <>
               <CoinTossCountdown deadlineMs={matchupState.sideChoiceDeadlineMs} />
-              <div className={`text-center text-sm ${theme.bodyText}`}>
-                Waiting for <span className={`font-bold ${theme.accentText}`}>{chooserName}</span> to choose a side…
+              <div className={`text-center text-sm ${theme.bodyText} max-w-xs`}>
+                Waiting for <span className={`font-bold ${theme.accentText} ${getCeremonyNameSize(chooserName)} truncate inline-block max-w-[60%] align-bottom`}>{chooserName}</span> to choose a side…
               </div>
             </>
           )}

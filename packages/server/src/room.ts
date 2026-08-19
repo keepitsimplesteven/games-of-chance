@@ -300,6 +300,12 @@ export class GameRoom extends Server {
       case "ADVANCE_LOTTERY_PHASE":
         this.handleAdvanceLotteryPhase(sender)
         break
+      case "LOTTERY_REVEAL_NEXT":
+        this.handleLotteryRevealNext(sender)
+        break
+      case "LOTTERY_TOGGLE_DRAMATIC":
+        this.handleLotteryToggleDramatic(sender)
+        break
       case "DRAFT_PICK_SELECTION":
         this.handleDraftPickSelection(sender, msg.payload)
         break
@@ -378,6 +384,16 @@ export class GameRoom extends Server {
       this.broadcastState()
       this.scheduleResolve(0)
       return
+    }
+
+    // ── Stopgap: if no human players remain connected, reset module-level
+    //    playcaller state so it doesn't leak into other room instances that
+    //    share this isolate's module scope. ──────────────────────────────────
+    const hasConnectedHumans = Object.values(this.state.players).some(
+      (p) => p.connected && !this.botManager.isBot(p.id)
+    )
+    if (!hasConnectedHumans && this.state.config.gameType === "playcaller") {
+      resetPlaycallerState()
     }
 
     this.broadcastState()
@@ -1361,6 +1377,42 @@ export class GameRoom extends Server {
     handleCoinTossChoiceFn(this.getPlaycallerContext(), sender, payload)
   }
 
+  private handleLotteryRevealNext(sender: Connection) {
+    const hostId = this.getHostId()
+    const senderId = this.getPlayerIdByConnectionId(sender.id)
+    if (senderId !== hostId) {
+      this.sendError(sender, "NOT_HOST", "Only the host can reveal lottery cells")
+      return
+    }
+    if (this.state.round.phase !== "LOTTERY_REVEAL") {
+      this.sendError(sender, "WRONG_PHASE", "Can only reveal during LOTTERY_REVEAL phase")
+      return
+    }
+    const lotteryState = this.state.lotteryState
+    if (!lotteryState) return
+    const playerCount = Object.keys(this.state.players).length
+    if (lotteryState.revealedCount >= playerCount) return
+    lotteryState.revealedCount += 1
+    this.broadcastState()
+  }
+
+  private handleLotteryToggleDramatic(sender: Connection) {
+    const hostId = this.getHostId()
+    const senderId = this.getPlayerIdByConnectionId(sender.id)
+    if (senderId !== hostId) {
+      this.sendError(sender, "NOT_HOST", "Only the host can toggle dramatic mode")
+      return
+    }
+    if (this.state.round.phase !== "LOTTERY_REVEAL") {
+      this.sendError(sender, "WRONG_PHASE", "Can only toggle during LOTTERY_REVEAL phase")
+      return
+    }
+    const lotteryState = this.state.lotteryState
+    if (!lotteryState) return
+    lotteryState.dramaticMode = !lotteryState.dramaticMode
+    this.broadcastState()
+  }
+
   private handleAdvanceLotteryPhase(sender: Connection) {
     const hostId = this.getHostId()
     const senderId = this.getPlayerIdByConnectionId(sender.id)
@@ -1865,6 +1917,8 @@ export class GameRoom extends Server {
           oddsTable: DEFAULT_LOTTERY_ODDS,
           placements: placementsRecord,
           matchupWinners,
+          revealedCount: 0,
+          dramaticMode: false,
         }
       }
 

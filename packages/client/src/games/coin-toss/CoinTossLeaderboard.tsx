@@ -20,9 +20,9 @@ export function CoinTossLeaderboard() {
   if (!roomState) return null
 
   // Gate leaderboard and toss history behind deferred reveal
-  const leaderboard = useDeferredRevealValue(roomState.gameLeaderboard)
+  const leaderboard = useDeferredRevealValue(roomState.gameLeaderboard, [])
   const coinTossState = roomState.coinTossGameState
-  const tossHistory = useDeferredRevealValue(coinTossState?.tossHistory ?? [])
+  const tossHistory = useDeferredRevealValue(coinTossState?.tossHistory ?? [], [])
 
   if (leaderboard.length === 0) return null
 

@@ -23,6 +23,9 @@ export const PLAYCALLER = {
   /** Maximum players (matches room limit) */
   MAX_PLAYERS: 10,
 
+  /** Minimum plays guaranteed in the Final game (lottery mode) for dramatic effect */
+  FINAL_MIN_PLAYS: 8,
+
   /** Minimum score table entries */
   SCORE_TABLE_MIN_ENTRIES: 2,
 

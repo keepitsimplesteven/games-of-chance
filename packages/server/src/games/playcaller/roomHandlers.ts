@@ -672,6 +672,7 @@ export function advancePlaycallerBracket(ctx: PlaycallerRoomContext): void {
       const drive = drives[matchup.matchupId]
       if (drive?.completion) {
         matchup.endingType = drive.completion.endingType
+        matchup.driveHistory = drive.playHistory
       }
     }
 
@@ -703,6 +704,7 @@ export function advancePlaycallerBracket(ctx: PlaycallerRoomContext): void {
       const drive = drives[matchup.matchupId]
       if (drive?.completion) {
         matchup.endingType = drive.completion.endingType
+        matchup.driveHistory = drive.playHistory
       }
     }
 

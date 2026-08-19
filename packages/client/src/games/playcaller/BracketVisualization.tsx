@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef } from "react"
+import { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import type { Bracket, BracketRound, ConsolationRound, Matchup } from "@games-of-chance/shared"
 import { useGameStore } from "../../store/useGameStore"
 import { getPlayerSlotState } from "./playerSlotStyling"
 import { getConsolationColumnIndex } from "./consolationColumnAlignment"
+import { DriveHistoryPopover } from "./DriveHistoryPopover"
 
 // ── BracketVisualization ───────────────────────────────────────────────────
 
@@ -46,6 +47,17 @@ export function BracketVisualization({ bracket }: BracketVisualizationProps) {
   const phase = useGameStore((s) => s.roomState?.round.phase)
   const scrollRef = useRef<HTMLDivElement>(null)
 
+  // Single popover state: only one matchup's drive history can be open at a time
+  const [openMatchupId, setOpenMatchupId] = useState<string | null>(null)
+
+  const handleMatchupClick = useCallback((matchupId: string) => {
+    setOpenMatchupId((prev) => (prev === matchupId ? null : matchupId))
+  }, [])
+
+  const handlePopoverClose = useCallback(() => {
+    setOpenMatchupId(null)
+  }, [])
+
   /** Resolve a player ID to display name with seed */
   function getPlayerDisplay(playerId: string): string {
     if (!playerId) return "TBD"
@@ -87,6 +99,9 @@ export function BracketVisualization({ bracket }: BracketVisualizationProps) {
             totalRounds={bracket.totalRounds}
             getPlayerDisplay={getPlayerDisplay}
             isEliminated={isEliminated}
+            openMatchupId={openMatchupId}
+            onMatchupClick={handleMatchupClick}
+            onPopoverClose={handlePopoverClose}
           />
         ))}
       </div>
@@ -94,6 +109,9 @@ export function BracketVisualization({ bracket }: BracketVisualizationProps) {
         bracket={bracket}
         getPlayerDisplay={getPlayerDisplay}
         isEliminated={isEliminated}
+        openMatchupId={openMatchupId}
+        onMatchupClick={handleMatchupClick}
+        onPopoverClose={handlePopoverClose}
       />
     </div>
   )
@@ -117,6 +135,9 @@ interface ConsolationRowProps {
   bracket: Bracket
   getPlayerDisplay: (playerId: string) => string
   isEliminated: (playerId: string) => boolean
+  openMatchupId: string | null
+  onMatchupClick: (matchupId: string) => void
+  onPopoverClose: () => void
 }
 
 /**
@@ -126,7 +147,7 @@ interface ConsolationRowProps {
  *
  * For 10 players (4 columns): 9th/10th→col 0, 7th/8th→col 1, 5th/6th→col 2, 3rd/4th→col 3
  */
-function ConsolationRow({ bracket, getPlayerDisplay, isEliminated }: ConsolationRowProps) {
+function ConsolationRow({ bracket, getPlayerDisplay, isEliminated, openMatchupId, onMatchupClick, onPopoverClose }: ConsolationRowProps) {
   // Map each consolation round to its visual column index based on placement position
   const byColumn = useMemo(() => {
     const map = new Map<number, ConsolationRound[]>()
@@ -169,6 +190,9 @@ function ConsolationRow({ bracket, getPlayerDisplay, isEliminated }: Consolation
                         getPlayerDisplay={getPlayerDisplay}
                         isEliminated={isEliminated}
                         isConsolation={true}
+                        openMatchupId={openMatchupId}
+                        onMatchupClick={onMatchupClick}
+                        onPopoverClose={onPopoverClose}
                       />
                     ))}
                   </div>
@@ -189,6 +213,9 @@ interface RoundColumnProps {
   totalRounds: number
   getPlayerDisplay: (playerId: string) => string
   isEliminated: (playerId: string) => boolean
+  openMatchupId: string | null
+  onMatchupClick: (matchupId: string) => void
+  onPopoverClose: () => void
 }
 
 function RoundColumn({
@@ -196,6 +223,9 @@ function RoundColumn({
   totalRounds,
   getPlayerDisplay,
   isEliminated,
+  openMatchupId,
+  onMatchupClick,
+  onPopoverClose,
 }: RoundColumnProps) {
   return (
     <div className="flex flex-col items-center gap-3" data-round-index={round.roundIndex}>
@@ -225,6 +255,9 @@ function RoundColumn({
             resolved={round.resolved}
             getPlayerDisplay={getPlayerDisplay}
             isEliminated={isEliminated}
+            openMatchupId={openMatchupId}
+            onMatchupClick={onMatchupClick}
+            onPopoverClose={onPopoverClose}
           />
         ))}
       </div>
@@ -240,6 +273,9 @@ interface MatchupCardProps {
   getPlayerDisplay: (playerId: string) => string
   isEliminated: (playerId: string) => boolean
   isConsolation?: boolean
+  openMatchupId: string | null
+  onMatchupClick: (matchupId: string) => void
+  onPopoverClose: () => void
 }
 
 function MatchupCard({
@@ -248,11 +284,30 @@ function MatchupCard({
   getPlayerDisplay,
   isEliminated,
   isConsolation,
+  openMatchupId,
+  onMatchupClick,
+  onPopoverClose,
 }: MatchupCardProps) {
-  const { playerA, playerB, winner, endingType } = matchup
+  const { playerA, playerB, winner, endingType, driveHistory } = matchup
+  const cardRef = useRef<HTMLDivElement>(null)
+  const hasDriveHistory = resolved && driveHistory && driveHistory.length > 0
+  const isOpen = openMatchupId === matchup.matchupId
+
+  const handleClick = useCallback(() => {
+    if (hasDriveHistory) {
+      onMatchupClick(matchup.matchupId)
+    }
+  }, [hasDriveHistory, matchup.matchupId, onMatchupClick])
 
   return (
-    <div className="w-44 border-2 border-[#2a7a3a] bg-[#1b5e2a] shadow-sm">
+    <div
+      ref={cardRef}
+      className={`relative w-44 border-2 border-[#2a7a3a] bg-[#1b5e2a] shadow-sm ${hasDriveHistory ? "cursor-pointer" : ""}`}
+      onClick={handleClick}
+      role={hasDriveHistory ? "button" : undefined}
+      aria-label={hasDriveHistory ? "View drive history" : undefined}
+      aria-expanded={hasDriveHistory ? isOpen : undefined}
+    >
       {/* Player A */}
       <PlayerSlot
         playerId={playerA}
@@ -281,6 +336,16 @@ function MatchupCard({
         <div className="border-t border-[#2a7a3a]">
           <MatchOutcomeBadge endingType={endingType} />
         </div>
+      )}
+
+      {/* Drive history popover — only for resolved matchups with recorded history */}
+      {hasDriveHistory && (
+        <DriveHistoryPopover
+          entries={driveHistory!}
+          open={isOpen}
+          onClose={onPopoverClose}
+          anchorRef={cardRef}
+        />
       )}
     </div>
   )
@@ -325,11 +390,11 @@ function PlayerSlot({
 
   let stateClasses = "text-[#f0f0f0]" // bodyText white
   if (state === "tbd") {
-    stateClasses = "text-[#3a9a4a] italic" // mutedText green
+    stateClasses = "text-[#b0b0b0] italic" // neutral gray for TBD — readable on green felt
   } else if (state === "winner") {
     stateClasses = "text-[#f5c542] font-bold bg-[#2a7a3a]/30 border-l-4 border-[#f5c542]"
   } else if (state === "eliminated") {
-    stateClasses = "text-[#3a9a4a]/50 line-through opacity-50"
+    stateClasses = "text-[#888888] line-through" // gray strikethrough — clearly muted
   }
 
   return (
@@ -378,7 +443,7 @@ function MatchOutcomeBadge({ endingType }: MatchOutcomeBadgeProps) {
 function getOutcomeDisplay(endingType: string): { label: string; colorClass: string } {
   switch (endingType) {
     case "touchdown":
-      return { label: "Touchdown", colorClass: "text-[#3a9a4a]" }
+      return { label: "Touchdown", colorClass: "text-[#66d97a]" }
     case "interception":
       return { label: "Interception", colorClass: "text-[#cc3333]" }
     case "fumble":
