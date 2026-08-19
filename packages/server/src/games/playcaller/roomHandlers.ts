@@ -16,6 +16,7 @@ import {
   getDriveStates,
   resetDriveStates,
   clearDownPicks,
+  getDownPicks,
   recordPlaySelection,
   resolveMatchupDown,
   allDrivesComplete,
@@ -608,6 +609,7 @@ export function handlePlaySelection(
   if (result.resolved) {
     // Resolve this matchup's down
     resolveMatchupDown(result.matchupId)
+    delete getDownPicks()[result.matchupId] // belt-and-suspenders: prevent stale pick reuse
     ctx.broadcastState()
 
     // Check if all drives are now complete (bracket round over)
@@ -893,6 +895,7 @@ export function schedulePlaycallerBotPicks(ctx: PlaycallerRoomContext): void {
         if ("resolved" in result && result.resolved) {
           // Both picks are in — resolve the down
           resolveMatchupDown(result.matchupId)
+          delete getDownPicks()[result.matchupId] // belt-and-suspenders: prevent stale pick reuse
           ctx.broadcastState()
 
           if (allDrivesComplete()) {

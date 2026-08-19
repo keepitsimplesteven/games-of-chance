@@ -18,6 +18,7 @@ export default function LandingPage() {
   const [roomSize, setRoomSize] = useState(10)
   const [draftPickEnabled, setDraftPickEnabled] = useState(false)
   const [skipGameplay, setSkipGameplay] = useState(false)
+  const [resultsOnly, setResultsOnly] = useState(false)
 
   function sanitizeRoomName(name: string): string {
     return name
@@ -46,7 +47,7 @@ export default function LandingPage() {
       roomId = humanId({ separator: "-", capitalize: false })
     }
     setRoomNameError(null)
-    navigate(`/${roomId}`, { state: { scoringMode, progressionMode, roomSize, draftPickEnabled: progressionMode === "lottery" ? draftPickEnabled : undefined, skipGameplay: progressionMode === "lottery" ? skipGameplay : undefined } })
+    navigate(`/${roomId}`, { state: { scoringMode, progressionMode, roomSize, draftPickEnabled: progressionMode === "lottery" ? draftPickEnabled : undefined, skipGameplay: progressionMode === "lottery" ? skipGameplay : undefined, resultsOnly: progressionMode === "lottery" ? resultsOnly : undefined } })
   }
 
   function handleJoinRoom(e: React.FormEvent) {
@@ -175,6 +176,22 @@ export default function LandingPage() {
                   {skipGameplay
                     ? "Games resolve instantly (results only)"
                     : "Full interactive drive gameplay"}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setResultsOnly(!resultsOnly)}
+                  className={`px-3 py-1.5 text-xs font-bold uppercase transition ${
+                    resultsOnly ? toggleActive : toggleInactive
+                  }`}
+                >
+                  Results Only {resultsOnly ? "ON" : "OFF"}
+                </button>
+                <span className={`text-xs ${theme.mutedText}`}>
+                  {resultsOnly
+                    ? "Skip to lottery reveal (no gameplay)"
+                    : "Play through bracket before reveal"}
                 </span>
               </div>
             </div>

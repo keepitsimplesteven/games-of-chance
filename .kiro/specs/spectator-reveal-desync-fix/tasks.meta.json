@@ -1,0 +1,267 @@
+{
+  "pbtResults": {
+    "1. Write bug condition exploration test": {
+      "status": "passed",
+      "failingExample": "All 3 bug condition tests FAILED as expected (proving the bugs exist):\n\nTest Case A (Server - Double Resolution):\n  Counterexample: [\"run-safe\",\"run-safe\"]\n  Error: expected ['matchupA', 'matchupB'] to not include 'matchupA'\n  → fillMissingPicks() unconditionally returns matchupA even though it already has both picks\n\nTest Case B (Server - Stale Picks):\n  Counterexample: [\"run-safe\",\"run-safe\"]\n  Error: expected { offense: 'run-safe', …(1) } to be undefined\n  → downPicks[\"matchupX\"] still exists after resolveMatchupDown (stale picks persist)\n\nTest Case C (Client - Overshoot):\n  Counterexample: [0] (playCount=0, displayedPlayCount=0, buggyNextValue=1)\n  Error: expected 1 to be less than or equal to 0\n  → Unbounded increment (prev + 1) overshoots playCount when displayedPlayCount === playCount",
+      "lastRunTimestamp": 1787109078187
+    },
+    "2. Write preservation property tests (BEFORE implementing fix)": {
+      "status": "passed",
+      "lastRunTimestamp": 1787109303475
+    }
+  },
+  "executionHistory": {
+    "1. Write bug condition exploration test": [
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787108902619
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787108911287
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109343616
+      }
+    ],
+    "2. Write preservation property tests (BEFORE implementing fix)": [
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787108902678
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787108912052
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109344588
+      }
+    ],
+    "3.1 Fix `fillMissingPicks()` to only return matchups where picks were actually filled": [
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787108902718
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109353708
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109715739
+      }
+    ],
+    "3.2 Clear consumed picks after `resolveMatchupDown` in `PlaycallerPlugin.ts`": [
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787108902753
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109354586
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109716839
+      }
+    ],
+    "3.3 Add pick cleanup after resolution in SUBMIT_PICK handler (`roomHandlers.ts`)": [
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787108902787
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109355478
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109717902
+      }
+    ],
+    "3.4 Add pick cleanup after bot-triggered resolution in `schedulePlaycallerBotPicks`": [
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787108902820
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109356445
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109718876
+      }
+    ],
+    "3.5 Verify bug condition exploration test now passes (server portion)": [
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787108902851
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109782305
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109863973
+      }
+    ],
+    "3.6 Verify preservation tests still pass (server portion)": [
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787108902885
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109783069
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109864737
+      }
+    ],
+    "4.1 Add overshoot guard to `SpectatorDriveView.tsx` `handleOutcomeReveal`": [
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787108902922
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109357377
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109719839
+      }
+    ],
+    "4.2 Add overshoot guard to `SpectatorGrid.tsx` timer-based reveal": [
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787108902961
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109724759
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109777059
+      }
+    ],
+    "4.3 Add overshoot guard to `DriveView.tsx` `handleOutcomeReveal`": [
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787108902998
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109725656
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109777948
+      }
+    ],
+    "4.4 Verify bug condition exploration test now passes (client portion)": [
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787108903030
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109783922
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109865550
+      }
+    ],
+    "4.5 Verify preservation tests still pass (client portion)": [
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787108903063
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109784816
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109866409
+      }
+    ],
+    "5. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787108903102
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109871174
+      },
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109956454
+      }
+    ],
+    "3. Fix server-side double-resolution bug (Bug #2)": [
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109864783
+      }
+    ],
+    "4. Fix client-side displayedPlayCount overshoot (Bug #1)": [
+      {
+        "executionId": "d54254d1-4a26-4f70-9ca6-61acbd156d27",
+        "chatSessionId": "sess_c3110159-1f4e-4d8a-9f45-92b9f7a6c404",
+        "timestamp": 1787109866453
+      }
+    ]
+  }
+}

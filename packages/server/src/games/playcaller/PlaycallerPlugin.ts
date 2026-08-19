@@ -343,6 +343,7 @@ export function resolveMatchupDown(matchupId: string): DriveState {
   }
 
   driveStates![matchupId] = newState
+  delete downPicks[matchupId] // prevent stale pick reuse on subsequent timeout
   return newState
 }
 
@@ -366,15 +367,20 @@ export function fillMissingPicks(): string[] {
       downPicks[matchupId] = {}
     }
 
+    let filled = false
     const picks = downPicks[matchupId]
     if (picks.offense === undefined) {
       picks.offense = selectRandomPlay(OFFENSIVE_PLAYS, Math.random) as OffensivePlayId
+      filled = true
     }
     if (picks.defense === undefined) {
       picks.defense = selectRandomPlay(DEFENSIVE_PLAYS, Math.random) as DefensivePlayId
+      filled = true
     }
 
-    resolvedMatchups.push(matchupId)
+    if (filled) {
+      resolvedMatchups.push(matchupId)
+    }
   }
 
   return resolvedMatchups

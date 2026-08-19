@@ -27,6 +27,7 @@ export interface GameStore {
   roomSize: number | undefined
   draftPickEnabled: boolean | undefined
   skipGameplay: boolean | undefined
+  resultsOnly: boolean | undefined
 
   // Connection
   connectionStatus: ConnectionStatus
@@ -55,7 +56,7 @@ export interface GameStore {
   _socketSend: ((msg: ClientMessage) => void) | null
 
   // Actions
-  connect: (roomId: string, name: string, role: "host" | "player", scoringMode?: ScoringMode, roomSize?: number, progressionMode?: ProgressionMode, draftPickEnabled?: boolean, skipGameplay?: boolean) => void
+  connect: (roomId: string, name: string, role: "host" | "player", scoringMode?: ScoringMode, roomSize?: number, progressionMode?: ProgressionMode, draftPickEnabled?: boolean, skipGameplay?: boolean, resultsOnly?: boolean) => void
   submitPick: (pick: unknown) => void
   startRound: () => void
   endGame: () => void
@@ -91,6 +92,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   roomSize: undefined,
   draftPickEnabled: undefined,
   skipGameplay: undefined,
+  resultsOnly: undefined,
   connectionStatus: "disconnected",
   serverError: null,
   roomState: null,
@@ -104,7 +106,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   // ── Actions ────────────────────────────────────────────────────────────
 
-  connect: (roomId, name, role, scoringMode, roomSize, progressionMode, draftPickEnabled, skipGameplay) => {
+  connect: (roomId, name, role, scoringMode, roomSize, progressionMode, draftPickEnabled, skipGameplay, resultsOnly) => {
     const current = get().joinState
     // Non-regression guard: once IN_ROOM, never transition backwards
     if (current === "IN_ROOM") return
@@ -129,7 +131,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // localStorage unavailable or corrupt — ignore
       }
       if (!clientId) {
-        clientId = crypto.randomUUID()
+        // Fallback for browsers/contexts where crypto.randomUUID is unavailable
+        if (typeof crypto.randomUUID === "function") {
+          clientId = crypto.randomUUID()
+        } else {
+          clientId = "10000000-1000-4000-8000-100000000000".replace(
+            /[018]/g,
+            (c) =>
+              (
+                +c ^
+                (crypto.getRandomValues(new Uint8Array(1))[0] &
+                  (15 >> (+c / 4)))
+              ).toString(16)
+          )
+        }
       }
     }
 
@@ -144,6 +159,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       roomSize,
       draftPickEnabled,
       skipGameplay,
+      resultsOnly,
       joinState: "CONNECTING",
       connectionStatus: "connecting",
     })

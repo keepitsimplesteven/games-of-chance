@@ -86,8 +86,8 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
   const isWaitingForReveal = displayedPlayCount < playCount
 
   const handleOutcomeReveal = useCallback(() => {
-    setDisplayedPlayCount((prev) => prev + 1)
-  }, [])
+    setDisplayedPlayCount((prev) => Math.min(prev + 1, playCount))
+  }, [playCount])
 
   // Compute display values based on which plays have been revealed
   let displayYardLine: number
@@ -275,10 +275,10 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
 
       {/* ═══ Player Matchup Panel (fills bottom space where play cards would be) ═══ */}
       {!(driveState.isComplete && !isWaitingForReveal) && (
-        <div className="shrink-0 flex items-center justify-center gap-4 px-3 py-4" style={{ minHeight: "18dvh" }}>
+        <div className="shrink-0 flex flex-col items-center gap-1 px-3 py-4" style={{ minHeight: "18dvh" }}>
           {/* Offense player */}
-          <div className="flex-1 min-w-0 text-center">
-            <div className={`text-[10px] uppercase tracking-widest ${theme.mutedText} mb-1`}>
+          <div className="w-full text-center">
+            <div className={`text-[10px] uppercase tracking-widest ${theme.mutedText} mb-0.5`}>
               Offense
             </div>
             <div className={`text-lg font-bold leading-tight truncate ${theme.bodyText}`}>
@@ -287,13 +287,13 @@ export function SpectatorDriveView({ driveState, onBack, roundName = "" }: Spect
           </div>
 
           {/* VS divider */}
-          <div className={`text-[12px] font-bold ${theme.mutedText} opacity-50 shrink-0`}>
+          <div className={`text-[11px] font-bold ${theme.mutedText} opacity-50`}>
             vs
           </div>
 
           {/* Defense player */}
-          <div className="flex-1 min-w-0 text-center">
-            <div className={`text-[10px] uppercase tracking-widest ${theme.mutedText} mb-1`}>
+          <div className="w-full text-center">
+            <div className={`text-[10px] uppercase tracking-widest ${theme.mutedText} mb-0.5`}>
               Defense
             </div>
             <div className={`text-lg font-bold leading-tight truncate ${theme.bodyText}`}>

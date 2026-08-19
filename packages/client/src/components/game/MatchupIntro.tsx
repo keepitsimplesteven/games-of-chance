@@ -30,7 +30,7 @@ export function MatchupIntro({
   roundName,
   matchups,
   onComplete,
-  durationMs = 3000,
+  durationMs = 6000,
 }: MatchupIntroProps) {
   const theme = useTheme()
   const [fadingOut, setFadingOut] = useState(false)

@@ -403,7 +403,7 @@ export class GameRoom extends Server {
 
   private handleJoin(
     connection: Connection,
-    payload: { name: string; role: "host" | "player"; clientId: string; reconnectPlayerId?: string; scoringMode?: "grand-prix" | "chips"; roomSize?: number; progressionMode?: ProgressionMode; draftPickEnabled?: boolean; skipGameplay?: boolean }
+    payload: { name: string; role: "host" | "player"; clientId: string; reconnectPlayerId?: string; scoringMode?: "grand-prix" | "chips"; roomSize?: number; progressionMode?: ProgressionMode; draftPickEnabled?: boolean; skipGameplay?: boolean; resultsOnly?: boolean }
   ) {
     const playerCount = Object.keys(this.state.players).length
 
@@ -517,6 +517,9 @@ export class GameRoom extends Server {
       } else {
         // Default to true (auto-play) for lottery mode if not specified
         this.state.gameSettings.tuning = { ...this.state.gameSettings.tuning, SKIP_GAMEPLAY: true }
+      }
+      if (payload.resultsOnly !== undefined) {
+        this.state.gameSettings.tuning = { ...this.state.gameSettings.tuning, RESULTS_ONLY: payload.resultsOnly }
       }
     }
 
@@ -1927,6 +1930,44 @@ export class GameRoom extends Server {
 
       // Set round count to bracket's totalRounds
       this.state.gameSettings.roundCount = bracket.totalRounds
+
+      // ── RESULTS_ONLY: skip all gameplay and go straight to LOTTERY_REVEAL ──
+      if (this.state.config.progressionMode === "lottery" && this.state.gameSettings.tuning?.RESULTS_ONLY === true) {
+        // Apply session scoring (same as autoEndGame does for lottery)
+        if (this.state.config.scoringMode === "chips") {
+          for (const playerId of Object.keys(this.state.players)) {
+            this.state.sessionScores[playerId] = this.state.gameScores[playerId] ?? 0
+          }
+        } else {
+          const strategy = getStrategy(
+            this.state.config.scoringMode,
+            this.state.config.placementPoints
+          )
+          const sessionUpdate = strategy.applyGameResult(
+            Object.values(this.state.players),
+            this.state.gameLeaderboard,
+            this.state.gameScores
+          )
+          for (const [playerId, points] of Object.entries(sessionUpdate.sessionScores)) {
+            this.state.sessionScores[playerId] =
+              (this.state.sessionScores[playerId] ?? 0) + points
+          }
+        }
+        for (const playerId of Object.keys(this.state.players)) {
+          this.state.sessionGamesPlayed[playerId] =
+            (this.state.sessionGamesPlayed[playerId] ?? 0) + 1
+        }
+        this.state.sessionLeaderboard = this.computeSessionLeaderboard()
+
+        // Jump directly to LOTTERY_REVEAL
+        this.state.round = {
+          ...this.state.round,
+          phase: "LOTTERY_REVEAL",
+          roundNumber,
+        }
+        this.broadcastState()
+        return
+      }
     }
 
     // ── Playcaller: start down loop if SKIP_GAMEPLAY is false ──────────

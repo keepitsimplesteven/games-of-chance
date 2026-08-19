@@ -23,6 +23,7 @@ export default function RoomPage() {
   const roomSize = (location.state as { roomSize?: number } | null)?.roomSize ?? undefined
   const draftPickEnabled = (location.state as { draftPickEnabled?: boolean } | null)?.draftPickEnabled ?? undefined
   const skipGameplay = (location.state as { skipGameplay?: boolean } | null)?.skipGameplay ?? undefined
+  const resultsOnly = (location.state as { resultsOnly?: boolean } | null)?.resultsOnly ?? undefined
 
   const [name, setName] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -90,7 +91,7 @@ export default function RoomPage() {
     // If scoringMode is set, this is the room creator (host)
     const joinRole = scoringMode ? "host" : "player"
     // Transition to CONNECTING and trigger WebSocket connection
-    useGameStore.getState().connect(roomId, trimmed, joinRole, scoringMode, roomSize, progressionMode, draftPickEnabled, skipGameplay)
+    useGameStore.getState().connect(roomId, trimmed, joinRole, scoringMode, roomSize, progressionMode, draftPickEnabled, skipGameplay, resultsOnly)
   }
 
   // ── NAME_ENTRY state ─────────────────────────────────────────────────────
