@@ -3,7 +3,7 @@ import type { SettingsSchema } from "@games-of-chance/shared"
 /** All tunable values for the Playcaller plugin */
 export const PLAYCALLER = {
   /** Duration of the play clock per down (20 seconds for interactive play) */
-  PICK_WINDOW_MS: 20_000,
+  PICK_WINDOW_MS: 30_000,
 
   /** Brief delay after both picks are in before starting next down (shows result) */
   PLAY_RESULT_DELAY_MS: 3_000,
@@ -38,11 +38,11 @@ export const COIN_TOSS_CEREMONY = {
   /** Per-matchup coin call timeout (ms) */
   COIN_CALL_TIMEOUT_MS: 20_000,
   /** Per-matchup side choice timeout (ms) */
-  SIDE_CHOICE_TIMEOUT_MS: 30_000,
+  SIDE_CHOICE_TIMEOUT_MS: 20_000,
   /** Global phase timeout — safety net, must exceed individual timeouts (ms) */
   PHASE_TIMEOUT_MS: 45_000,
   /** Minimum hold time after all ceremonies complete before advancing (ms) */
-  RESULT_HOLD_MS: 5_000,
+  RESULT_HOLD_MS: 2_000,
 } as const
 
 export const PLAYCALLER_SETTINGS_SCHEMA: SettingsSchema = [
