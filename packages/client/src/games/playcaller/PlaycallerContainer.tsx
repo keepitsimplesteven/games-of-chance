@@ -34,6 +34,7 @@ import { useTheme } from "../../theme"
 export function PlaycallerContainer() {
   const roomState = useGameStore((s) => s.roomState)
   const playerId = useGameStore((s) => s.playerId)
+  const role = useGameStore((s) => s.role)
   const getPlayerName = usePlayerName()
   const theme = useTheme()
 
@@ -150,6 +151,11 @@ export function PlaycallerContainer() {
         </div>
         <div className="shrink-0 w-full max-w-sm mx-auto px-4 pb-4 pt-2">
           <RoundControls />
+          {role !== "host" && (
+            <p className="text-center text-sm text-[#f5c542]/70 italic">
+              Waiting for host to start the next round...
+            </p>
+          )}
         </div>
       </div>
     )
@@ -235,6 +241,7 @@ export function PlaycallerContainer() {
               roundName={roundName}
               matchups={introMatchups}
               onComplete={() => setShowIntro(false)}
+              durationMs={5000}
             />
           )
         }
@@ -288,6 +295,7 @@ export function PlaycallerContainer() {
               roundName={roundName}
               matchups={introMatchups}
               onComplete={() => setShowIntro(false)}
+              durationMs={5000}
             />
           )
         }
@@ -364,6 +372,11 @@ export function PlaycallerContainer() {
         </div>
         <div className="shrink-0 w-full max-w-sm mx-auto px-4 pb-4 pt-2">
           <RoundControls />
+          {role !== "host" && (
+            <p className="text-center text-sm text-[#f5c542]/70 italic">
+              Waiting for host to start the next round...
+            </p>
+          )}
         </div>
       </div>
     )
