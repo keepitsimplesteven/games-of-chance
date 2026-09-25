@@ -1,9 +1,13 @@
 import type { SettingsSchema } from "@games-of-chance/shared"
+import type { BotDelayRange } from "../../bots/botTiming"
 
 /** All tunable values for the Playcaller plugin */
 export const PLAYCALLER = {
   /** Duration of the play clock per down (20 seconds for interactive play) */
   PICK_WINDOW_MS: 30_000,
+
+  /** Bot decision delay range for play calling (quick, reactive feel) */
+  BOT_PICK_DELAY: { minMs: 1_500, maxMs: 4_000 } as BotDelayRange,
 
   /** Brief delay after both picks are in before starting next down (shows result) */
   PLAY_RESULT_DELAY_MS: 3_000,

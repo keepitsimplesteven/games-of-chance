@@ -1,9 +1,13 @@
 import type { SettingsSchema } from "@games-of-chance/shared"
+import type { BotDelayRange } from "../../bots/botTiming"
 
 /** All tunable values for the Battle Bots plugin */
 export const BATTLE_BOTS = {
   /** Duration of the prep/pick window in milliseconds */
   PICK_WINDOW_MS: 60_000,
+
+  /** Bot decision delay range for robot building (longer than default to feel deliberate) */
+  BOT_PICK_DELAY: { minMs: 3_000, maxMs: 8_000 } as BotDelayRange,
 
   /** Fixed number of rounds for this game */
   ROUND_COUNT: 3,

@@ -350,7 +350,7 @@ export function scheduleCoinTossBotActions(ctx: PlaycallerRoomContext): void {
 
     // If the caller is a bot and step is AWAITING_CALL, schedule coin call
     if (state.step === "AWAITING_CALL" && botIds.includes(state.callerId)) {
-      const delay = getBotDecisionDelay()
+      const delay = getBotDecisionDelay(PLAYCALLER.BOT_PICK_DELAY)
 
       const timerId = setTimeout(() => {
         if (!ceremonyStates || !ceremonyStates[matchupId]) return
@@ -409,7 +409,7 @@ export function scheduleCoinTossBotActions(ctx: PlaycallerRoomContext): void {
  * Schedule a bot's side choice for a specific matchup.
  */
 function scheduleBotSideChoice(ctx: PlaycallerRoomContext, matchupId: string, chooserId: string): void {
-  const delay = getBotDecisionDelay()
+  const delay = getBotDecisionDelay(PLAYCALLER.BOT_PICK_DELAY)
 
   const timerId = setTimeout(() => {
     if (!ceremonyStates || !ceremonyStates[matchupId]) return
@@ -881,7 +881,7 @@ export function schedulePlaycallerBotPicks(ctx: PlaycallerRoomContext): void {
       if (botId !== drive.offensePlayerId && botId !== drive.defensePlayerId) continue
 
       const isOffense = botId === drive.offensePlayerId
-      const delay = getBotDecisionDelay()
+      const delay = getBotDecisionDelay(PLAYCALLER.BOT_PICK_DELAY)
 
       const timerId = setTimeout(() => {
         const play = isOffense

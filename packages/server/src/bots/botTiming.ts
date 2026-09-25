@@ -12,13 +12,20 @@ export const BOT_TIMING = {
   DECISION_MAX_MS: 5_000,
 } as const
 
+/** Optional per-game override for bot decision timing */
+export interface BotDelayRange {
+  minMs: number
+  maxMs: number
+}
+
 /**
  * Returns a random delay (in ms) within the configured bot decision range.
  * Use this anywhere a bot needs to "think" before acting.
+ *
+ * @param override - Optional game-specific delay range. Falls back to global BOT_TIMING if omitted.
  */
-export function getBotDecisionDelay(): number {
-  return (
-    BOT_TIMING.DECISION_MIN_MS +
-    Math.random() * (BOT_TIMING.DECISION_MAX_MS - BOT_TIMING.DECISION_MIN_MS)
-  )
+export function getBotDecisionDelay(override?: BotDelayRange): number {
+  const min = override?.minMs ?? BOT_TIMING.DECISION_MIN_MS
+  const max = override?.maxMs ?? BOT_TIMING.DECISION_MAX_MS
+  return min + Math.random() * (max - min)
 }

@@ -81,7 +81,6 @@ export default function GameView() {
   if (phase === "END_GAME") {
     return <GameCompleteScreen />
   }
-
   // Playcaller renders full-viewport — omit phase indicator, leaderboard, round controls
   const isPlaycaller = gameType === "playcaller"
 

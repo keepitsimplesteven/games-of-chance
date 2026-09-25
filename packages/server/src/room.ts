@@ -66,7 +66,7 @@ import { validateSettingsUpdate } from "./settings/validateSettings"
 import { evaluateAvailability } from "./tournament/UnlockCriteriaHarness"
 import { FastPlayAdapter } from "./simulation/FastPlayAdapter"
 import { BotManager } from "./bots/BotManager"
-import { getBotDecisionDelay } from "./bots/botTiming"
+import { getBotDecisionDelay, type BotDelayRange } from "./bots/botTiming"
 // Side-effect import: registers coin-toss pick generator in the simulation registry
 import "@games-of-chance/simulation/src/pick-generators/coin-toss"
 
@@ -1489,7 +1489,7 @@ export class GameRoom extends Server {
     if (!draftState) return
     const currentPicker = draftState.pickOrder[draftState.currentPickIndex]
     const isBot = this.botManager.isBot(currentPicker) || currentPicker in this.state.vacatedSlots
-    const delay = isBot ? getBotDecisionDelay() : 30000
+    const delay = isBot ? getBotDecisionDelay(PLAYCALLER.BOT_PICK_DELAY) : 30000
     this.draftPickTimerId = setTimeout(() => {
       this.autoDraftPick()
     }, delay)
@@ -2130,6 +2130,12 @@ export class GameRoom extends Server {
 
     const allPicks = { ...picks, ...vacatedPicks }
 
+    // Resolve game-specific bot delay, falling back to global defaults
+    const botDelayOverride: BotDelayRange | undefined =
+      this.state.config.gameType === "battle-bots" ? BATTLE_BOTS.BOT_PICK_DELAY :
+      this.state.config.gameType === "playcaller" ? PLAYCALLER.BOT_PICK_DELAY :
+      undefined
+
     // Submit bot-controlled picks with a randomized delay to simulate thinking
     for (const id of allBotControlled) {
       const pick = allPicks[id]
@@ -2152,7 +2158,7 @@ export class GameRoom extends Server {
           this.cancelDeadlineTimer()
           this.scheduleResolve(0)
         }
-      }, getBotDecisionDelay())
+      }, getBotDecisionDelay(botDelayOverride))
 
       this.botPickTimerIds.push(timerId)
     }
@@ -2189,8 +2195,17 @@ export class GameRoom extends Server {
       )
       for (const player of connectedHumans) {
         if (!(player.id in this.state.round.picks)) {
-          const randomSide = Math.random() < 0.5 ? "HEADS" : "TAILS"
-          this.state.round.picks[player.id] = { side: randomSide }
+          switch (this.state.config.gameType) {
+            case "battle-bots":
+              this.state.round.picks[player.id] = botPersonaSelectParts()
+              break
+            case "coin-toss":
+            default: {
+              const randomSide = Math.random() < 0.5 ? "HEADS" : "TAILS"
+              this.state.round.picks[player.id] = { side: randomSide }
+              break
+            }
+          }
         }
       }
 
@@ -2773,7 +2788,12 @@ export class GameRoom extends Server {
    * Always cancels any existing timer first.
    */
   private scheduleResolve(delayMs: number) {
-    this.cancelDeadlineTimer()
+    // Only cancel the deadline timer itself — NOT bot pick timers.
+    // Bot timers must remain active so bots can submit picks before the deadline.
+    if (this.deadlineTimerId !== null) {
+      clearTimeout(this.deadlineTimerId)
+      this.deadlineTimerId = null
+    }
     this.deadlineTimerId = setTimeout(() => {
       if (this.state.config.gameType === "playcaller" && getDriveStates() !== null) {
         this.resolvePlaycallerTimeout()
