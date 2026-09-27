@@ -158,9 +158,9 @@ describe("10-player bracket consolation placements", () => {
 
     while (!result.isComplete && iterations < maxIterations) {
       result = playcallerPlugin.resolveRound({}, {
-        maxPlayers: 10,
-        minPlayers: 2,
-        scoreTable: [10, 8, 6, 5, 4, 3, 2, 1, 0, 0],
+        roundCount: 10,
+        pickWindowMs: 10_000,
+        tuning: {},
       })
       iterations++
     }
