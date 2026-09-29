@@ -14,6 +14,8 @@ const cloudflareWorkersStub = fileURLToPath(
 export default defineConfig({
   test: {
     globals: true,
+    // Pin a fixed fast-check seed for deterministic property-test runs (T4).
+    setupFiles: ["./src/test-setup.ts"],
     server: {
       deps: {
         inline: ["partyserver"],
