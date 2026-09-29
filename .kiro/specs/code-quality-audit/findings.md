@@ -88,13 +88,19 @@ Ran `knip`, cross-checked each candidate with a grep for `import ... from` in so
 
 Verified after deletion: typecheck 112 to 1 error; tests unchanged from baseline (no regression).
 
-### D2. Held-back deletion candidates (8 files) — LOW / SMALL
+### D2. Held-back deletion candidates (8 files) — TRIAGED: 3 deleted, 3 kept, 2 your call
 
-Flagged by knip but held back for lower confidence (analysis/simulation tooling or possible dynamic references). Worth a human decision, not auto-deleted:
+Flagged by knip but held back for lower confidence. Verified each; they split three ways rather than all being dead:
 
-- `server/scripts/lottery-distribution.ts`, `playcaller/drive/sim-final-bomb.ts`, `playcaller/drive/presets/{index,v1-balanced,v2-25yard}.ts` (simulation/analysis tooling)
-- `client playcaller/hooks/useDriveState.ts`
-- `client playcaller/play-art/{defense,offense}.ts` (332 + 227 lines, 0% coverage — sizable; confirm no dynamic play-art lookup before removing)
+**Deleted (safe orphans, zero references, client typecheck green after):**
+- `client playcaller/play-art/defense.ts` and `play-art/offense.ts` — orphaned by the `playcaller-dynamic-playbook` spec, which moved art onto `PlayDefinition.playArt` (task 10.3: "no separate art resolver or registry lookup"). NOTE: `play-art/types.ts` and `play-art/PlayArtSvg.tsx` in the same dir are LIVE — do not delete the directory, only these two data files.
+- `client playcaller/hooks/useDriveState.ts` — hook with zero call sites; superseded.
+
+**Kept (NOT dead — live configuration pattern knip mislabels):**
+- `playcaller/drive/presets/{index,v1-balanced,v2-25yard}.ts` — `config.ts` imports `presets/v3-decisive` as the live tuning; `presets/index.ts` re-exports v1/v2/v3. v1/v2 are intentional reference/reversion configs behind the documented preset-swap mechanism in `config.ts`. Pruning them is a separate "do we still want old tuning configs" decision, not dead-code removal.
+
+**Your call (manually-run tooling, never imported by design):**
+- `server/scripts/lottery-distribution.ts` and `playcaller/drive/sim-final-bomb.ts` — both carry `npx tsx <path>` usage headers. Keep if you may re-run the analysis; delete if done.
 
 ### D3. ~97 unused exports + ~98 unused exported types — LOW / MED
 
