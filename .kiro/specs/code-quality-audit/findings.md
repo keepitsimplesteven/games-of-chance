@@ -41,16 +41,16 @@ Fix direction: configure the server tests to run under a Workers-compatible pool
 
 Spec-ready. This is the top prerequisite for server-side refactors.
 
-### T2. Real assertion failures (4 files, 8 assertions) — MED / MED
+### T2. Real assertion failures (4 files, 7 assertions) — MED / MED — TRIAGED: all stale tests
 
-Distinct from T1, these actually run and fail:
+Distinct from T1, these actually run and fail. Re-triaged after this snapshot went stale (the two related bugfix specs landed in between); the failures are now 7, not 8, and every one is a stale test, not a product bug:
 
-- `playcaller-consolation-generation.test.ts` (2): 8-player and 10-player consolation bracket structure.
-- `BattleEngine.test.ts` (2): FFA/1v1 exceed the 1000-tick `TICK_LIMIT`.
-- `BugConditionExploration.test.ts` (3): consolation rounds generated concurrently after elimination.
-- `SpectatorRevealDesync.exploration.test.ts` (1): `displayedPlayCount` overshoot.
+- `BattleEngine.test.ts` (2): FFA/1v1 "exceed the 1000-tick `TICK_LIMIT`". STALE — `TICK_LIMIT` is now 2000 (in the pre-existing `battle-bots/constants.ts` edit); the tests hardcode 1000. Fix: assert against `BATTLE_BOTS.TICK_LIMIT`.
+- `SpectatorRevealDesync.exploration.test.ts` (1): "displayedPlayCount overshoot". STALE — Test Case C inlines the old buggy `prev + 1` and asserts `N+1 <= N`; tests no product code. The `Math.min` fix already shipped (spectator-reveal-desync-fix, complete). Delete Test Case C; Cases A/B pass and stay.
+- `playcaller-consolation-generation.test.ts` (2): 8/10-player consolation structure. STALE — assert the old mini-bracket shape; the shipped consolation-concurrent-scheduling fix splits 4-player groups into two 1v1 games. Re-pin to 10p → 4 rounds, placementStarts [3,5,7,9], each 1 matchup, all populated. (`generateConsolationRounds` is still live in the lottery/sim path in `room.ts`, so keep the tests.)
+- `BugConditionExploration.test.ts` (3): "concurrent" consolation scheduling. STALE — assert consolation rides on `schedule[1]`; the shipped `buildSchedule` consolidates all consolation into one dedicated entry between Semifinal and Final. Re-point to the consolidated model; B3's empty-slot precondition was designed out (rewrite as a filter-invariant test or delete).
 
-Some of these relate to open specs (`consolation-concurrent-scheduling`, `spectator-reveal-desync-fix`), so they may be known in-progress work rather than regressions. Needs manual triage per file: fix, or delete if the test encodes a since-changed intent.
+No real regression surfaced. Resolution is scoped into `test-harness-repair` Phase 0.5 (R6), because a behavior-locking baseline is exactly what the refactor phases depend on. Gated behind T1 (the server suite must load first).
 
 ### T3. Client `scrollTo` failures under jsdom — LOW / SMALL
 
