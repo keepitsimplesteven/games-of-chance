@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { simulate1v1, simulateFFA } from "./BattleEngine"
+import { BATTLE_BOTS } from "../constants"
 import type { CombatRobot } from "../types"
 
 function makeCombatRobot(overrides: Partial<CombatRobot> = {}): CombatRobot {
@@ -133,14 +134,14 @@ describe("simulate1v1", () => {
     }
   })
 
-  it("does not exceed 1000 ticks (TICK_LIMIT)", () => {
+  it("does not exceed TICK_LIMIT ticks", () => {
     // Low accuracy to make a long battle
     const robot1 = makeCombatRobot({ ownerId: "p1", accuracy: 10, energyPerTick: 13 })
     const robot2 = makeCombatRobot({ ownerId: "p2", accuracy: 10, energyPerTick: 13 })
 
     const result = simulate1v1(robot1, robot2)
 
-    expect(result.tickLog.length).toBeLessThanOrEqual(1000)
+    expect(result.tickLog.length).toBeLessThanOrEqual(BATTLE_BOTS.TICK_LIMIT)
     expect(result.winnerId).toBeDefined()
   })
 
@@ -339,7 +340,7 @@ describe("simulateFFA", () => {
     }
   })
 
-  it("does not exceed 1000 ticks (TICK_LIMIT)", () => {
+  it("does not exceed TICK_LIMIT ticks", () => {
     const robots = [
       makeFFARobot("p1", { accuracy: 10, energyPerTick: 13 }),
       makeFFARobot("p2", { accuracy: 10, energyPerTick: 13 }),
@@ -348,7 +349,7 @@ describe("simulateFFA", () => {
 
     const result = simulateFFA(robots)
 
-    expect(result.tickLog.length).toBeLessThanOrEqual(1000)
+    expect(result.tickLog.length).toBeLessThanOrEqual(BATTLE_BOTS.TICK_LIMIT)
     expect(result.survivorId).toBeDefined()
   })
 

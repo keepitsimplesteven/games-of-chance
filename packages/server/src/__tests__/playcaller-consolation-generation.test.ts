@@ -59,22 +59,23 @@ describe("generateConsolationRounds", () => {
       )
       const consolation = generateConsolationRounds(bracket)
 
-      // Semi-final losers (2 players) → 1 consolation round with 1 matchup
-      // Quarter-final losers (4 players) → mini bracket: 2 semi-finals + 1 final = 2 consolation rounds
-      expect(consolation.length).toBeGreaterThanOrEqual(3)
+      // Consolidated model: each elimination group of 4 splits into TWO
+      // single-matchup consolation rounds (offsets placementStart and placementStart+2),
+      // each fully populated. Ordered best placement first:
+      //   [0] 3rd/4th game (semi-final losers, group of 2)  → placementStart 3
+      //   [1] 5th/6th game (quarter-final losers pair)       → placementStart 5
+      //   [2] 7th/8th game (quarter-final losers pair)       → placementStart 7
+      expect(consolation).toHaveLength(3)
 
-      // First consolation round: 3rd/4th place game
-      expect(consolation[0].placementStart).toBe(3)
-      expect(consolation[0].matchups).toHaveLength(1)
+      // Each consolation round is a single fully-populated matchup
+      for (const round of consolation) {
+        expect(round.matchups).toHaveLength(1)
+        expect(round.matchups[0].playerA).toBeTruthy()
+        expect(round.matchups[0].playerB).toBeTruthy()
+      }
 
-      // Next consolation rounds: 5th-8th mini bracket
-      // Semi-final round of the mini bracket
-      expect(consolation[1].placementStart).toBe(5)
-      expect(consolation[1].matchups).toHaveLength(2)
-
-      // Final round of the mini bracket
-      expect(consolation[2].placementStart).toBe(5)
-      expect(consolation[2].matchups).toHaveLength(1)
+      // placementStart values, in order
+      expect(consolation.map((r) => r.placementStart)).toEqual([3, 5, 7])
     })
   })
 
@@ -89,34 +90,24 @@ describe("generateConsolationRounds", () => {
       // Round 1 (quarterfinals): 4 losers → group of 4 → 5th-8th (mini bracket)
       // Round 2 (semifinals): 2 losers → group of 2 → 3rd/4th
 
-      // Expected consolation rounds (ordered best placement first):
-      // 1. 3rd/4th place game (1 matchup)
-      // 2. 5th-8th semi-finals (2 matchups)
-      // 3. 5th-8th final (1 matchup, players TBD)
-      // 4. 9th/10th place game (1 matchup)
+      // Consolidated model: every elimination group becomes single-matchup
+      // consolation rounds (a group of 4 splits into two, offsets ps and ps+2),
+      // each fully populated. Ordered best placement first:
+      //   [0] 3rd/4th   (semifinal losers, group of 2)     → placementStart 3
+      //   [1] 5th/6th   (quarterfinal losers pair)          → placementStart 5
+      //   [2] 7th/8th   (quarterfinal losers pair)          → placementStart 7
+      //   [3] 9th/10th  (play-in losers, group of 2)        → placementStart 9
       expect(consolation).toHaveLength(4)
 
-      // 3rd/4th place game
-      expect(consolation[0].placementStart).toBe(3)
-      expect(consolation[0].matchups).toHaveLength(1)
-      expect(consolation[0].matchups[0].playerA).toBeTruthy()
-      expect(consolation[0].matchups[0].playerB).toBeTruthy()
+      // Each consolation round is a single fully-populated matchup (no empty slots)
+      for (const round of consolation) {
+        expect(round.matchups).toHaveLength(1)
+        expect(round.matchups[0].playerA).toBeTruthy()
+        expect(round.matchups[0].playerB).toBeTruthy()
+      }
 
-      // 5th-8th semi-finals
-      expect(consolation[1].placementStart).toBe(5)
-      expect(consolation[1].matchups).toHaveLength(2)
-
-      // 5th-8th final (empty players until semi-finals resolve)
-      expect(consolation[2].placementStart).toBe(5)
-      expect(consolation[2].matchups).toHaveLength(1)
-      expect(consolation[2].matchups[0].playerA).toBe("")
-      expect(consolation[2].matchups[0].playerB).toBe("")
-
-      // 9th/10th place game
-      expect(consolation[3].placementStart).toBe(9)
-      expect(consolation[3].matchups).toHaveLength(1)
-      expect(consolation[3].matchups[0].playerA).toBeTruthy()
-      expect(consolation[3].matchups[0].playerB).toBeTruthy()
+      // placementStart values, in order
+      expect(consolation.map((r) => r.placementStart)).toEqual([3, 5, 7, 9])
     })
 
     it("players in consolation matchups were actually eliminated in the same main bracket round", () => {

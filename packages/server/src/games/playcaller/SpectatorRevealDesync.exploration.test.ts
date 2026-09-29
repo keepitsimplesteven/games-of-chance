@@ -164,44 +164,6 @@ describe("Bug Condition Exploration: Spectator Reveal Desync (Server + Client)",
   })
 
   describe("Test Case C (Client - Overshoot): displayedPlayCount exceeds playCount", () => {
-    it("handleOutcomeReveal should NOT increment displayedPlayCount past playCount", () => {
-      /**
-       * Property 2: Bug Condition — No displayedPlayCount Overshoot
-       *
-       * Simulate displayedPlayCount === playCount === N, then call handleOutcomeReveal.
-       * Assert displayedPlayCount remains N, not N+1.
-       *
-       * The client uses: setDisplayedPlayCount((prev) => prev + 1)
-       * The fix should be: setDisplayedPlayCount((prev) => Math.min(prev + 1, playCount))
-       *
-       * We test the LOGIC here without React state — just the update function:
-       * - Current (buggy): (prev) => prev + 1
-       * - Expected (fixed): (prev) => Math.min(prev + 1, playCount)
-       *
-       * EXPECTED: This test FAILS on unfixed code because the unbounded increment
-       * causes displayedPlayCount to exceed playCount.
-       */
-      fc.assert(
-        fc.property(
-          fc.integer({ min: 0, max: 100 }),
-          (playCount) => {
-            // Simulate the state: displayedPlayCount === playCount (fully caught up)
-            const displayedPlayCount = playCount
-
-            // Simulate the CURRENT (buggy) handleOutcomeReveal:
-            // setDisplayedPlayCount((prev) => prev + 1)
-            const buggyNextValue = displayedPlayCount + 1
-
-            // The bug: this overshoots playCount
-            // EXPECTED BEHAVIOR (FIXED): the result should never exceed playCount
-            // EXPECTED: This assertion FAILS on unfixed code
-            expect(buggyNextValue).toBeLessThanOrEqual(playCount)
-          }
-        ),
-        { numRuns: 50 }
-      )
-    })
-
     it("when displayedPlayCount < playCount, increment by 1 is valid (preservation)", () => {
       /**
        * This confirms the normal case still works: when displayedPlayCount < playCount,

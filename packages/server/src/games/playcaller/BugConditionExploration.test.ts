@@ -4,7 +4,6 @@ import {
   generateBracket,
   resolveCurrentRound,
   isComplete,
-  generateConsolationRounds,
   generateConsolationForRound,
   buildSchedule,
   getActiveMatchupsForSchedule,
@@ -42,62 +41,6 @@ function randomResolver(outcomes: boolean[]): MatchResolver {
     idx++
     return pickA ? playerA : playerB
   }
-}
-
-/**
- * Helper: after resolving a round, generates consolation for newly eliminated
- * players and rebuilds the schedule. Returns the main-bracket and consolation
- * matchups for the current schedule entry.
- *
- * This is the FIXED behavior: consolation is generated incrementally after
- * each round resolves, and the schedule maps them concurrently.
- */
-function generateConsolationAndGetActiveMatchups(bracket: Bracket, resolvedRoundIndex: number): {
-  mainBracketMatchups: Matchup[]
-  consolationMatchups: Matchup[]
-} {
-  // Generate consolation for players eliminated in the just-resolved round
-  const newConsolation = generateConsolationForRound(bracket, resolvedRoundIndex)
-  bracket.consolationRounds.push(...newConsolation)
-
-  // Rebuild the schedule to include new consolation rounds
-  bracket.schedule = buildSchedule(bracket)
-
-  // Advance the schedule index past the resolved entry (mirroring advancePlaycallerBracket)
-  // After resolving the play-in, the schedule index should point to the next game round
-  // (quarterfinals + consolation). The schedule entry for the resolved round was at
-  // currentScheduleIndex, so we advance past it.
-  bracket.currentScheduleIndex++
-
-  // Find the current schedule entry (should be the one for the next game round)
-  const scheduleEntry = bracket.schedule[bracket.currentScheduleIndex]
-  if (!scheduleEntry) {
-    return { mainBracketMatchups: [], consolationMatchups: [] }
-  }
-
-  // Get main-bracket matchups from this schedule entry
-  const mainBracketMatchups: Matchup[] = []
-  if (scheduleEntry.mainBracketRoundIndex !== null) {
-    const mainRound = bracket.rounds[scheduleEntry.mainBracketRoundIndex]
-    if (mainRound) {
-      mainBracketMatchups.push(
-        ...mainRound.matchups.filter((m) => m.playerA !== "" && m.playerB !== "")
-      )
-    }
-  }
-
-  // Get consolation matchups from this schedule entry
-  const consolationMatchups: Matchup[] = []
-  for (const cIdx of scheduleEntry.consolationRoundIndices) {
-    const cRound = bracket.consolationRounds[cIdx]
-    if (cRound) {
-      consolationMatchups.push(
-        ...cRound.matchups.filter((m) => m.playerA !== "" && m.playerB !== "")
-      )
-    }
-  }
-
-  return { mainBracketMatchups, consolationMatchups }
 }
 
 describe("Bug Condition Exploration: Consolation Rounds Deferred Until After Finals", () => {
@@ -151,13 +94,16 @@ describe("Bug Condition Exploration: Consolation Rounds Deferred Until After Fin
 
     it("active matchups for next game round should include BOTH quarterfinal AND consolation matchups", () => {
       /**
-       * After the play-in resolves in a 10-player bracket, the next game round
-       * should include:
-       * - 4 quarterfinal matchups (main bracket)
-       * - 1 consolation matchup (9th/10th place game for play-in losers)
-       *
-       * This confirms the schedule-based system maps consolation concurrently
-       * with main-bracket rounds.
+       * Consolidated-schedule model: after the play-in resolves in a 10-player
+       * bracket, buildSchedule produces (in order):
+       *   Round 1 (play-in) → Quarterfinal → Semifinal → Consolation → Final
+       * The main-bracket quarterfinal matchups and the consolation matchups no
+       * longer live on the SAME schedule entry. Instead:
+       * - the Quarterfinal entry (mainBracketRoundIndex → rounds[1]) yields 4
+       *   fully-populated main matchups, AND
+       * - the dedicated Consolation entry (mainBracketRoundIndex === null,
+       *   description "Consolation") holds the 9th/10th play-in-loser matchup.
+       * Both are reachable via getActiveMatchupsForSchedule.
        */
       fc.assert(
         fc.property(
@@ -171,19 +117,31 @@ describe("Bug Condition Exploration: Consolation Rounds Deferred Until After Fin
             const resolvedRoundIndex = bracket.currentRoundIndex
             bracket = resolveCurrentRound(bracket, resolver)
 
-            // Generate consolation and get active matchups using the new schedule-based API
-            const { mainBracketMatchups, consolationMatchups } =
-              generateConsolationAndGetActiveMatchups(bracket, resolvedRoundIndex)
+            // Generate consolation for the play-in losers and rebuild the schedule
+            // (single currentScheduleIndex++ mirroring advancePlaycallerBracket).
+            const newConsolation = generateConsolationForRound(bracket, resolvedRoundIndex)
+            bracket.consolationRounds.push(...newConsolation)
+            bracket.schedule = buildSchedule(bracket)
+            bracket.currentScheduleIndex++
 
-            // Main bracket: quarterfinals should have 4 matchups
+            // The advanced schedule index points at the Quarterfinal entry, whose
+            // main-bracket round (rounds[1]) has 4 fully-populated matchups.
+            const quarterfinalEntry = bracket.schedule[bracket.currentScheduleIndex]
+            expect(quarterfinalEntry).toBeDefined()
+            expect(quarterfinalEntry.mainBracketRoundIndex).toBe(1)
+            const mainBracketMatchups = getActiveMatchupsForSchedule(bracket, quarterfinalEntry)
             expect(mainBracketMatchups.length).toBe(4)
 
-            // EXPECTED BEHAVIOR (FIXED code):
-            // Consolation matchups should include the 9th/10th game
-            // (1 matchup between the 2 play-in losers)
+            // The dedicated Consolation entry (mainBracketRoundIndex === null) holds
+            // the play-in-loser matchups.
+            const consolationEntry = bracket.schedule.find(
+              (e) => e.mainBracketRoundIndex === null
+            )
+            expect(consolationEntry).toBeDefined()
+            const consolationMatchups = getActiveMatchupsForSchedule(bracket, consolationEntry!)
             expect(consolationMatchups.length).toBeGreaterThan(0)
 
-            // The consolation matchup should contain the eliminated players
+            // The consolation matchup(s) should contain the eliminated (play-in loser) players
             const eliminatedPlayerIds = Object.keys(bracket.eliminated)
             const consolationPlayerIds = consolationMatchups.flatMap((m) => [m.playerA, m.playerB])
             for (const eliminatedId of eliminatedPlayerIds) {
@@ -227,23 +185,31 @@ describe("Bug Condition Exploration: Consolation Rounds Deferred Until After Fin
             // Advance the schedule index past the resolved play-in entry
             bracket.currentScheduleIndex++
 
-            // Use getActiveMatchupsForSchedule (the new unified API)
-            const scheduleEntry = bracket.schedule[bracket.currentScheduleIndex]
-            expect(scheduleEntry).toBeDefined()
+            // Consolidated-schedule model: main-bracket and consolation matchups live
+            // on DIFFERENT schedule entries, but both are reachable via the unified
+            // getActiveMatchupsForSchedule API.
 
-            const activeMatchups = getActiveMatchupsForSchedule(bracket, scheduleEntry)
+            // (1) The advanced index points at the Quarterfinal entry: 4 main matchups.
+            const quarterfinalEntry = bracket.schedule[bracket.currentScheduleIndex]
+            expect(quarterfinalEntry).toBeDefined()
+            const mainActive = getActiveMatchupsForSchedule(bracket, quarterfinalEntry)
+            expect(mainActive.length).toBe(4)
 
-            // Active matchups should include BOTH main-bracket AND consolation matchups
-            const eliminatedPlayerIds = Object.keys(bracket.eliminated)
-
-            // Assert: at least one active matchup involves an eliminated player
-            // (i.e., consolation matchups are included alongside main bracket)
-            const activePlayerIds = activeMatchups.flatMap((m) => [m.playerA, m.playerB])
-            const hasConsolationInActive = eliminatedPlayerIds.some((id) =>
-              activePlayerIds.includes(id)
+            // (2) The dedicated Consolation entry holds the play-in-loser matchups.
+            const consolationEntry = bracket.schedule.find(
+              (e) => e.mainBracketRoundIndex === null
             )
+            expect(consolationEntry).toBeDefined()
+            const consolationActive = getActiveMatchupsForSchedule(bracket, consolationEntry!)
+            expect(consolationActive.length).toBeGreaterThan(0)
 
-            expect(hasConsolationInActive).toBe(true)
+            // The consolation matchups involve the eliminated (play-in loser) players.
+            const eliminatedPlayerIds = Object.keys(bracket.eliminated)
+            const consolationPlayerIds = consolationActive.flatMap((m) => [m.playerA, m.playerB])
+            const hasConsolationReachable = eliminatedPlayerIds.some((id) =>
+              consolationPlayerIds.includes(id)
+            )
+            expect(hasConsolationReachable).toBe(true)
           }
         ),
         { numRuns: 10 }
@@ -252,60 +218,76 @@ describe("Bug Condition Exploration: Consolation Rounds Deferred Until After Fin
   })
 
   describe("Secondary Bug Condition: Empty matchup slots cause 'No active matchups' hang", () => {
-    it("consolation round with empty playerA/playerB should not be included in active matchups", () => {
+    it("getActiveMatchupsForSchedule filters out matchups with empty playerA/playerB", () => {
       /**
-       * When a consolation mini-bracket has a "final" round with empty slots
-       * (waiting for semi-final winners), the system should NOT attempt to play it.
-       * Only consolation rounds with fully populated matchup slots should be playable.
+       * Filter invariant (Requirement: prevent the "No active matchups" hang):
+       * getActiveMatchupsForSchedule must NEVER return a matchup whose playerA or
+       * playerB slot is empty. Empty slots occur while a matchup is still waiting
+       * for an upstream winner to be placed; playing such a matchup would hang.
        *
-       * On UNFIXED code: the filter `m.playerA !== "" && m.playerB !== ""` correctly
-       * excludes empty matchups, BUT the problem is that after filtering, if ALL matchups
-       * in a consolation round are empty, the system ends up with activeMatchups.length === 0,
-       * which causes the "No active matchups" hang.
-       *
-       * The FIXED system should use a schedule that only references consolation rounds
-       * whose matchup slots are fully populated.
+       * The current generation model never emits empty-slot consolation rounds, so
+       * we construct one directly: a consolation round containing one fully-populated
+       * matchup plus one empty-slot matchup, referenced by a schedule entry. The
+       * populated matchup must come through; the empty one must be filtered out.
        */
-      const players = ["p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8", "p9", "p10"]
-      let bracket = generateBracket(players)
-
-      // Resolve ALL main bracket rounds to get to consolation
-      while (!isComplete(bracket)) {
-        bracket = resolveCurrentRound(bracket, higherSeedWinsResolver)
+      const populatedMatchup: Matchup = {
+        matchupId: "c0-m0",
+        playerA: "p1",
+        playerB: "p2",
+        winner: null,
+      }
+      const emptyMatchup: Matchup = {
+        matchupId: "c0-m1",
+        playerA: "",
+        playerB: "",
+        winner: null,
       }
 
-      // Generate consolation rounds (this is what the unfixed code does after isComplete)
-      bracket.consolationRounds = generateConsolationRounds(bracket)
-      bracket.currentConsolationIndex = 0
+      // Minimal bracket: one consolation round mixing a populated and an empty matchup.
+      const bracket: Bracket = {
+        rounds: [
+          {
+            roundIndex: 0,
+            matchups: [{ matchupId: "r0-m0", playerA: "p1", playerB: "p2", winner: null }],
+            byes: [],
+            resolved: false,
+          },
+        ],
+        currentRoundIndex: 0,
+        totalRounds: 1,
+        seeds: { p1: 1, p2: 2 },
+        eliminated: {},
+        consolationRounds: [
+          {
+            roundIndex: 0,
+            matchups: [populatedMatchup, emptyMatchup],
+            resolved: false,
+            sourceRoundIndex: 0,
+            placementStart: 5,
+          },
+        ],
+        currentConsolationIndex: 0,
+        schedule: [],
+        currentScheduleIndex: 0,
+      }
 
-      // Find a consolation round that has empty matchup slots (mini-bracket final)
-      const emptySlotRound = bracket.consolationRounds.find((r) =>
-        r.matchups.some((m) => m.playerA === "" || m.playerB === "")
-      )
+      // A schedule entry that references the consolation round (index 0).
+      const scheduleEntry: GameRoundSchedule = {
+        mainBracketRoundIndex: null,
+        consolationRoundIndices: [0],
+        description: "Consolation",
+      }
 
-      // Verify that such a round exists (the 5th-8th final has empty slots before semis resolve)
-      expect(emptySlotRound).toBeDefined()
+      const active = getActiveMatchupsForSchedule(bracket, scheduleEntry)
 
-      if (emptySlotRound) {
-        // Simulate the current code's filter behavior
-        const activeMatchups = emptySlotRound.matchups.filter(
-          (m) => m.playerA !== "" && m.playerB !== ""
-        )
+      // The populated matchup is returned; the empty-slot matchup is filtered out.
+      expect(active).toHaveLength(1)
+      expect(active[0].matchupId).toBe("c0-m0")
 
-        // BUG: After filtering, activeMatchups is EMPTY for the final round
-        // because no one has been placed into the slots yet.
-        // The FIXED system should never attempt to play this round until
-        // the semi-final winners have been placed.
-
-        // EXPECTED BEHAVIOR (FIXED code):
-        // The scheduling system should ensure that consolation rounds with empty
-        // slots are NEVER referenced as active until their dependency (semi-finals)
-        // has been resolved and winners placed into the slots.
-        //
-        // Assert: if a schedule entry references this round, its matchups must be non-empty
-        // On UNFIXED code, there IS no schedule, so we can't test this directly.
-        // Instead, we verify the fundamental issue: empty matchups produce 0 active matchups.
-        expect(activeMatchups.length).toBe(0) // This confirms the hang condition exists
+      // Invariant: every returned matchup has non-empty playerA AND playerB.
+      for (const m of active) {
+        expect(m.playerA).not.toBe("")
+        expect(m.playerB).not.toBe("")
       }
     })
 
